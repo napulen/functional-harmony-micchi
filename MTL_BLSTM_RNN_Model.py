@@ -1,4 +1,5 @@
 import os
+
 path = os.path.dirname(os.path.abspath(__file__))
 
 import tensorflow as tf
@@ -9,6 +10,7 @@ n_output_classes = {'key': 24,
                     'sec_deg': 21,
                     'quality': 10,
                     'inversion': 4}
+
 
 class MTL_BLSTM_RNNModel(object):
     def __init__(self,
@@ -41,7 +43,7 @@ class MTL_BLSTM_RNNModel(object):
         self.batch_in = tf.placeholder(tf.float32, shape=batch_in_shape, name='batch_in')
         self.batch_out = {}
         for key in n_output_classes.keys():
-            self.batch_out[key] = tf.placeholder(tf.int32, shape=batch_out_shape, name='batch_out_'+key)
+            self.batch_out[key] = tf.placeholder(tf.int32, shape=batch_out_shape, name='batch_out_' + key)
 
         self.is_dropout = tf.placeholder(tf.bool)
 
@@ -61,7 +63,7 @@ class MTL_BLSTM_RNNModel(object):
         saver.save(self._session, path)
 
     def _label_smoothing(self, inputs, epsilon=0.1):
-        K = inputs.get_shape().as_list()[-1] # number of channels
+        K = inputs.get_shape().as_list()[-1]  # number of channels
         return ((1 - epsilon) * inputs) + (epsilon / K)
 
     def network(self):
@@ -83,14 +85,14 @@ class MTL_BLSTM_RNNModel(object):
                                                                                            self.batch_in,
                                                                                            time_major=False,
                                                                                            dtype=tf.float32)
-            rnn_outputs = tf.concat([output_fw, output_bw], axis=-1) # shape = [batch, n_steps, 2*n_hiddne_units]
+            rnn_outputs = tf.concat([output_fw, output_bw], axis=-1)  # shape = [batch, n_steps, 2*n_hiddne_units]
 
         with tf.name_scope('Output_projection_layer'):
-            logits = tf.layers.dense(rnn_outputs, self._total_classes) # shape = [batch, n_steps, total_classes]
+            logits = tf.layers.dense(rnn_outputs, self._total_classes)  # shape = [batch, n_steps, total_classes]
             # predictions = tf.argmax(logits, axis=-1, output_type=tf.int32) # shape = [batch, n_steps]
 
         with tf.name_scope('Task_specific_layer'):
-            logits_key = logits[:,:,:24]
+            logits_key = logits[:, :, :24]
             logits_pri_deg = logits[:, :, 24:45]
             logits_sec_deg = logits[:, :, 45:66]
             logits_quality = logits[:, :, 66:76]
@@ -109,7 +111,8 @@ class MTL_BLSTM_RNNModel(object):
             # cross entropy
             cross_entropy = []
             for key in n_output_classes.keys():
-                cross_entropy.append(tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits[key], labels=self.batch_out[key])))
+                cross_entropy.append(tf.reduce_mean(
+                    tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits[key], labels=self.batch_out[key])))
             cross_entropy = tf.reduce_sum(cross_entropy)
 
             # L2 norm regularization
@@ -130,7 +133,8 @@ class MTL_BLSTM_RNNModel(object):
             correct_predictions['overall'] = tf.reduce_all(correct_predictions['overall'], axis=2)
             """keys in correct_predictions: key, pri_deg, sec_deg, quality, inversion, overall"""
 
-            correct_predictions['degree'] = tf.stack([correct_predictions['pri_deg'], correct_predictions['sec_deg']], axis=2)
+            correct_predictions['degree'] = tf.stack([correct_predictions['pri_deg'], correct_predictions['sec_deg']],
+                                                     axis=2)
             correct_predictions['degree'] = tf.reduce_all(correct_predictions['degree'], axis=2)
             """keys in correct_predictions: key, pri_deg, sec_deg, quality, inversion, overall, degree"""
 
@@ -140,7 +144,7 @@ class MTL_BLSTM_RNNModel(object):
                 tf.summary.scalar(key, accuracy[key])
             """keys in accuracy: key, sec_deg, quality, inversion, overall, degree"""
 
-        merged = tf.summary.merge_all() # merge all summaries collected in the graph
+        merged = tf.summary.merge_all()  # merge all summaries collected in the graph
 
         # Apply gradient clipping
         gvs = self._optimizer.compute_gradients(loss)
@@ -195,18 +199,20 @@ class MTL_BLSTM_RNNModel(object):
             print('CE = %.4f,  L2 = %.4f' % (_loss - _L2, _L2))
 
         if step % 200 == 0:
-            self._train_writer.add_summary(_summary, step) # add to training log
-            print("*------ iteration %d:  train_loss %.4f, train_accuracy %.4f, %.4f, %.4f, %.4f, %.4f, %.4f ------*" % (step,
-                                                                                                           _loss,
-                                                                                                           _accuracy['key'],
-                                                                                                           _accuracy['degree'],
-                                                                                                           _accuracy['sec_deg'],
-                                                                                                           _accuracy['quality'],
-                                                                                                           _accuracy['inversion'],
-                                                                                                           _accuracy['overall']))
+            self._train_writer.add_summary(_summary, step)  # add to training log
+            print(
+                "*------ iteration %d:  train_loss %.4f, train_accuracy %.4f, %.4f, %.4f, %.4f, %.4f, %.4f ------*" % (
+                step,
+                _loss,
+                _accuracy['key'],
+                _accuracy['degree'],
+                _accuracy['sec_deg'],
+                _accuracy['quality'],
+                _accuracy['inversion'],
+                _accuracy['overall']))
 
             for key in _predictions.keys():
-                print('$'+key+'$')
+                print('$' + key + '$')
                 print(' Label'.ljust(11, ' '), ''.join([str(b).rjust(3, ' ') for b in batch_out[0, :][key]]))
                 print(' Prediction'.ljust(11, ' '), ''.join([str(b).rjust(3, ' ') for b in _predictions[key][0, :]]))
 
@@ -263,6 +269,7 @@ class MTL_BLSTM_RNNModel(object):
             except:
                 raise RuntimeError('Session unitialized and no variables saved at provided path %s' % variable_path)
 
+
 if __name__ == "__main__":
 
     import time
@@ -285,10 +292,10 @@ if __name__ == "__main__":
 
     variable_path = path + "\\Training\\training_model_ckpt"
     best_variable_path = path + "\\Training\\best_training_model_ckpt"
-    n_epoches = 27 # number of training epochs
-    bsize = 36 # batch size
-    best_valid_acc, in_succession = 0.0, 0 # log for early stopping
-    n_in_succession = 8 # number of accuracy drops before early stopping
+    n_epoches = 27  # number of training epochs
+    bsize = 36  # batch size
+    best_valid_acc, in_succession = 0.0, 0  # log for early stopping
+    n_in_succession = 8  # number of accuracy drops before early stopping
 
     startTime = time.time()
     print('\nStart training......')
@@ -299,27 +306,31 @@ if __name__ == "__main__":
         batches_indices = [new_order[x:x + bsize] for x in range(0, len(new_order), bsize)]
 
         for batch, indices in enumerate(batches_indices):
-            save = False if batch != (len(batches_indices) -1) else True
-            network.train(x_train[indices], y_train[indices], save_vars_to_disk=save, variable_path=variable_path, step=epoch * len(batches_indices) + batch)
+            save = False if batch != (len(batches_indices) - 1) else True
+            network.train(x_train[indices], y_train[indices], save_vars_to_disk=save, variable_path=variable_path,
+                          step=epoch * len(batches_indices) + batch)
 
         # validation
-        valid_pred, valid_loss, valid_acc = network.predict(batch_in=x_valid, batch_out=y_valid, variable_path=variable_path, step=(epoch+1) * len(batches_indices), is_valid=True)
-        print("======== epoch: %d  valid_loss = %4f, valid_accuracy = %.4f, %.4f, %.4f, %.4f, %.4f %.4f ========" % (epoch + 1,
-                                                                                                                valid_loss,
-                                                                                                                valid_acc['key'],
-                                                                                                                valid_acc['degree'],
-                                                                                                                valid_acc['sec_deg'],
-                                                                                                                valid_acc['quality'],
-                                                                                                                valid_acc['inversion'],
-                                                                                                                valid_acc['overall']))
+        valid_pred, valid_loss, valid_acc = network.predict(batch_in=x_valid, batch_out=y_valid,
+                                                            variable_path=variable_path,
+                                                            step=(epoch + 1) * len(batches_indices), is_valid=True)
+        print("======== epoch: %d  valid_loss = %4f, valid_accuracy = %.4f, %.4f, %.4f, %.4f, %.4f %.4f ========" % (
+        epoch + 1,
+        valid_loss,
+        valid_acc['key'],
+        valid_acc['degree'],
+        valid_acc['sec_deg'],
+        valid_acc['quality'],
+        valid_acc['inversion'],
+        valid_acc['overall']))
 
         # prediction result
         sample_index = random.randint(0, y_valid.shape[0] - 1)
         for key in valid_pred.keys():
-            print('$'+key+'$')
+            print('$' + key + '$')
             print(' Label'.ljust(11, ' '), ''.join([str(b).rjust(3, ' ') for b in y_valid[sample_index, :][key]]))
-            print(' Prediction'.ljust(11, ' '), ''.join([str(b).rjust(3, ' ') for b in valid_pred[key][sample_index, :]]))
-
+            print(' Prediction'.ljust(11, ' '),
+                  ''.join([str(b).rjust(3, ' ') for b in valid_pred[key][sample_index, :]]))
 
         # check if early stop
         if valid_acc['overall'] > best_valid_acc:
@@ -336,15 +347,16 @@ if __name__ == "__main__":
     # testing
     startTime = time.time()
     print('\nStart Testing......')
-    network._session.close() # closs session
-    network._session = None # force predict() to load variables from best_variable_path
-    test_pred, test_loss, test_acc = network.predict(batch_in=x_test, batch_out=y_test, variable_path=best_variable_path, is_valid=False)
+    network._session.close()  # closs session
+    network._session = None  # force predict() to load variables from best_variable_path
+    test_pred, test_loss, test_acc = network.predict(batch_in=x_test, batch_out=y_test,
+                                                     variable_path=best_variable_path, is_valid=False)
     print('testing accuracy = %.4f, %.4f, %.4f,%.4f ,%.4f ,%.4f' % (test_acc['key'],
-                                                             test_acc['degree'],
-                                                             test_acc['sec_deg'],
-                                                             test_acc['quality'],
-                                                             test_acc['inversion'],
-                                                             test_acc['overall']))
+                                                                    test_acc['degree'],
+                                                                    test_acc['sec_deg'],
+                                                                    test_acc['quality'],
+                                                                    test_acc['inversion'],
+                                                                    test_acc['overall']))
 
     elapsed_time = time.time() - startTime
     print('testing time = %.2f min\n' % (elapsed_time / 60))

@@ -1,4 +1,11 @@
-Tonality
+Explication of the columns in the chords.xlsx files:
+
+A: start beat (inclusive, 0-indexed, pickup measures are indexed with negative numbers)
+B: end measure (exclusive)
+
+------
+
+C: Local Tonality
 
 capital = major
 lower case = minor
@@ -7,9 +14,11 @@ lower case = minor
 
 ex. C = C major, c+ = C# minor
 
+The difference between the local tonality and the global tonality of the piece gives what in the paper is called "primary degree" 
+
 --
 
-Scale Degree
+D: Scale Degree (of the current chord wrt the local tonality)
 
 
 1 = I, i (1+ for augmented I)  
@@ -23,30 +32,41 @@ Scale Degree
 '-' before number = flat
 / = secondary chord 
 
-
+This is what is called "secondary degree"
 --
 
-Chord Quality
+E: Chord Quality
 M = major
 m = minor
 M7 = major 7th
 m7 = minor 7th
 D7 = dominant 7th
-a = agumented chord (1+)
-a6 = agumented 6th (+4: It+6, Fr+6, Gr+6)
+a = augmented chord (1+)
+a6 = augmented 6th (+4: It+6, Fr+6, Gr+6)
 
 --
 
-Chord Label
+F: inversion
 
-capital Roman numeral = mojor triad
+0 = root position
+1 = first inversion
+2 = second inversion
+3 = third inversion (only for seventh chords)
+
+--
+
+G: Chord Label
+
+This resumes the information contained in columns D, E, and F 
+
+capital Roman numeral = major triad
 lower case Roman numeral = minor triad
 capital Roman numeral with '+' = augmented triad
 lower case Roman numeral with '-' = diminished chord
 lower case Roman numeral with '=' = half diminished chord
 
 6 = triad (1st inversion) 
-64 = trid (2nd inversion)
+64 = triad (2nd inversion)
 7 = 7th chord (root position)
 65 = 7th chord (1st inversion)
 43 = 7th chord (2nd inversion)
