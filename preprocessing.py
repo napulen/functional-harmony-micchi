@@ -5,9 +5,16 @@ import numpy.lib.recfunctions as rfn
 from scipy import stats
 import itertools
 import os
+import logging
+import tensorflow as tf
+import seaborn as sns
 
-NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
-KEYS = {
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+NOTES = ['C', 'C+', 'D', 'D+', 'E', 'F', 'F+', 'G', 'G+', 'A', 'A+', 'B']
+SCALES = {
     'C': ['C', 'D', 'E', 'F', 'G', 'A', 'B'], 'a': ['A', 'B', 'C', 'D', 'E', 'F', 'G+'],
     'G': ['G', 'A', 'B', 'C', 'D', 'E', 'F+'], 'e': ['E', 'F+', 'G', 'A', 'B', 'C', 'D+'],
     'D': ['D', 'E', 'F+', 'G', 'A', 'B', 'C+'], 'b': ['B', 'C+', 'D', 'E', 'F+', 'G', 'A+'],
@@ -27,6 +34,20 @@ KEYS = {
     'G-': ['G-', 'A-', 'B-', 'C-', 'D-', 'E-', 'F'], 'e-': ['E-', 'F', 'G-', 'A-', 'B-', 'C-', 'D'],
     'C-': ['C-', 'D-', 'E-', 'F-', 'G-', 'A-', 'B-'], 'a-': ['A-', 'B-', 'C-', 'D-', 'E-', 'F-', 'G'],
     'F-': ['F-', 'G-', 'A-', 'B--', 'C-', 'D-', 'E-'], 'd-': ['D-', 'E-', 'F-', 'G-', 'A-', 'B--', 'C']}
+R2I = dict([(e[1], e[0]) for e in enumerate(ROOTS)])
+N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
+DATASET_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'BPS_FH_Dataset')
+TRAIN_INDICES = [4, 11, 16, 20, 26, 31, 3, 8, 12, 17, 23, 21, 27, 29, 30, 10, 1, 2]
+VALID_INDICES = [7, 18, 28, 15, 25, 5, 19]
+TEST_INDICES = [0, 13, 22, 14, 19, 24, 6]
+TRAIN_TFRECORDS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'train.tfrecords')
+VALID_TFRECORDS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'valid.tfrecords')
+TEST_TFRECORDS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'test.tfrecords')
+
+
+class HarmonicAnalysisError(Exception):
+    """ Raised when the harmonic analysis associated to a certain time can't be found """
+    pass
 
 
 def _is_major(key):
@@ -39,122 +60,99 @@ def _flat_alteration(note):
     return note[:-1] if '+' in note else note + '-'
 
 
-def strided_axis1(a, window, hop):
-    # Zero-padding
-    npad = (a.shape[1] - window) % hop + 1
-    if npad != 0 and hop != 1:
-        b = np.lib.pad(a, ((0, 0), (0, npad)), 'constant', constant_values=0)
-    else:
-        b = np.array(a)
-
-    # Length of 3D output array along its axis=1
-    nd1 = int((b.shape[1] - window) / hop) + 1
-
-    # Store shape and strides info
-    m, n = b.shape
-    s0, s1 = b.strides
-
-    # Finally use strides to get the 3D array view
-    return np.lib.stride_tricks.as_strided(b, shape=(nd1, m, window), strides=(s1 * hop, s0, s1))
-
-
-def load_notes(directory="BPS_FH_Dataset", resolution=8):
+def load_notes(i, fpq=8):
     """
-    Load notes in each piece, which is then represented as pianoroll.
-    :param directory: the path of the dataset
-    :param resolution: time resolution, default =  8 frame for one crotchet beat (that is, 32th note as 1unit in piano roll)
+    Load notes in each piece, which is then represented as piano roll.
+    :param i: which sonata to take (sonatas indexed from 0 to 31)
+    :param fpq: frames per quarter note, default =  8 (that is, 32th note as 1 unit in piano roll)
     :return: pieces, tdeviation
     """
 
     dt = [('onset', 'float'), ('pitch', 'int'), ('mPitch', 'int'), ('duration', 'float'), ('staffNum', 'int'),
           ('measure', 'int')]  # datatype
-    pieces = [None for _ in range(32)]
-    tdeviation = [None for _ in range(32)]  # time deviation
-    for i in range(32):
-        fileDir = os.path.join(directory, str(i + 1).zfill(2), "notes.csv")
-        notes = np.genfromtxt(fileDir, delimiter=',', dtype=dt)  # read notes from .csv file
-        length = math.ceil((max(notes[-20:]['onset'] + notes[-20:]['duration']) - notes[0][
-            'onset']) * resolution)  # length of the piece
-        tdeviation[i] = abs(notes[0]['onset'])  # deviation of start time
-        pianoRoll = np.zeros(shape=[128, length], dtype=np.int32)
-        for note in notes:
-            pitch = note['pitch']
-            start = int(round((note['onset'] + tdeviation[i]) * resolution))
-            end = int(round((note['onset'] + note['duration'] + tdeviation[i]) * resolution))
-            time = range(start, end)
-            pianoRoll[pitch, time] = 1  # add note to pianoRoll
-        pieces[i] = pianoRoll
 
-    return pieces, tdeviation
+    notes_file = os.path.join(DATASET_FOLDER, str(i + 1).zfill(2), "notes.csv")
+    notes = np.genfromtxt(notes_file, delimiter=',', dtype=dt)  # read notes from .csv file
+    # length of the piece in piano roll frames, assuming the last note to stay was amongst the 20 last to be played
+    length = math.ceil((max(notes[-20:]['onset'] + notes[-20:]['duration']) - notes[0]['onset']) * fpq)
+    # TODO: Change tdev to be defined without the absolute value to make sure that it behaves correctly
+    #   also when it is anyway positive (not sure if this can happen at all, but it's anyway simpler conceptually)
+    tdev = abs(notes[0]['onset'])
+    piano_roll = np.zeros(shape=[128, length], dtype=np.int32)
+    for note in notes:
+        pitch = note['pitch']
+        start = int(round((note['onset'] + tdev) * fpq))
+        end = start + min(int(round(note['duration'] * fpq)), 1)
+        time = range(start, end)
+        piano_roll[pitch, time] = 1  # add note to piano_roll
+    return piano_roll, tdev
 
 
-def load_chord_labels(directory="BPS_FH_Dataset"):
+def load_chord_labels(i):
     """
     Load chords of each piece and add chord symbols into the labels.
-    :param directory: the path of the dataset
+    :param i: which sonata to take (sonatas indexed from 0 to 31)
     :return: chord_labels
     """
 
     dt = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
-          ('inversion', 'int'), ('rchord', '<U10')]  # datatype
-    chord_labels = [None for _ in range(32)]
-    for i in range(32):
-        fileDir = os.path.join(directory, str(i + 1).zfill(2), "chords.xlsx")
+          ('inversion', 'int'), ('chord_function', '<U10')]  # datatype
+    chords_file = os.path.join(DATASET_FOLDER, str(i + 1).zfill(2), "chords.xlsx")
 
-        workbook = xlrd.open_workbook(fileDir)
-        sheet = workbook.sheet_by_index(0)
-        chords = []
-        for rowx in range(sheet.nrows):
-            cols = sheet.row_values(rowx)
-            if isinstance(cols[3], float):  # if type(degree) == float
-                cols[3] = int(cols[3])
-            chords.append(tuple(cols))
-        chords = np.array(chords, dtype=dt)  # convert to structured array
-        chord_labels[i] = r2tconvert(chords)  # translate rchords into chord symbols
+    workbook = xlrd.open_workbook(chords_file)
+    sheet = workbook.sheet_by_index(0)
+    chords = []
+    for rowx in range(sheet.nrows):
+        cols = sheet.row_values(rowx)
+        # xlrd.open_workbook automatically casts strings to float if they are compatible. Revert this.
+        if isinstance(cols[3], float):  # if type(degree) == float
+            cols[3] = str(int(cols[3]))
+        chords.append(tuple(cols))
+    chords = np.array(chords, dtype=dt)  # convert to structured array
 
-    return chord_labels
+    return _add_chord_symbol(chords)
 
 
-def r2tconvert(chords):
+def _add_chord_symbol(chords):
     """
-    Translate roman numeral representations into chord symbols, and add chord symbols into chord labels.
+    Translate roman numeral representations into chord symbols.
     :param chords:
-    :return: rtchords
+    :return: chords_full
     """
 
     # Translate chords
     outputQ = {'M': 'M', 'm': 'm', 'M7': 'M7', 'm7': 'm7', 'D7': '7', 'a': 'aug', 'd': 'dim', 'd7': 'dim7',
-               'h7': 'm7(b5)', 'a6': '7'}
-    tchords = []
-    for rchord in chords:
-        key = str(rchord['key'])
-        str_degree = str(rchord['degree'])
+               'h7': 'm7(b5)', 'a6': '7'}  # necessary only because the data is stored in non-standard notation
+    chord_symbols = []
+    for chord in chords:
+        key = chord['key']
+        str_degree = chord['degree']
 
         # FIND THE ROOT OF THE CHORD
         if len(str_degree) == 1 or str_degree == '1+':  # case: degree = x, 1+
             degree = int(str_degree[0])
-            root = KEYS[key][degree - 1]
+            root = SCALES[key][degree - 1]
 
         elif str_degree == '+4':  # case: augmented 6th
             degree = 6
-            root = KEYS[key][degree - 1]
-            if _is_major(str(rchord['key'])):  # case: major key
+            root = SCALES[key][degree - 1]
+            if _is_major(key):  # case: major key
                 root = _flat_alteration(root)  # lower the sixth in a major key
 
         elif str_degree == '-2' or str_degree == '-6':  # case: neapolitan chord or 6b (?)
             degree = int(str_degree[1])
-            root = KEYS[key][degree - 1]
+            root = SCALES[key][degree - 1]
             root = _flat_alteration(root)  # the fundamental of the chord is lowered
 
         elif '/' in str_degree:  # case: secondary chord
             degree = str_degree
             n = int(degree.split('/')[0]) if '+' not in degree.split('/')[0] else 6  # take care of augmented 6th chords
             d = int(degree.split('/')[1])  # denominator
-            key2 = KEYS[key][abs(d) - 1]  # secondary key
+            key2 = SCALES[key][abs(d) - 1]  # secondary key
             if d < 0:
                 key2 = _flat_alteration(key2)
 
-            root = KEYS[key2][n - 1]
+            root = SCALES[key2][n - 1]
             if '+' in degree.split('/')[0]:  # augmented 6th chords
                 if _is_major(key2):  # case: major key
                     root = _flat_alteration(root)
@@ -164,126 +162,84 @@ def r2tconvert(chords):
         # Re-translate root for enharmonic equivalence
         if '++' in root:
             if 'B' in root or 'E' in root:
-                root = NOTES[(NOTES.index(root[0]) + 1) % 7] + '+'
+                root = ROOTS[(ROOTS.index(root[0]) + 1) % 7] + '+'
             else:
-                root = NOTES[NOTES.index(root[0]) + 1]  # no problem when index == 6 because that's the case B++
+                root = ROOTS[ROOTS.index(root[0]) + 1]  # no problem when index == 6 because that's the case B++
         elif '--' in root:  # if root = x--
             if 'C' in root or 'F' in root:
-                root = NOTES[NOTES.index(root[0]) - 1] + '-'
+                root = ROOTS[ROOTS.index(root[0]) - 1] + '-'
             else:
-                root = NOTES[NOTES.index(root[0]) - 1]
+                root = ROOTS[ROOTS.index(root[0]) - 1]
 
         if root == 'F-' or root == 'C-':
-            root = NOTES[NOTES.index(root[0]) - 1]
+            root = ROOTS[ROOTS.index(root[0]) - 1]
         elif root == 'E+' or root == 'B+':
-            root = NOTES[(NOTES.index(root[0]) + 1) % 7]
+            root = ROOTS[(ROOTS.index(root[0]) + 1) % 7]
 
-        quality = outputQ[str(rchord['quality'])]
-        tchord = root + quality
-        tchords.append(tchord)
+        quality = outputQ[chord['quality']]
+        chord_symbol = root + quality
+        chord_symbols.append(chord_symbol)
 
-    tchords = np.array(tchords, dtype=[('tchord', '<U10')])
-    rtchords = rfn.merge_arrays((chords, tchords), flatten=True, usemask=False)  # merge rchords and tchords into one structured array
+    chord_symbols = np.array(chord_symbols, dtype=[('chord_symbol', '<U10')])
+    chords_full = rfn.merge_arrays((chords, chord_symbols), flatten=True, usemask=False)
+    return chords_full
 
-    return rtchords
+
+# def shift_chord_labels(chord_labels, s):
+#     """
+#
+#     :param chord_labels:
+#     :param s:
+#     :return:
+#     """
+#     for i in range(len(chord_labels)):
+#         temp = chord_labels[i]['chord_symbol']
+#         temp =
+#         chord_labels[i]['chord_symbol'] = temp
+#
+#     return
 
 
-def segment_pianorolls(pianorolls, tdeviation, chord_labels, resolution=8, wsize=32, hsize=4, label_type=None):
+def segment_piano_roll(piano_roll, n_frames, wsize=32, hsize=4):
     """
     Segment each pianoroll.
-    :param pianorolls:
-    :param tdeviation:
-    :param chord_labels:
-    :param resolution: time resolution,default=8 (32th note as 1unit in pianoroll)
+    :param piano_roll:
+    :param n_frames:
     :param wsize: window size,  default= 32 (4 beats)
     :param hsize: hop size, default = 4 (half a beat)
-    :param label_type: string, 'chord_symbol' and 'chord_function'  are valid
-    :return:
+    :return: segments of piano roll
     """
+    # Zero-padding
+    npad = (piano_roll.shape[1] - wsize) % hsize
+    piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant', constant_values=0)
 
-    segments_pianoroll = [[None for _ in range(32)] for _ in range(12)]  # segments for 32 pieces, 12 keys
-    segments_label = [[None for _ in range(32)] for _ in range(12)]  # segment labels for 32 pieces, 12 keys
-    for p in range(32):
-        # Split Piano Roll into segments
-        pianoroll = pianorolls[p]
-        # Data augmentation
-        pianoroll_aug = augment_pianoroll(pianoroll)  # modulate to 12 keys
-        for m in range(len(pianoroll_aug)):
-            segments = strided_axis1(pianoroll_aug[m], window=wsize, hop=hsize).astype(
-                np.float32)  # Split pianoroll into segments with shape = [num_segments, 61, wsize]
-            segments_reshape = [segments[i, :, :].reshape(61 * wsize) for i in
-                                range(segments.shape[0])]  # reshape segments, new shape = [num_segments, 61*wsize]
+    # Length of 3D output array along its axis=1
+    segments = np.zeros((n_frames, piano_roll.shape[0] * wsize))
+    for i in range(n_frames - 1):
+        segments[i] = piano_roll[:, i * hsize:i * hsize + wsize].reshape([-1])
+    return segments
 
-            # Normalize each segment
-            for i, v in enumerate(segments_reshape):
-                if np.std(v) != 0:
-                    segments_reshape[i] = stats.zscore(v)
-            segments_pianoroll[m][p] = segments_reshape
 
-        # Get corresponding chord label (only chord symbol) for each segment
-        labels = []
-        td = tdeviation[p]  # time deviation
-        num_segments = segments.shape[0]  # number of segments
-        for n in range(num_segments):
-            sonset = n * hsize * (1 / resolution) - td  # onset time of the segment
-            send = sonset + wsize * (1 / resolution)  # end time of the segment
-            scenter = max(0, (sonset + send) / 2)
-            # print(fonset, fend, fcenter)
-            label = chord_labels[p][(chord_labels[p]['onset'] <= scenter) & (chord_labels[p]['end'] > scenter)]
-            if len(label) != 0:
-                label = label[0]
-            else:
-                print('Error: Cannot read label!')
-                print('piece %d' % p)
-                print(label)
-                quit()
-            labels.append(label)
+def segment_chord_labels(chord_labels, n_frames, td, label_type, wsize=32, hsize=4, fpq=8):
+    if label_type not in ['chord_symbol', 'chord_function']:
+        raise ValueError(f"label_type should be either \'chord_symbol\' or \'chord_function\', not {label_type}.")
+
+    # Get corresponding chord label (only chord symbol) for each segment
+    labels = []
+    for n in range(n_frames):
+        seg_time = (n * hsize + 0.5 * wsize) / fpq - td  # central time of the segment in quarter notes
+        # print(fonset, fend, fcenter)
+        label = chord_labels[np.logical_and(chord_labels['onset'] <= seg_time, chord_labels['end'] > seg_time)]
+        try:
+            label = label[0]
+        except IndexError:
+            raise HarmonicAnalysisError(f"Cannot read label for Sonata N.{i + 1} at frame {n}")
 
         if label_type == 'chord_symbol':
-            labels_onehot = tchord2onehot(labels)  # convert labels to one hot vectors
-            labels_aug = augment_tchords(labels_onehot)
-        elif label_type == 'chord_function':
-            labels_onehot = rchord2onehot(labels)  # convert labels to one hot vectors
-            labels_aug = augment_rchords(labels_onehot)
+            labels.append(label['chord_symbol'])
         else:
-            print('LabelTypeError: %s,' % label_type, 'label_type should be \'chord_symbol\' or \'chord_function\'.')
-            quit()
-        for m in range(len(labels_aug)):
-            segments_label[m][p] = labels_aug[m]
-
-    return segments_pianoroll, segments_label
-
-
-def augment_pianoroll(pianoroll):
-    """
-    Modulate pianoroll into 12 keys.
-    :param pianoroll:
-    :return: pianoroll_aug
-    """
-
-    pianoroll_aug = [None for _ in range(12)]
-    for m in range(12):
-        # Modulate to 12 keys
-        if m < 7:
-            temp = np.roll(pianoroll, shift=m, axis=0)  # modulate upwards
-        else:
-            temp = np.roll(pianoroll, shift=m - 12, axis=0)  # modulate downwards
-
-        # Cut off pitches higher than 84 (which is then moved a octave down)
-        while (np.any(np.any(temp[85:], axis=1))):
-            cut_off = np.array(temp[85:])
-            temp[85:] -= cut_off
-            temp[73:116] += cut_off
-
-        # Cut off pitches lower than 24 (which is then moved a octave up)
-        while (np.any(np.any(temp[:24], axis=1))):
-            cut_off = np.array(temp[:24])
-            temp[:24] -= cut_off
-            temp[12:36] += cut_off
-
-        pianoroll_aug[m] = temp[24:85]  # only uses the pitch range from C1 (24) to C6 (84)
-
-    return pianoroll_aug
+            labels.append((label['key'], label['degree'], label['quality'], label['inversion']))
+    return labels
 
 
 def tchord2onehot(labels):
@@ -296,16 +252,14 @@ def tchord2onehot(labels):
     root_template = ['C', 'C+', 'D', 'D+', 'E', 'F', 'F+', 'G', 'G+', 'A', 'A+', 'B']
     onehots = []
     for label in labels:
-        # print('label =', label)
-        tchord = label['tchord']
-        # quit()
-        onehot = [0 for i in range(25)]
-        if '+' not in tchord and '-' not in tchord:
-            root = tchord[0]
-            quality = tchord[1:]
+        chord_names = label['chord_names']
+        onehot = [0 for _ in range(25)]
+        if '+' not in chord_names and '-' not in chord_names:
+            root = chord_names[0]
+            quality = chord_names[1:]
         else:
-            root = tchord[:2]
-            quality = tchord[2:]
+            root = chord_names[:2]
+            quality = chord_names[2:]
 
         chord_hot = root_template.index(root)
         if quality in ['M', 'm', 'M7', 'm7', '7']:
@@ -333,7 +287,7 @@ def rchord2onehot(chords):
         key = str(chord['key'])
         degree = str(chord['degree'])
         quality = str(chord['quality'])
-        inversoin = int(chord['inversion'])
+        inversion = int(chord['inversion'])
 
         # Translate key to one-hot vector
         key_vector = [0 for _ in range(24)]  # 24 major and minor modes, 0-11 for major keys, 12-23 for minor keys
@@ -369,15 +323,15 @@ def rchord2onehot(chords):
         quality_vector[quality_hot] = 1
 
         # Translate inversion to one-hot vector
-        inversoin_vector = [0 for _ in range(4)]  # {'ori.':0, '1st':1, '2nd', 2, '3rd': 3}
-        inversoin_hot = inversoin
-        inversoin_vector[inversoin_hot] = 1
+        inversion_vector = [0 for _ in range(4)]  # {'ori.':0, '1st':1, '2nd', 2, '3rd': 3}
+        inversion_hot = inversion
+        inversion_vector[inversion_hot] = 1
 
         all_vectors = (key_vector,
                        degree_denominator_vector,
                        degree_numerator_vector,
                        quality_vector,
-                       inversoin_vector)
+                       inversion_vector)
 
         one_hot_vectors.append(all_vectors)
 
@@ -441,7 +395,7 @@ def augment_rchords(labels_onehot):
     return labels_aug
 
 
-def prepare_input_data(segments_pianoroll, segments_label, hop=32, num_steps=64, feature_size=61 * 32, label_type=None):
+def prepare_input_data(segments_pianoroll, segments_label, label_type, num_steps=64, feature_size=61 * 32, hop=32):
     """
     Rearrange segments_pianoroll and segments_label into the format [num_sequences, num_steps, feature_size] and [num_sequences, num_steps, num_classes] respectively
     :param segments_pianoroll:
@@ -453,10 +407,12 @@ def prepare_input_data(segments_pianoroll, segments_label, hop=32, num_steps=64,
     :return: input_segments, input_labels
     """
 
+    if label_type not in ['chord_symbol', 'chord_function']:
+        raise ValueError(f"label_type should be either \'chord_symbol\' or \'chord_function\', not {label_type}.")
     input_segments = [[None for _ in range(32)] for _ in range(12)]
     input_labels = [[None for _ in range(32)] for _ in range(12)]
-    for m in range(12):
-        for p in range(32):
+    for m in range(12):  # the transpositions
+        for p in range(32):  # the sonatas
             indices = list(range(len(segments_pianoroll[m][p])))  # indices of segments in the piece with m modulation
             seq_indices = [indices[i:i + num_steps] for i in itertools.takewhile(lambda x: x + num_steps < len(indices),
                                                                                  range(0, len(indices),
@@ -498,68 +454,47 @@ def prepare_input_data(segments_pianoroll, segments_label, hop=32, num_steps=64,
 
 def split_input_data(input_segments, input_labels):
     # split 32 pieces into three sets
-    train_indices = [4, 11, 16, 20, 26, 31, 3, 8, 12, 17, 23, 21, 27, 29, 30, 10, 1, 2]
-    valid_indices = [7, 18, 28, 15, 25, 5, 19]
-    test_indices = [0, 13, 22, 14, 19, 24, 6]
+    inputs_train = np.concatenate([input_segments[m][p] for m in range(12) for p in TRAIN_INDICES], axis=0)
+    inputs_valid = np.concatenate([input_segments[0][p] for p in VALID_INDICES], axis=0)
+    inputs_test = np.concatenate([input_segments[0][p] for p in TEST_INDICES], axis=0)
 
-    inputs_train = np.concatenate([input_segments[m][p] for m in range(12) for p in train_indices], axis=0)
-    inputs_valid = np.concatenate([input_segments[0][p] for p in valid_indices], axis=0)
-    inputs_test = np.concatenate([input_segments[0][p] for p in test_indices], axis=0)
-
-    labels_train = np.concatenate([input_labels[m][p] for m in range(12) for p in train_indices], axis=0)
-    labels_valid = np.concatenate([input_labels[0][p] for p in valid_indices], axis=0)
-    labels_test = np.concatenate([input_labels[0][p] for p in test_indices], axis=0)
+    labels_train = np.concatenate([input_labels[m][p] for m in range(12) for p in TRAIN_INDICES], axis=0)
+    labels_valid = np.concatenate([input_labels[0][p] for p in VALID_INDICES], axis=0)
+    labels_test = np.concatenate([input_labels[0][p] for p in TEST_INDICES], axis=0)
 
     return inputs_train, inputs_valid, inputs_test, labels_train, labels_valid, labels_test
 
 
-def get_training_data(label_type=None):
-    """
-    x is input data, y is label;
-    x has the shape [num_sequences, num_steps, feature_size];
-    if label_type == 'chord_symbol',
-        y has the shape [num_sequences, num_steps];
-    if label_type == 'chord_function',
-        y has the shape [num_sequences, num_steps],
-        and chord functions can be access by y[num_sequences, num_steps][function_name],
-        where 'key', 'pri_deg', 'sec_deg', 'quality', 'inversion' are valid function_name
-    """
+"""
+x is input data, y is label;
+x has the shape [num_sequences, num_steps, feature_size];
+if label_type == 'chord_symbol',
+    y has the shape [num_sequences, num_steps];
+if label_type == 'chord_function',
+    y has the shape [num_sequences, num_steps],
+    and chord functions can be access by y[num_sequences, num_steps][function_name],
+    where 'key', 'pri_deg', 'sec_deg', 'quality', 'inversion' are valid function_name
+"""
+label_type = 'chord_function'
+hsize = 4  # hopping size between frames in 32nd notes
+wsize = 32  # window size for a frame in 32nd notes
+fpq = 8  # number of frames per quarter note
 
-    print("Preprocessing the BPS-FH dataset:")
+for indices, output_file in zip([TRAIN_INDICES, VALID_INDICES, TEST_INDICES],
+                                [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_TFRECORDS]):
+    with tf.io.TFRecordWriter(output_file) as writer:
+        logger.info(f'Working on {os.path.basename(output_file)}.')
 
-    if label_type not in ['chord_symbol', 'chord_function']:
-        print('LabelTypeError: %s,' % label_type, 'label_type should be \'chord_symbol\' or \'chord_function\'.')
-        quit()
+        for i in indices:
+            logger.info(f"Sonata N.{i + 1}")
+            piano_roll, td = load_notes(i)
+            chord_labels = load_chord_labels(i)
+            n_frames = int(math.ceil((piano_roll.shape[1] - wsize) / hsize)) + 1
 
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'BPS_FH_Dataset')
-    print('load data...')
-    pianorolls, tdeviation = load_notes(directory=path)
-    chord_labels = load_chord_labels(directory=path)
-    print('segment data...')
-    segments_pianoroll, segments_label = segment_pianorolls(pianorolls, tdeviation, chord_labels, wsize=32, hsize=4,
-                                                            label_type=label_type)
-    print('prepare data...')
-    input_segments, input_labels = prepare_input_data(segments_pianoroll, segments_label, hop=32, num_steps=64,
-                                                      feature_size=1952, label_type=label_type)
-    print('split data...')
-    x_train, x_valid, x_test, y_train, y_valid, y_test = split_input_data(input_segments, input_labels)
+            for s in range(-6, 6):
+                pr_shifted = np.roll(piano_roll, shift=s, axis=0)
+                pr_segments = segment_piano_roll(pr_shifted, n_frames, wsize=wsize, hsize=hsize)
 
-    lens = [len(segments) for segments in segments_pianoroll[0]]
-    total_segments = sum(
-        [sum([len(segments) for segments in segments_pianoroll[m]]) for m in range(len(segments_pianoroll))])
-    # total_labels = sum([sum([len(labels) for labels in segments_label[m]]) for m in range(len(segments_label))])
-    print('num_segments in each piece =', lens)
-    print('total_segments =', total_segments)
-    sets = [x_train, x_valid, x_test, y_train, y_valid, y_test]
-    print('shape_of_all_sets =', [set.shape for set in sets])
-
-    return sets
-
-
-if __name__ == '__main__':
-    """
-    x: the input data with shape = [num_sequences, num_steps, feature_size]
-    y: the ground truth with shape = [num_sequences, num_steps]
-    label_type: 'chord_symbol' for STL_BLSTM_RNNModel, and 'chord_function' for MTL_BLSTM_RNNModel 
-    """
-    [x_train, x_valid, x_test, y_train, y_valid, y_test] = get_training_data(label_type='chord_symbol')
+                # cl_shifted = shift_chord_labels(chord_labels, s)
+                cl_segments = segment_chord_labels(chord_labels, n_frames, td, label_type, wsize=wsize, hsize=hsize,
+                                                   fpq=fpq)
