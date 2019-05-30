@@ -1,3 +1,13 @@
+"""
+create a tfrecord containing the following features:
+x the piano roll input data, with shape [n_frames, pitches]
+label_key the local key of the music
+label_degree the chord degree with respect to the key, possibly fractional, e.g. V/V dominant of dominant
+label_quality e.g. m, M, D7 for minor, major, dominant 7th etc.
+label_inversion, from 0 to 3 depending on what note is at the basse
+label_symbol, for example C7, d, etc.
+"""
+
 import numpy as np
 import math
 import xlrd
@@ -5,16 +15,9 @@ import os
 import logging
 import tensorflow as tf
 
+from config import DATASET_FOLDER, TRAIN_INDICES, VALID_INDICES, TEST_INDICES, TRAIN_TFRECORDS, VALID_TFRECORDS, \
+    TEST_TFRECORDS, HSIZE, WSIZE, FPQ, PITCH_LOW, PITCH_HIGH
 from utils import NOTES, _find_chord_symbol, _encode_key, _encode_degree, _encode_quality, _encode_symbol
-
-DATASET_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'BPS_FH_Dataset')
-
-TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3]
-VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
-TEST_INDICES = [1, 14, 23, 15, 10, 25, 7]
-TRAIN_TFRECORDS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'train.tfrecords')
-VALID_TFRECORDS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'valid.tfrecords')
-TEST_TFRECORDS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'test.tfrecords')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -25,9 +28,11 @@ class HarmonicAnalysisError(Exception):
     pass
 
 
-def load_notes(i, fpq=8):
+def load_notes(i, fpq, pitch_low=0, pitch_high=128):
     """
     Load notes in each piece, which is then represented as piano roll.
+    :param pitch_low:
+    :param pitch_high:
     :param i: which sonata to take (sonatas indexed from 1 to 32)
     :param fpq: frames per quarter note, default =  8 (that is, 32th note as 1 unit in piano roll)
     :return: pieces, tdeviation
@@ -45,10 +50,10 @@ def load_notes(i, fpq=8):
     for note in notes:
         pitch = note['pitch']
         start = int(round((note['onset'] - t0) * fpq))
-        end = start + min(int(round(note['duration'] * fpq)), 1)
+        end = start + max(int(round(note['duration'] * fpq)), 1)
         time = range(start, end)
         piano_roll[pitch, time] = 1  # add note to piano_roll
-    return piano_roll, t0
+    return piano_roll[pitch_low:pitch_high], t0
 
 
 def load_chord_labels(i):
@@ -131,20 +136,6 @@ def segment_chord_labels(chord_labels, n_frames, t0, wsize=32, hsize=4, fpq=8):
     return labels
 
 
-"""
-create a tfrecords containing the following features:
-x the piano roll input data, with shape [n_frames, pitches]
-label_key the local key of the music
-label_degree the chord degree with respect to the key, possibly fractional, e.g. V/V dominant of dominant
-label_quality e.g. m, M, D7 for minor, major, dominant 7th etc.
-label_inversion, from 0 to 3 depending on what note is at the basse
-label_symbol, for example C7, d, etc.
-"""
-hsize = 4  # hopping size between frames in 32nd notes
-wsize = 32  # window size for a frame in 32nd notes
-fpq = 8  # number of frames per quarter note
-
-
 def encode_chords(chords):
     """
 
@@ -164,6 +155,24 @@ def encode_chords(chords):
     return chords_enc
 
 
+def find_pitch_extremes():
+    min_note, max_note = 128, 0  # they are inverted on purpose!
+    for i in range(1, 33):
+        piano_roll, t0 = load_notes(i, FPQ)
+        min_i = np.where(np.max(piano_roll, axis=-1) == 1)[0][0] - 6  # -6 because we want room for transposing
+        max_i = np.where(np.max(piano_roll, axis=-1) == 1)[0][-1] + 5  # +5 because we want room for transposing
+        min_note = min(min_note, min_i)
+        max_note = max(max_note, max_i)
+    return min_note, max_note
+
+
+if os.path.isfile(TRAIN_TFRECORDS):
+    answer = input("tfrecords exist already. Are you sure that you want to erase and recalculate them? [yes/no]\n")
+    while answer.lower().strip() not in ['yes', 'no']:
+        answer = input("I didn't understand. Please confirm if you want to erase and recalculate tfrecords. [yes/no]\n")
+    if answer.lower().strip() == 'no':
+        print("You decided not to replace them. I guess, better safe than sorry. Goodbye!")
+        quit()
 for indices, output_file in zip([TRAIN_INDICES, VALID_INDICES, TEST_INDICES],
                                 [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_TFRECORDS]):
     with tf.io.TFRecordWriter(output_file) as writer:
@@ -171,26 +180,31 @@ for indices, output_file in zip([TRAIN_INDICES, VALID_INDICES, TEST_INDICES],
 
         for i in indices:
             logger.info(f"Sonata N.{i}")
-            piano_roll, t0 = load_notes(i)
+            piano_roll, t0 = load_notes(i, FPQ, PITCH_LOW, PITCH_HIGH)
             chord_labels = load_chord_labels(i)
-            n_frames = int(math.ceil((piano_roll.shape[1] - wsize) / hsize)) + 1
+            n_frames = int(math.ceil((piano_roll.shape[1] - WSIZE) / HSIZE)) + 1
 
             for s in range(-6, 6):
                 pr_shifted = np.roll(piano_roll, shift=s, axis=0)
-                pr_segments = segment_piano_roll(pr_shifted, n_frames, wsize=wsize, hsize=hsize)
+                pr_segments = segment_piano_roll(pr_shifted, n_frames, wsize=WSIZE, hsize=HSIZE)
 
                 cl_shifted = shift_chord_labels(chord_labels, s)
-                cl_segments = segment_chord_labels(cl_shifted, n_frames, t0, wsize=wsize, hsize=hsize, fpq=fpq)
+                cl_segments = segment_chord_labels(cl_shifted, n_frames, t0, wsize=WSIZE, hsize=HSIZE, fpq=FPQ)
                 cl_encoded = encode_chords(cl_segments)
-                for x, y in zip(pr_segments, cl_encoded):
+                for frame in range(n_frames):
+                    x = pr_segments[frame]
+                    y = cl_encoded[frame]
                     feature = {
                         'x': tf.train.Feature(float_list=tf.train.FloatList(value=x)),
                         'label_key': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[0]])),
-                        'label_degree': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[1]])),
-                        'label_quality': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[2]])),
-                        'label_inversion': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[3]])),
-                        'label_root': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[4]])),
-                        'label_symbol': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[5]]))
+                        'label_degree_primary': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[1]])),
+                        'label_degree_secondary': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[2]])),
+                        'label_quality': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[3]])),
+                        'label_inversion': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[4]])),
+                        'label_root': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[5]])),
+                        'label_symbol': tf.train.Feature(int64_list=tf.train.Int64List(value=[y[6]])),
+                        'sonata': tf.train.Feature(int64_list=tf.train.Int64List(value=[i])),
+                        'frame': tf.train.Feature(int64_list=tf.train.Int64List(value=[frame])),
+                        'transposed': tf.train.Feature(int64_list=tf.train.Int64List(value=[s])),
                     }
-
-                writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
+                    writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())

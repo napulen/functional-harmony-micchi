@@ -173,3 +173,4 @@ def _flat_alteration(note):
 def _is_major(key):
     """ The input needs to be a string like "A-" for A flat major, "b" for b minor, etc. """
     return key[0].isupper()
+
