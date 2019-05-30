@@ -1,7 +1,6 @@
 import numpy as np
 import math
 import xlrd
-import itertools
 import os
 import logging
 import tensorflow as tf
@@ -9,15 +8,16 @@ import tensorflow as tf
 from utils import NOTES, _find_chord_symbol, _encode_key, _encode_degree, _encode_quality, _encode_symbol
 
 DATASET_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'BPS_FH_Dataset')
-TRAIN_INDICES = [4, 11, 16, 20, 26, 31, 3, 8, 12, 17, 23, 21, 27, 29, 30, 10, 1, 2]
-VALID_INDICES = [7, 18, 28, 15, 25, 5, 19]
-TEST_INDICES = [0, 13, 22, 14, 19, 24, 6]
+
+TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3]
+VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
+TEST_INDICES = [1, 14, 23, 15, 10, 25, 7]
 TRAIN_TFRECORDS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'train.tfrecords')
 VALID_TFRECORDS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'valid.tfrecords')
 TEST_TFRECORDS = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'test.tfrecords')
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class HarmonicAnalysisError(Exception):
@@ -28,7 +28,7 @@ class HarmonicAnalysisError(Exception):
 def load_notes(i, fpq=8):
     """
     Load notes in each piece, which is then represented as piano roll.
-    :param i: which sonata to take (sonatas indexed from 0 to 31)
+    :param i: which sonata to take (sonatas indexed from 1 to 32)
     :param fpq: frames per quarter note, default =  8 (that is, 32th note as 1 unit in piano roll)
     :return: pieces, tdeviation
     """
@@ -36,21 +36,19 @@ def load_notes(i, fpq=8):
     dt = [('onset', 'float'), ('pitch', 'int'), ('mPitch', 'int'), ('duration', 'float'), ('staffNum', 'int'),
           ('measure', 'int')]  # datatype
 
-    notes_file = os.path.join(DATASET_FOLDER, str(i + 1).zfill(2), "notes.csv")
+    notes_file = os.path.join(DATASET_FOLDER, str(i).zfill(2), "notes.csv")
     notes = np.genfromtxt(notes_file, delimiter=',', dtype=dt)  # read notes from .csv file
     # length of the piece in piano roll frames, assuming the last note to stay was amongst the 20 last to be played
     length = math.ceil((max(notes[-20:]['onset'] + notes[-20:]['duration']) - notes[0]['onset']) * fpq)
-    # TODO: Change tdev to be defined without the absolute value to make sure that it behaves correctly
-    #   also when it is anyway positive (not sure if this can happen at all, but it's anyway simpler conceptually)
-    tdev = abs(notes[0]['onset'])
+    t0 = notes[0]['onset']
     piano_roll = np.zeros(shape=[128, length], dtype=np.int32)
     for note in notes:
         pitch = note['pitch']
-        start = int(round((note['onset'] + tdev) * fpq))
+        start = int(round((note['onset'] - t0) * fpq))
         end = start + min(int(round(note['duration'] * fpq)), 1)
         time = range(start, end)
         piano_roll[pitch, time] = 1  # add note to piano_roll
-    return piano_roll, tdev
+    return piano_roll, t0
 
 
 def load_chord_labels(i):
@@ -62,7 +60,7 @@ def load_chord_labels(i):
 
     dt = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
           ('inversion', 'int'), ('chord_function', '<U10')]  # datatype
-    chords_file = os.path.join(DATASET_FOLDER, str(i + 1).zfill(2), "chords.xlsx")
+    chords_file = os.path.join(DATASET_FOLDER, str(i).zfill(2), "chords.xlsx")
 
     workbook = xlrd.open_workbook(chords_file)
     sheet = workbook.sheet_by_index(0)
@@ -117,11 +115,11 @@ def segment_piano_roll(piano_roll, n_frames, wsize=32, hsize=4):
     return segments
 
 
-def segment_chord_labels(chord_labels, n_frames, td, wsize=32, hsize=4, fpq=8):
+def segment_chord_labels(chord_labels, n_frames, t0, wsize=32, hsize=4, fpq=8):
     # Get corresponding chord label (only chord symbol) for each segment
     labels = []
     for n in range(n_frames):
-        seg_time = (n * hsize + 0.5 * wsize) / fpq - td  # central time of the segment in quarter notes
+        seg_time = (n * hsize + 0.5 * wsize) / fpq + t0  # central time of the segment in quarter notes
         label = chord_labels[np.logical_and(chord_labels['onset'] <= seg_time, chord_labels['end'] > seg_time)]
         try:
             label = label[0]
@@ -172,8 +170,8 @@ for indices, output_file in zip([TRAIN_INDICES, VALID_INDICES, TEST_INDICES],
         logger.info(f'Working on {os.path.basename(output_file)}.')
 
         for i in indices:
-            logger.info(f"Sonata N.{i + 1}")
-            piano_roll, td = load_notes(i)
+            logger.info(f"Sonata N.{i}")
+            piano_roll, t0 = load_notes(i)
             chord_labels = load_chord_labels(i)
             n_frames = int(math.ceil((piano_roll.shape[1] - wsize) / hsize)) + 1
 
@@ -182,7 +180,7 @@ for indices, output_file in zip([TRAIN_INDICES, VALID_INDICES, TEST_INDICES],
                 pr_segments = segment_piano_roll(pr_shifted, n_frames, wsize=wsize, hsize=hsize)
 
                 cl_shifted = shift_chord_labels(chord_labels, s)
-                cl_segments = segment_chord_labels(cl_shifted, n_frames, td, wsize=wsize, hsize=hsize, fpq=fpq)
+                cl_segments = segment_chord_labels(cl_shifted, n_frames, t0, wsize=wsize, hsize=hsize, fpq=fpq)
                 cl_encoded = encode_chords(cl_segments)
                 for x, y in zip(pr_segments, cl_encoded):
                     feature = {

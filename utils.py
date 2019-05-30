@@ -57,6 +57,9 @@ def _translate_degree(degree_str):
         offset = 14
     elif degree_str[0] == '+':
         offset = 7
+    elif len(degree_str) == 2 and degree_str[1] == '+':
+        degree_str = degree_str[0]
+        offset = 0
     else:
         offset = 0
     return int(degree_str) + offset
@@ -113,33 +116,33 @@ def _find_chord_symbol(chord):
 
     # Translate chords
     key = chord['key']
-    str_degree = chord['degree']
+    degree_str = chord['degree']
     quality = chord['quality']
 
     try:
-        return F2S[','.join([key, str_degree, quality])]
+        return F2S[','.join([key, degree_str, quality])]
     except KeyError:
         pass
 
     # FIND THE ROOT OF THE CHORD
-    if len(str_degree) == 1 or str_degree == '1+':  # case: degree = x, 1+
-        degree = int(str_degree[0])
+    if len(degree_str) == 1 or (len(degree_str) == 2 and degree_str[1] == '+'):  # case: degree = x, augmented chords
+        degree = int(degree_str[0])
         root = SCALES[key][degree - 1]
 
-    elif str_degree == '+4':  # case: augmented 6th
+    elif degree_str == '+4':  # case: augmented 6th
         degree = 6
         root = SCALES[key][degree - 1]
         if _is_major(key):  # case: major key
             root = _flat_alteration(root)  # lower the sixth in a major key
 
     # TODO: Verify these cases!
-    elif str_degree == '-2' or str_degree == '-6' or str_degree == '-7':  # case: neapolitan chord or 6b or -7 (?)
-        degree = int(str_degree[1])
+    elif degree_str[0] == '-':  # case: chords on flattened degree
+        degree = int(degree_str[1])
         root = SCALES[key][degree - 1]
         root = _flat_alteration(root)  # the fundamental of the chord is lowered
 
-    elif '/' in str_degree:  # case: secondary chord
-        degree = str_degree
+    elif '/' in degree_str:  # case: secondary chord
+        degree = degree_str
         n = int(degree.split('/')[0]) if '+' not in degree.split('/')[0] else 6  # take care of augmented 6th chords
         d = int(degree.split('/')[1])  # denominator
         key2 = SCALES[key][abs(d) - 1]  # secondary key
@@ -152,13 +155,13 @@ def _find_chord_symbol(chord):
             if _is_major(key2):  # case: major key
                 root = _flat_alteration(root)
     else:
-        raise ValueError(f"Can't understand the following chord degree: {str_degree}")
+        raise ValueError(f"Can't understand the following chord degree: {degree_str}")
 
     root = _find_enharmonic_equivalent(root)
 
     quality_out = Q2S[quality]
     chord_symbol = root + quality_out
-    F2S[','.join([key, str_degree, quality])] = chord_symbol
+    F2S[','.join([key, degree_str, quality])] = chord_symbol
     return chord_symbol
 
 
