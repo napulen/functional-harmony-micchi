@@ -1,19 +1,30 @@
-from tensorflow.python.keras import Sequential, Input
+from tensorflow.python.keras import Sequential, Input, Model
 from tensorflow.python.keras.layers import Bidirectional, LSTM, Dense
 
-import numpy as np
-from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, TEST_TFRECORDS, CLASSES_TOTAL
+from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, TEST_TFRECORDS, CLASSES_TOTAL, CLASSES_ROOT, \
+    VALID_TFRECORDS, EPOCHS, STEPS_PER_EPOCH, WSIZE, N_PITCHES, CLASSES_KEY, CLASSES_DEGREE, CLASSES_INVERSION, \
+    CLASSES_QUALITY, CLASSES_SYMBOL
 from load_data import create_tfrecords_iterator
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-x_train, y_train, info_train = create_tfrecords_iterator(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
-x_test, y_test, info_test = create_tfrecords_iterator(TEST_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
+train_data = create_tfrecords_iterator(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
+valid_data = create_tfrecords_iterator(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
+test_data = create_tfrecords_iterator(TEST_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
 
-# a0 = Input(shape=(100,), dtype='int32', name='main_input')
-# a = Bidirectional(LSTM(10, return_sequences=True), input_shape=(5, 10))(main_input)
+notes = Input(shape=(N_PITCHES, WSIZE))
+x = Bidirectional(LSTM(256))(notes)
+x = Dense(256)(x)
+o1 = Dense(CLASSES_KEY, activation='softmax', name='key')(x)
+o2 = Dense(CLASSES_DEGREE, activation='softmax', name='degree_1')(x)
+o3 = Dense(CLASSES_DEGREE, activation='softmax', name='degree_2')(x)
+o4 = Dense(CLASSES_QUALITY, activation='softmax', name='quality')(x)
+o5 = Dense(CLASSES_INVERSION, activation='softmax', name='inversion')(x)
+o6 = Dense(CLASSES_ROOT, activation='softmax', name='root')(x)
+o7 = Dense(CLASSES_SYMBOL, activation='softmax', name='symbol')(x)
 
-# model = Sequential()
-# model.add(Bidirectional(LSTM(10, return_sequences=True), input_shape=(5, 10)))
-# model.add(Dense(CLASSES_TOTAL))
-# model.compile(loss='categorical_crossentropy', optimizer='adam')
+model = Model(inputs=notes, outputs=[o1, o2, o3, o4, o5, o6, o7])
+
+
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+
+model.fit(train_data, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, validation_data=valid_data)

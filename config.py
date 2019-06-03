@@ -21,7 +21,10 @@ CLASSES_QUALITY = 10  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'a6']
 CLASSES_INVERSION = 4  # root position, 1st, 2nd, and 3rd inversion (the last only for seventh chords)
 CLASSES_ROOT = 12  # the twelve notes without enharmonic duplicates
 CLASSES_SYMBOL = 10  # ['M', 'm', 'M7', 'm7', '7', 'aug', 'dim', 'dim7', 'm7(b5)']
-CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE*2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT + CLASSES_SYMBOL
+CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT + CLASSES_SYMBOL
 
 BATCH_SIZE = 64
 SHUFFLE_BUFFER = 100_000
+EPOCHS = 10
+N_VALIDATION = 184080  # number of records in the validation dataset as coming from the utils.count_tfrecords function
+STEPS_PER_EPOCH = N_VALIDATION / BATCH_SIZE

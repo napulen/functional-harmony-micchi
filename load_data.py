@@ -34,7 +34,9 @@ def _parse_function(proto):
     sonata = parsed_features['sonata']
     frame = parsed_features['frame']
     transposed = parsed_features['transposed']
-    return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym]), tuple([sonata, frame, transposed])
+    # return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym]), tuple([sonata, frame, transposed])
+    return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym])
+    # return x, y_roo
 
 
 def create_tfrecords_iterator(input_path, batch_size, shuffle_buffer):

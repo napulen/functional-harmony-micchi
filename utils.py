@@ -1,3 +1,7 @@
+import tensorflow as tf
+
+from config import VALID_TFRECORDS
+
 ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 NOTES = ['C', 'C+', 'D', 'D+', 'E', 'F', 'F+', 'G', 'G+', 'A', 'A+', 'B']
 SCALES = {
@@ -174,3 +178,15 @@ def _is_major(key):
     """ The input needs to be a string like "A-" for A flat major, "b" for b minor, etc. """
     return key[0].isupper()
 
+
+def count_records(tfrecord):
+    """ Count the number of lines in a tfrecord file. This is useful to establish 'steps_per_epoch' when training """
+    c = 0
+    for _ in tf.data.TFRecordDataset(tfrecord):
+        c += 1
+    return c
+
+
+if __name__ == '__main__':
+    c = count_records(VALID_TFRECORDS)
+    print(f'There is a total of {c} records in the validation file')
