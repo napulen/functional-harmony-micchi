@@ -21,7 +21,7 @@ def _parse_function(proto):
     }
 
     parsed_features = tf.io.parse_single_example(proto, feature)
-    x = tf.reshape(parsed_features['x'], (N_PITCHES, WSIZE))
+    x = tf.transpose(tf.reshape(parsed_features['x'], (N_PITCHES, WSIZE)))
     y_key = tf.one_hot(parsed_features['label_key'], depth=CLASSES_KEY)
     y_dg1 = tf.one_hot(parsed_features['label_degree_primary'], depth=CLASSES_DEGREE)
     y_dg2 = tf.one_hot(parsed_features['label_degree_secondary'], depth=CLASSES_DEGREE)

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from config import VALID_TFRECORDS
+from config import VALID_TFRECORDS, TRAIN_TFRECORDS
 
 ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 NOTES = ['C', 'C+', 'D', 'D+', 'E', 'F', 'F+', 'G', 'G+', 'A', 'A+', 'B']
@@ -182,11 +182,15 @@ def _is_major(key):
 def count_records(tfrecord):
     """ Count the number of lines in a tfrecord file. This is useful to establish 'steps_per_epoch' when training """
     c = 0
-    for _ in tf.data.TFRecordDataset(tfrecord):
-        c += 1
+    if tf.__version__ == '1.12.0':
+        for _ in tf.io.tf_record_iterator(tfrecord):
+            c += 1
+    else:
+        for _ in tf.data.TFRecordDataset(tfrecord):
+            c += 1
     return c
 
 
 if __name__ == '__main__':
-    c = count_records(VALID_TFRECORDS)
+    c = count_records(TRAIN_TFRECORDS)
     print(f'There is a total of {c} records in the validation file')

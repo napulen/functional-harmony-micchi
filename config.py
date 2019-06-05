@@ -25,6 +25,8 @@ CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INV
 
 BATCH_SIZE = 64
 SHUFFLE_BUFFER = 100_000
-EPOCHS = 10
+EPOCHS = 100
+N_TRAIN = 372924  # number of records in the training dataset as coming from the utils.count_tfrecords function
 N_VALIDATION = 184080  # number of records in the validation dataset as coming from the utils.count_tfrecords function
-STEPS_PER_EPOCH = N_VALIDATION // BATCH_SIZE
+STEPS_PER_EPOCH = N_TRAIN // BATCH_SIZE
+VALIDATION_STEPS = N_VALIDATION // BATCH_SIZE
