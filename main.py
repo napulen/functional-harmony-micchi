@@ -1,7 +1,7 @@
-from tensorflow.python.keras import Sequential, Input, Model
+from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.layers import Bidirectional, LSTM, Dense
 
-from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, TEST_TFRECORDS, CLASSES_TOTAL, CLASSES_ROOT, \
+from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, TEST_TFRECORDS, CLASSES_ROOT, \
     VALID_TFRECORDS, EPOCHS, STEPS_PER_EPOCH, WSIZE, N_PITCHES, CLASSES_KEY, CLASSES_DEGREE, CLASSES_INVERSION, \
     CLASSES_QUALITY, CLASSES_SYMBOL
 from load_data import create_tfrecords_iterator

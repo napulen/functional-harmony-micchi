@@ -3,8 +3,6 @@ import tensorflow as tf
 from config import WSIZE, N_PITCHES, CLASSES_SYMBOL, CLASSES_ROOT, CLASSES_INVERSION, CLASSES_QUALITY, CLASSES_DEGREE, \
     CLASSES_KEY
 
-raw_image_dataset = tf.data.TFRecordDataset('images.tfrecords')
-
 
 def _parse_function(proto):
     # Parse the input tf.Example proto using the dictionary above.
@@ -48,6 +46,7 @@ def create_tfrecords_iterator(input_path, batch_size, shuffle_buffer):
     :return:
     """
     dataset = tf.data.TFRecordDataset(input_path)
-    dataset = dataset.map(_parse_function, num_parallel_calls=16).shuffle(shuffle_buffer).repeat().batch(batch_size).prefetch(2)
+    dataset = dataset.map(_parse_function, num_parallel_calls=16).shuffle(shuffle_buffer).repeat().batch(
+        batch_size).prefetch(2)
 
     return dataset
