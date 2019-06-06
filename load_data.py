@@ -7,21 +7,20 @@ from config import WSIZE, N_PITCHES, CLASSES_SYMBOL, CLASSES_ROOT, CLASSES_INVER
 def _parse_function(proto):
     # Parse the input tf.Example proto using the dictionary above.
     feature = {
-        'x': tf.io.FixedLenFeature([WSIZE * N_PITCHES], tf.float32),
-        'label_key': tf.io.FixedLenFeature([], tf.int64),
-        'label_degree_primary': tf.io.FixedLenFeature([], tf.int64),
-        'label_degree_secondary': tf.io.FixedLenFeature([], tf.int64),
-        'label_quality': tf.io.FixedLenFeature([], tf.int64),
-        'label_inversion': tf.io.FixedLenFeature([], tf.int64),
-        'label_root': tf.io.FixedLenFeature([], tf.int64),
-        'label_symbol': tf.io.FixedLenFeature([], tf.int64),
+        'x': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+        'label_key': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+        'label_degree_primary': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+        'label_degree_secondary': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+        'label_quality': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+        'label_inversion': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+        'label_root': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+        'label_symbol': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
         'sonata': tf.io.FixedLenFeature([], tf.int64),
-        'frame': tf.io.FixedLenFeature([], tf.int64),
         'transposed': tf.io.FixedLenFeature([], tf.int64),
     }
 
     parsed_features = tf.io.parse_single_example(proto, feature)
-    x = tf.transpose(tf.reshape(parsed_features['x'], (N_PITCHES, WSIZE)))
+    x = tf.transpose(tf.reshape(parsed_features['x'], (N_PITCHES, -1)))
     y_key = tf.one_hot(parsed_features['label_key'], depth=CLASSES_KEY)
     y_dg1 = tf.one_hot(parsed_features['label_degree_primary'], depth=CLASSES_DEGREE)
     y_dg2 = tf.one_hot(parsed_features['label_degree_secondary'], depth=CLASSES_DEGREE)
@@ -30,9 +29,8 @@ def _parse_function(proto):
     y_roo = tf.one_hot(parsed_features['label_root'], depth=CLASSES_ROOT)
     y_sym = tf.one_hot(parsed_features['label_symbol'], depth=CLASSES_SYMBOL)
     sonata = parsed_features['sonata']
-    frame = parsed_features['frame']
     transposed = parsed_features['transposed']
-    # return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym]), tuple([sonata, frame, transposed])
+    # return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym]), tuple([sonata, transposed])
     return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym])
     # return x, y_roo
 

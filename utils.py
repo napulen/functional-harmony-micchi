@@ -1,3 +1,5 @@
+import seaborn as sns
+import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from config import VALID_TFRECORDS, TRAIN_TFRECORDS, TEST_TFRECORDS
@@ -191,6 +193,20 @@ def count_records(tfrecord):
     return c
 
 
+def visualize_data(data):
+    # data = tf.data.TFRecordDataset(input_path)
+    temp = data.make_one_shot_iterator()
+    x, y = temp.get_next()
+    for pr in x:
+        sns.heatmap(pr)
+        plt.show()
+    return
+
+
 if __name__ == '__main__':
-    c = count_records(TEST_TFRECORDS)
+    c = count_records(TRAIN_TFRECORDS)
+    print(f'There is a total of {c} records in the train file')
+    c = count_records(VALID_TFRECORDS)
     print(f'There is a total of {c} records in the validation file')
+    c = count_records(TEST_TFRECORDS)
+    print(f'There is a total of {c} records in the test file')
