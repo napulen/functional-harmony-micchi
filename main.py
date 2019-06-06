@@ -9,7 +9,6 @@ from load_data import create_tfrecords_iterator
 
 train_data = create_tfrecords_iterator(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
 valid_data = create_tfrecords_iterator(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
-test_data = create_tfrecords_iterator(TEST_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
 
 notes = Input(shape=(WSIZE, N_PITCHES))
 x = Bidirectional(LSTM(256))(notes)
@@ -33,3 +32,5 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 
 model.fit(train_data, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, validation_data=valid_data,
           validation_steps=VALIDATION_STEPS, callbacks=callbacks)
+
+model.save('my_model.h5')

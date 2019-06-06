@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from config import VALID_TFRECORDS, TRAIN_TFRECORDS
+from config import VALID_TFRECORDS, TRAIN_TFRECORDS, TEST_TFRECORDS
 
 ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 NOTES = ['C', 'C+', 'D', 'D+', 'E', 'F', 'F+', 'G', 'G+', 'A', 'A+', 'B']
@@ -192,5 +192,5 @@ def count_records(tfrecord):
 
 
 if __name__ == '__main__':
-    c = count_records(TRAIN_TFRECORDS)
+    c = count_records(TEST_TFRECORDS)
     print(f'There is a total of {c} records in the validation file')
