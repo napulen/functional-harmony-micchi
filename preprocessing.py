@@ -2,10 +2,17 @@
 create a tfrecord containing the following features:
 x the piano roll input data, with shape [n_frames, pitches]
 label_key the local key of the music
-label_degree the chord degree with respect to the key, possibly fractional, e.g. V/V dominant of dominant
+label_degree_primary the chord degree with respect to the key, possibly fractional, e.g. V/V dominant of dominant
+label_degree_secondary the chord degree with respect to the key, possibly fractional, e.g. V/V dominant of dominant
 label_quality e.g. m, M, D7 for minor, major, dominant 7th etc.
 label_inversion, from 0 to 3 depending on what note is at the basse
-label_symbol, for example C7, d, etc.
+label_root, the root of the chord in jazz notation
+label_symbol, the quality of the chord in jazz notation
+sonata, the index of the sonata that is analysed
+transposed, the number of semitones of transposition (negative for down-transposition)
+
+ATTENTION: despite the name, the secondary_degree is actually "more important" than the primary degree,
+since the latter is almost always equal to 1.
 """
 
 import logging
@@ -17,8 +24,8 @@ import tensorflow as tf
 import xlrd
 
 from config import DATASET_FOLDER, TRAIN_INDICES, VALID_INDICES, TEST_INDICES, TRAIN_TFRECORDS, VALID_TFRECORDS, \
-    TEST_TFRECORDS, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, DATA_FOLDER
-from utils import NOTES, _find_chord_symbol, _encode_key, _encode_degree, _encode_quality, _encode_symbol
+    TEST_TFRECORDS, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, DATA_FOLDER, NOTES
+from utils import _find_chord_symbol, _encode_key, _encode_degree, _encode_quality, _encode_symbol
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

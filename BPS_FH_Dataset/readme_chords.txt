@@ -14,7 +14,7 @@ lower case = minor
 
 ex. C = C major, c+ = C# minor
 
-The difference between the local tonality and the global tonality of the piece gives what in the paper is called "primary degree" 
+This is what in the paper is called "key"
 
 --
 
@@ -32,7 +32,9 @@ D: Scale Degree (of the current chord wrt the local tonality)
 '-' before number = flat
 / = secondary chord 
 
-This is what is called "secondary degree"
+The numerator is what is called "secondary degree", and the denominator "primary degree". 
+When there is no denominator, a 1 is understood. So, most primary degrees are 1.
+
 --
 
 E: Chord Quality
