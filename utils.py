@@ -1,5 +1,5 @@
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 import tensorflow as tf
 
 from config import VALID_TFRECORDS, TRAIN_TFRECORDS, TEST_TFRECORDS

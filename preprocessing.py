@@ -17,7 +17,7 @@ import tensorflow as tf
 import xlrd
 
 from config import DATASET_FOLDER, TRAIN_INDICES, VALID_INDICES, TEST_INDICES, TRAIN_TFRECORDS, VALID_TFRECORDS, \
-    TEST_TFRECORDS, FPQ, PITCH_LOW, PITCH_HIGH, WSIZE, HSIZE, DATA_FOLDER
+    TEST_TFRECORDS, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, DATA_FOLDER
 from utils import NOTES, _find_chord_symbol, _encode_key, _encode_degree, _encode_quality, _encode_symbol
 
 logger = logging.getLogger(__name__)
@@ -45,9 +45,9 @@ def load_notes(i, fpq, pitch_low=0, pitch_high=128):
     notes_file = os.path.join(DATASET_FOLDER, str(i).zfill(2), "notes.csv")
     notes = np.genfromtxt(notes_file, delimiter=',', dtype=dt)  # read notes from .csv file
     # length of the piece in piano roll frames, assuming the last note to stay was amongst the 20 last to be played
-    length = math.ceil((max(notes[-20:]['onset'] + notes[-20:]['duration']) - notes[0]['onset']) * fpq)
     t0 = notes[0]['onset']
-    piano_roll = np.zeros(shape=[128, length], dtype=np.int32)
+    length = math.ceil((max(notes[-20:]['onset'] + notes[-20:]['duration']) - t0) * fpq)
+    piano_roll = np.zeros(shape=(128, length), dtype=np.int32)
     for note in notes:
         pitch = note['pitch']
         start = int(round((note['onset'] - t0) * fpq))
@@ -101,27 +101,7 @@ def shift_chord_labels(chord_labels, s):
     return new_labels
 
 
-def segment_piano_roll(piano_roll, n_frames, wsize=32, hsize=4):
-    """
-    Segment each pianoroll.
-    :param piano_roll:
-    :param n_frames:
-    :param wsize: window size,  default= 32 (4 beats)
-    :param hsize: hop size, default = 4 (half a beat)
-    :return: segments of piano roll
-    """
-    # Zero-padding
-    npad = (piano_roll.shape[1] - wsize) % hsize
-    piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant', constant_values=0)
-
-    # Length of 3D output array along its axis=1
-    segments = np.zeros((n_frames, piano_roll.shape[0] * wsize))
-    for i in range(n_frames - 1):
-        segments[i] = piano_roll[:, i * hsize:i * hsize + wsize].reshape([-1])
-    return segments
-
-
-def segment_chord_labels(chord_labels, n_frames, t0, wsize=32, hsize=4, fpq=8):
+def segment_chord_labels(chord_labels, n_frames, t0, hsize=4, fpq=8):
     # Get corresponding chord label (only chord symbol) for each segment
     labels = []
     for n in range(n_frames):
@@ -210,7 +190,7 @@ for indices, output_file in zip(indices, tfrecords):
                 pr_shifted = np.roll(piano_roll, shift=s, axis=0)
 
                 cl_shifted = shift_chord_labels(chord_labels, s)
-                cl_segments = segment_chord_labels(cl_shifted, n_frames, t0, wsize=WSIZE, hsize=HSIZE, fpq=FPQ)
+                cl_segments = segment_chord_labels(cl_shifted, n_frames, t0, hsize=HSIZE, fpq=FPQ)
                 cl_encoded = encode_chords(cl_segments)
                 feature = {
                     'x': tf.train.Feature(float_list=tf.train.FloatList(value=pr_shifted.reshape(-1))),

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from config import WSIZE, N_PITCHES, CLASSES_SYMBOL, CLASSES_ROOT, CLASSES_INVERSION, CLASSES_QUALITY, CLASSES_DEGREE, \
+from config import N_PITCHES, CLASSES_SYMBOL, CLASSES_ROOT, CLASSES_INVERSION, CLASSES_QUALITY, CLASSES_DEGREE, \
     CLASSES_KEY
 
 
@@ -30,12 +30,11 @@ def _parse_function(proto):
     y_sym = tf.one_hot(parsed_features['label_symbol'], depth=CLASSES_SYMBOL)
     sonata = parsed_features['sonata']
     transposed = parsed_features['transposed']
-    # return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym]), tuple([sonata, transposed])
     return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym])
-    # return x, y_roo
+    # return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym, sonata, transposed])
 
 
-def create_tfrecords_iterator(input_path, batch_size, shuffle_buffer):
+def create_tfrecords_dataset(input_path, batch_size, shuffle_buffer):
     """
     Create an iterator over the TFRecords file with chroma features.
     :param input_path: can accept both a file and a folder
@@ -46,5 +45,4 @@ def create_tfrecords_iterator(input_path, batch_size, shuffle_buffer):
     dataset = tf.data.TFRecordDataset(input_path)
     dataset = dataset.map(_parse_function, num_parallel_calls=16).shuffle(shuffle_buffer).repeat().batch(
         batch_size).prefetch(2)
-
     return dataset

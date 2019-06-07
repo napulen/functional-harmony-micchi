@@ -10,8 +10,7 @@ VALID_TFRECORDS = os.path.join(DATA_FOLDER, 'valid.tfrecords')
 TEST_TFRECORDS = os.path.join(DATA_FOLDER, 'test.tfrecords')
 
 HSIZE = 4  # hopping size between frames in 32nd notes
-WSIZE = 32  # window size for a frame in 32nd notes
-FPQ = 8  # number of frames per quarter note
+FPQ = 8  # number of frames per quarter note with 32nd note quantization (check: HSIZE * FPQ = 32)
 PITCH_LOW = 18  # lowest midi pitch used, as returned by preprocessing.find_pitch_extremes()
 PITCH_HIGH = 107  # lowest midi pitch not used, i.e., piano_roll = piano_roll[PITCH_LOW:PITCH_HIGH]
 N_PITCHES = PITCH_HIGH - PITCH_LOW  # number of pitches kept out of total 128 midi pitches
