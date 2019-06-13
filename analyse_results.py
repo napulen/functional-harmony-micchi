@@ -1,30 +1,12 @@
+import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import tensorflow as tf
 from tensorflow.python.keras.models import load_model
-import seaborn as sns
-import matplotlib.pyplot as plt
 
-from config import TEST_TFRECORDS, BATCH_SIZE, TEST_STEPS, TEST_INDICES, FEATURES, NOTES, QUALITY, SYMBOL
+from config import BATCH_SIZE, TEST_STEPS, TEST_INDICES, FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, TEST_TFRECORDS
 from load_data import create_tfrecords_dataset
-
-TEST_TFRECORDS = './data/test_sonata.tfrecords'
-
-circle_of_fifth_order = [8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1]
-circle_of_fifth_order += [x + 12 for x in circle_of_fifth_order]
-
-notes_flat = NOTES.copy()
-notes_flat[3] = 'E-'
-notes_flat[8] = 'A-'
-notes_flat[10] = 'B-'
-tick_labels = [
-    [(notes_flat + [n.lower() for n in notes_flat])[i] for i in circle_of_fifth_order],
-    [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
-    [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
-    QUALITY,
-    [str(x) for x in range(4)],
-    NOTES,
-    SYMBOL
-]
+from utils import create_dezrann_annotations
 
 test_data = create_tfrecords_dataset(TEST_TFRECORDS, BATCH_SIZE, shuffle_buffer=1)
 test_data_iter = test_data.make_one_shot_iterator()
@@ -38,26 +20,36 @@ def check_predictions(y_true, y_pred, index):
 def visualize_data(mode='probabilities'):
     if mode not in ['probabilities', 'predictions']:
         raise ValueError('mode should be either probabilities or predictions')
-    cmap = sns.color_palette(['#000000', '#f7f7f7', '#d73027']) if mode == 'predictions' else 'RdBu_r'
+    cmap = sns.color_palette(['#d73027', '#f7f7f7', '#3027d7', '#000000']) if mode == 'predictions' else 'RdGy'
 
     for j in range(7):
-        a = test_predict[i][j][0] if j > 0 else test_predict[i][j][0][:, circle_of_fifth_order]
-        b = test_truth[i][j][0] if j > 0 else test_truth[i][j][0][:, circle_of_fifth_order]
+        a = test_predict[i][j][0] if j > 0 else test_predict[i][j][0][:, CIRCLE_OF_FIFTH]
+        b = test_truth[i][j][0] if j > 0 else test_truth[i][j][0][:, CIRCLE_OF_FIFTH]
         if mode == 'predictions':
             a = (a == np.max(a, axis=-1, keepdims=True))
-        ax = sns.heatmap(b - a, cmap=cmap, center=0, vmin=-1, vmax=1, xticklabels=tick_labels[j])
-        colorbar = ax.collections[0].colorbar
-        colorbar.set_ticks([-1, 0, +1])
-        colorbar.set_ticklabels(['False Neg', 'True', 'False Pos'])
+            x = b - a
+            x[b == 1] += 1
+            x = x.transpose()
+            ax = sns.heatmap(x, cmap=cmap, vmin=-1, vmax=2, xticklabels=TICK_LABELS[j])
+            colorbar = ax.collections[0].colorbar
+            colorbar.set_ticks([-5 / 8, 1 / 8, 7 / 8, 13 / 8])
+            colorbar.set_ticklabels(['False Pos', 'True Neg', 'True Pos', 'False Neg'])
+        else:
+            x = b - a
+            x = x.transpose()
+            ax = sns.heatmap(x, cmap=cmap, center=0, vmin=-1, vmax=1, xticklabels=TICK_LABELS[j])
+            colorbar = ax.collections[0].colorbar
+            colorbar.set_ticks([-1, 0, +1])
+            colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
 
         ax.set(xlabel=FEATURES[j], ylabel='time',
-               title=f"Sonata {TEST_INDICES[i // 12]}, transposed {i % 12 - 6} semitones - {FEATURES[j]}")
+               title=f"Sonata {TEST_INDICES[i]} - {FEATURES[j]}")
         figManager = plt.get_current_fig_manager()
         figManager.window.showMaximized()
         plt.show()
 
 
-model = load_model('conv_lstm.h5')
+model = load_model('./logs/gru/conv_gru_with_bass.h5')
 model.summary()
 
 # Retrieve the true labels
@@ -66,6 +58,7 @@ with tf.Session() as sess:
     for i in range(TEST_STEPS):
         data = sess.run(y)
         test_truth.append(data)
+        create_dezrann_annotations(test_truth[-1], n=TEST_INDICES[i], batch_size=BATCH_SIZE, type='true')
 
 # Predict new labels and view the difference
 test_predict = []  # It will have shape: [pieces, features, (batch size, length of sonata, feature size)]
@@ -74,7 +67,10 @@ for i in range(TEST_STEPS):
     temp = model.predict(test_data.skip(i), steps=1, verbose=False)
     test_predict.append(temp)
 
-    visualize_data()
+    # visualize_data(mode='predictions')
+    # visualize_data(mode='probabilities')
+
+    create_dezrann_annotations(test_predict[-1], n=TEST_INDICES[i], batch_size=BATCH_SIZE, type='pred')
 
 # Calculate accuracy etc.
 func_tp, symb_tp, total = 0, 0, 0

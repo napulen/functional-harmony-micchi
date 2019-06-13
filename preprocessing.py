@@ -97,7 +97,6 @@ def shift_chord_labels(chord_labels, s):
     new_labels = chord_labels.copy()
 
     for i in range(len(new_labels)):
-
         key = chord_labels[i]['key']
         if '-' in key:
             new_key = NOTES[(NOTES.index(key[0].upper()) + s - 1) % 12]
@@ -119,7 +118,7 @@ def segment_chord_labels(chord_labels, n_frames, t0, hsize=4, fpq=8):
         except IndexError:
             raise HarmonicAnalysisError(f"Cannot read label for Sonata N.{i} at frame {n}")
 
-        # TODO: clearly not optimal, since I'm calculating every
+        # TODO: clearly not optimal, since I'm calculating every chord separately
         labels.append((label['key'], label['degree'], label['quality'], label['inversion'], _find_chord_symbol(label)))
     return labels
 
@@ -154,17 +153,32 @@ def find_pitch_extremes():
     return min_note, max_note
 
 
+def find_bass_notes(piano_roll):
+    bass = np.argmax(piano_roll, axis=0)
+    bass = np.array([np.min(bass[4 * i:4 * (i + 1)]) for i in range(len(bass) // 4)])
+    return bass + PITCH_LOW - 60  # C4 is the midi pitch 60
+
+
 indices = [TRAIN_INDICES, VALID_INDICES, TEST_INDICES]
 tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_TFRECORDS]
 if os.path.isfile(TRAIN_TFRECORDS):
-    answer = input("tfrecords exist already. Do you want to erase them, backup them, or abort the calculation? "
-                   "[erase/backup/abort]\n")
-    while answer.lower().strip() not in ['erase', 'backup', 'abort']:
-        answer = input("I didn't understand. Please choose an option (abort is safest). [erase/backup/abort]\n")
+    answer = input(
+        "tfrecords exist already. Do you want to erase them, backup them, write into a temporary file, or abort the calculation? "
+        "[erase/backup/temp/abort]\n")
+    while answer.lower().strip() not in ['erase', 'backup', 'temp', 'abort']:
+        answer = input("I didn't understand. Please choose an option (abort is safest). [erase/backup/temp/abort]\n")
     if answer.lower().strip() == 'abort':
         print("You decided not to replace them. I guess, better safe than sorry. Goodbye!")
         quit()
-    if answer.lower().strip() == 'backup':
+
+    elif answer.lower().strip() == 'temp':
+        print("I'm going to write the files to train_temp.tfrecords and similar!")
+        tfrecords_temp = [f.split(".") for f in tfrecords]
+        for ft in tfrecords_temp:
+            ft[0] += '_temp'
+        tfrecords = ['.'.join(ft) for ft in tfrecords_temp]
+
+    elif answer.lower().strip() == 'backup':
         i = 0
         tfrecords_backup = [f.split(".") for f in tfrecords]
         for fb in tfrecords_backup:
@@ -181,26 +195,35 @@ if os.path.isfile(TRAIN_TFRECORDS):
             os.rename(src, dst)
         print(f"data backed up with backup index {i}")
 
+k = 0
 for indices, output_file in zip(indices, tfrecords):
+    k += 1
     with tf.io.TFRecordWriter(output_file) as writer:
         logger.info(f'Working on {os.path.basename(output_file)}.')
 
         for i in indices:
             logger.info(f"Sonata N.{i}")
             piano_roll, t0 = load_notes(i, FPQ, PITCH_LOW, PITCH_HIGH)
-            npad = HSIZE - piano_roll.shape[1] % HSIZE
-            piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant', constant_values=0)
+            # Adjust the length of the piano roll to be an exact multiple of the HSIZE
+            npad = (- piano_roll.shape[1]) % HSIZE
+            piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant',
+                                constant_values=0)  # shape(PITCH_HIGH - PITCH_LOW, frames)
+
             chord_labels = load_chord_labels(i)
             n_frames = piano_roll.shape[1] // HSIZE
 
             for s in range(-6, 6):
+                if k == 3 and s != 0:  # don't store all 12 transpositions for test data
+                    continue
                 pr_shifted = np.roll(piano_roll, shift=s, axis=0)
+                bass = find_bass_notes(pr_shifted)
 
                 cl_shifted = shift_chord_labels(chord_labels, s)
                 cl_segments = segment_chord_labels(cl_shifted, n_frames, t0, hsize=HSIZE, fpq=FPQ)
                 cl_encoded = encode_chords(cl_segments)
                 feature = {
-                    'x': tf.train.Feature(float_list=tf.train.FloatList(value=pr_shifted.reshape(-1))),
+                    'piano_roll': tf.train.Feature(float_list=tf.train.FloatList(value=pr_shifted.reshape(-1))),
+                    'bass': tf.train.Feature(int64_list=tf.train.Int64List(value=[b for b in bass])),
                     'label_key': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[0] for c in cl_encoded])),
                     'label_degree_primary': tf.train.Feature(
                         int64_list=tf.train.Int64List(value=[c[1] for c in cl_encoded])),

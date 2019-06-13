@@ -6,7 +6,7 @@ from tensorflow.python.keras.layers.pooling import MaxPooling1D
 
 from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, CLASSES_ROOT, \
     VALID_TFRECORDS, EPOCHS, STEPS_PER_EPOCH, N_PITCHES, CLASSES_KEY, CLASSES_DEGREE, CLASSES_INVERSION, \
-    CLASSES_QUALITY, CLASSES_SYMBOL, VALIDATION_STEPS
+    CLASSES_QUALITY, CLASSES_SYMBOL, VALIDATION_STEPS, CLASSES_BASS
 from load_data import create_tfrecords_dataset
 from utils import visualize_data
 
@@ -21,7 +21,7 @@ if exploratory:
     visualize_data(train_data)
 
 
-def DenseNetLayer(x, l, k):
+def DenseNetLayer(x, l, k, n=1):
     """
     Implementation of a DenseNetLayer
     :param x:
@@ -30,18 +30,22 @@ def DenseNetLayer(x, l, k):
     :return:
     """
     for _ in range(l):
-        y = Conv1D(filters=4 * k, kernel_size=1, padding='same', data_format='channels_last', activation='relu')(x)
-        z = Conv1D(filters=k, kernel_size=32, padding='same', data_format='channels_last', activation='relu')(y)
-        x = Concatenate()([x, z])
+        y = Conv1D(filters=4 * k, kernel_size=1, padding='same', data_format='channels_last', activation='relu',
+                   name=f"denseNet_{n}_{_}_reduction")(x)
+        z = Conv1D(filters=k, kernel_size=32, padding='same', data_format='channels_last', activation='relu',
+                   name=f"denseNet_{n}_{_}_newFeatures")(y)
+        x = Concatenate(name=f"dense_{n}_{_}_concat")([x, z])
     return x
 
 
-notes = Input(shape=(None, N_PITCHES))
-x = DenseNetLayer(notes, 4, 12)
+notes = Input(shape=(None, N_PITCHES), name="piano_roll_input")
+bass = Input(shape=(None, CLASSES_BASS), name="bass_input")
+x = DenseNetLayer(notes, 4, 12, n=1)
 x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
-x = DenseNetLayer(x, 4, 12)
+x = DenseNetLayer(x, 4, 12, n=2)
 x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
 x = Bidirectional(GRU(256, return_sequences=True, dropout=0.3))(x)
+x = Concatenate(name=f"concatenate_bass")([x, bass])
 x = TimeDistributed(Dense(256, activation='tanh'))(x)
 o1 = TimeDistributed(Dense(CLASSES_KEY, activation='softmax'), name='key')(x)
 o2 = TimeDistributed(Dense(CLASSES_DEGREE, activation='softmax'), name='degree_1')(x)
@@ -51,7 +55,7 @@ o5 = TimeDistributed(Dense(CLASSES_INVERSION, activation='softmax'), name='inver
 o6 = TimeDistributed(Dense(CLASSES_ROOT, activation='softmax'), name='root')(x)
 o7 = TimeDistributed(Dense(CLASSES_SYMBOL, activation='softmax'), name='symbol')(x)
 
-model = Model(inputs=notes, outputs=[o1, o2, o3, o4, o5, o6, o7])
+model = Model(inputs=[notes, bass], outputs=[o1, o2, o3, o4, o5, o6, o7])
 model.summary()
 
 callbacks = [
@@ -64,4 +68,4 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 model.fit(train_data, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, validation_data=valid_data,
           validation_steps=VALIDATION_STEPS, callbacks=callbacks)
 
-model.save('conv_gru.h5')
+model.save('conv_gru_with_bass.h5')

@@ -1,8 +1,13 @@
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import tensorflow as tf
+import json
+import numpy as np
 
-from config import VALID_TFRECORDS, TRAIN_TFRECORDS, TEST_TFRECORDS, ROOTS, NOTES, SCALES, QUALITY, SYMBOL
+from config import VALID_TFRECORDS, TRAIN_TFRECORDS, TEST_TFRECORDS, ROOTS, NOTES, SCALES, QUALITY, SYMBOL, FEATURES, \
+    TICK_LABELS
 
 F2S = dict()
 R2I = dict([(e[1], e[0]) for e in enumerate(ROOTS)])
@@ -31,7 +36,7 @@ def _encode_degree(degree):
     else:
         primary = 1  # 1-indexed as usual in musicology
         secondary = _translate_degree(degree)
-    return primary-1, secondary-1  # set 0-indexed
+    return primary - 1, secondary - 1  # set 0-indexed
 
 
 def _translate_degree(degree_str):
@@ -176,6 +181,55 @@ def visualize_data(data):
     for pr in x:
         sns.heatmap(pr)
         plt.show()
+    return
+
+
+def create_dezrann_annotations(output, n, batch_size, type):
+    """
+    Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net
+    This allows for a nice visualization of the analysis on top of the partition.
+    :param output: The output of the machine learning model.
+    :param n: the number of beethoven sonata
+    :param batch_size: Just a check. It needs to be one
+    :param type: either "true" or "pred"
+    :return:
+    """
+
+    if batch_size != 1:
+        raise NotImplementedError("This script only works for a batch size of one!")
+    if type not in ['true', 'pred']:
+        raise ValueError(f"The type should be either true or pred, not {type}")
+
+    for j in range(7):
+        data = output[j]
+        feature = FEATURES[j]
+        x = {
+            "meta": {
+                'title': f"Beethoven sonata no.{n}",
+                'name': f"{n} - {feature} {type}",
+                'date': str(datetime.now()),
+                'producer': 'Algomus team'
+            }
+        }
+        data = data[0]
+        data = np.argmax(data, axis=-1)
+        labels = []
+        start = 0
+        for t in range(len(data)):
+            if t > 0:
+                if data[t] != data[t - 1] or t == len(data) - 1:
+                    duration = t / 2 - start
+                    labels.append({
+                        "type": feature,
+                        "start": start,
+                        "duration": duration,
+                        "staff": "top.1" if type == "true" else "top.2",
+                        "tag": TICK_LABELS[j][data[-1]]
+                    })
+                    start = t / 2
+        x['labels'] = labels
+        with open(f'analysis_sonata{n}_{j}_{type}.json', 'w') as fp:
+            json.dump(x, fp)
     return
 
 

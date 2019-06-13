@@ -40,6 +40,7 @@ SCALES = {
     'F-': ['F-', 'G-', 'A-', 'B--', 'C-', 'D-', 'E-'], 'd-': ['D-', 'E-', 'F-', 'G-', 'A-', 'B--', 'C']}
 QUALITY = ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'a6']
 SYMBOL = ['M', 'm', 'M7', 'm7', '7', 'aug', 'dim', 'dim7', 'm7(b5)']  # quality as encoded in chord symbols
+CLASSES_BASS = 12  # the twelve notes without enharmonic duplicates
 CLASSES_KEY = 24  # Major keys: 0-11, Minor keys: 12-23
 CLASSES_DEGREE = 21  # 7 degrees * 3: regular, diminished, augmented
 CLASSES_QUALITY = 10  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'a6']
@@ -48,12 +49,28 @@ CLASSES_ROOT = 12  # the twelve notes without enharmonic duplicates
 CLASSES_SYMBOL = 10  # ['M', 'm', 'M7', 'm7', '7', 'aug', 'dim', 'dim7', 'm7(b5)']
 CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT + CLASSES_SYMBOL
 
+CIRCLE_OF_FIFTH = [8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1]
+CIRCLE_OF_FIFTH += [x + 12 for x in CIRCLE_OF_FIFTH]
+notes_flat = NOTES.copy()
+notes_flat[3] = 'E-'
+notes_flat[8] = 'A-'
+notes_flat[10] = 'B-'
+TICK_LABELS = [
+    [(notes_flat + [n.lower() for n in notes_flat])[i] for i in CIRCLE_OF_FIFTH],
+    [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
+    [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
+    QUALITY,
+    [str(x) for x in range(4)],
+    NOTES,
+    SYMBOL
+]
+
 BATCH_SIZE = 1
 SHUFFLE_BUFFER = 100_000
 EPOCHS = 100
 N_TRAIN = 216  # number of records in the training dataset as coming from the utils.count_tfrecords function
 N_VALIDATION = 84  # number of records in the validation dataset as coming from the utils.count_tfrecords function
-N_TEST = 84  # number of records in the validation dataset as coming from the utils.count_tfrecords function
+N_TEST = 7  # number of records in the validation dataset as coming from the utils.count_tfrecords function
 STEPS_PER_EPOCH = N_TRAIN // BATCH_SIZE
 VALIDATION_STEPS = N_VALIDATION // BATCH_SIZE
 TEST_STEPS = N_TEST // BATCH_SIZE

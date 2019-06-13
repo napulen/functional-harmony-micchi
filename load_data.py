@@ -1,13 +1,14 @@
 import tensorflow as tf
 
 from config import N_PITCHES, CLASSES_SYMBOL, CLASSES_ROOT, CLASSES_INVERSION, CLASSES_QUALITY, CLASSES_DEGREE, \
-    CLASSES_KEY
+    CLASSES_KEY, CLASSES_BASS
 
 
 def _parse_function(proto):
     # Parse the input tf.Example proto using the dictionary above.
     feature = {
-        'x': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+        'piano_roll': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
+        'bass': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
         'label_key': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
         'label_degree_primary': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
         'label_degree_secondary': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
@@ -20,7 +21,8 @@ def _parse_function(proto):
     }
 
     parsed_features = tf.io.parse_single_example(proto, feature)
-    x = tf.transpose(tf.reshape(parsed_features['x'], (N_PITCHES, -1)))
+    piano_roll = tf.transpose(tf.reshape(parsed_features['piano_roll'], (N_PITCHES, -1)))
+    bass = tf.one_hot(parsed_features['bass'], depth=CLASSES_BASS)
     y_key = tf.one_hot(parsed_features['label_key'], depth=CLASSES_KEY)
     y_dg1 = tf.one_hot(parsed_features['label_degree_primary'], depth=CLASSES_DEGREE)
     y_dg2 = tf.one_hot(parsed_features['label_degree_secondary'], depth=CLASSES_DEGREE)
@@ -30,7 +32,7 @@ def _parse_function(proto):
     y_sym = tf.one_hot(parsed_features['label_symbol'], depth=CLASSES_SYMBOL)
     sonata = parsed_features['sonata']
     transposed = parsed_features['transposed']
-    return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym])
+    return tuple([piano_roll, bass]), tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym])
     # return x, tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo, y_sym, sonata, transposed])
 
 
