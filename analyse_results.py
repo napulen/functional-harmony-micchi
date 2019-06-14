@@ -8,10 +8,6 @@ from config import BATCH_SIZE, TEST_STEPS, TEST_INDICES, FEATURES, TICK_LABELS, 
 from load_data import create_tfrecords_dataset
 from utils import create_dezrann_annotations
 
-test_data = create_tfrecords_dataset(TEST_TFRECORDS, BATCH_SIZE, shuffle_buffer=1)
-test_data_iter = test_data.make_one_shot_iterator()
-x, y = test_data_iter.get_next()
-
 
 def check_predictions(y_true, y_pred, index):
     return np.argmax(y_true[index], axis=-1) == np.argmax(y_pred[index], axis=-1)
@@ -49,7 +45,11 @@ def visualize_data(mode='probabilities'):
         plt.show()
 
 
-model = load_model('./logs/gru/conv_gru_with_bass.h5')
+test_data = create_tfrecords_dataset(TEST_TFRECORDS, BATCH_SIZE, shuffle_buffer=1)
+test_data_iter = test_data.make_one_shot_iterator()
+x, y = test_data_iter.get_next()
+
+model = load_model('./logs/conv-gru_bass/conv_gru_with_bass.h5')
 model.summary()
 
 # Retrieve the true labels
@@ -67,7 +67,7 @@ for i in range(TEST_STEPS):
     temp = model.predict(test_data.skip(i), steps=1, verbose=False)
     test_predict.append(temp)
 
-    # visualize_data(mode='predictions')
+    visualize_data(mode='predictions')
     # visualize_data(mode='probabilities')
 
     create_dezrann_annotations(test_predict[-1], n=TEST_INDICES[i], batch_size=BATCH_SIZE, type='pred')

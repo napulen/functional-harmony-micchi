@@ -1,3 +1,5 @@
+import os
+
 from tensorflow import enable_eager_execution
 from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard
@@ -19,6 +21,8 @@ valid_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFE
 
 if exploratory:
     visualize_data(train_data)
+
+model_folder = os.path.join('logs', 'conv_bass')
 
 
 def DenseNetLayer(x, l, k, n=1):
@@ -44,7 +48,7 @@ x = DenseNetLayer(notes, 4, 12, n=1)
 x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
 x = DenseNetLayer(x, 4, 12, n=2)
 x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
-x = Bidirectional(GRU(256, return_sequences=True, dropout=0.3))(x)
+# x = Bidirectional(GRU(256, return_sequences=True, dropout=0.3))(x)
 x = Concatenate(name=f"concatenate_bass")([x, bass])
 x = TimeDistributed(Dense(256, activation='tanh'))(x)
 o1 = TimeDistributed(Dense(CLASSES_KEY, activation='softmax'), name='key')(x)
@@ -60,7 +64,7 @@ model.summary()
 
 callbacks = [
     EarlyStopping(patience=3),
-    TensorBoard()
+    TensorBoard(log_dir=model_folder)
 ]
 
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -68,4 +72,4 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 model.fit(train_data, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, validation_data=valid_data,
           validation_steps=VALIDATION_STEPS, callbacks=callbacks)
 
-model.save('conv_gru_with_bass.h5')
+model.save(os.path.join(model_folder, 'conv_bass.h5'))

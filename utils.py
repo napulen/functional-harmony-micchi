@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -184,7 +185,7 @@ def visualize_data(data):
     return
 
 
-def create_dezrann_annotations(output, n, batch_size, type):
+def create_dezrann_annotations(output, n, batch_size, type, model_folder):
     """
     Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net
     This allows for a nice visualization of the analysis on top of the partition.
@@ -228,7 +229,7 @@ def create_dezrann_annotations(output, n, batch_size, type):
                     })
                     start = t / 2
         x['labels'] = labels
-        with open(f'analysis_sonata{n}_{j}_{type}.json', 'w') as fp:
+        with open(os.path.join(model_folder, 'analyses', f'analysis_sonata{n}_{j}_{type}.json'), 'w') as fp:
             json.dump(x, fp)
     return
 
