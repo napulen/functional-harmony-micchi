@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -49,7 +51,8 @@ test_data = create_tfrecords_dataset(TEST_TFRECORDS, BATCH_SIZE, shuffle_buffer=
 test_data_iter = test_data.make_one_shot_iterator()
 x, y = test_data_iter.get_next()
 
-model = load_model('./logs/conv-gru_bass/conv_gru_with_bass.h5')
+model_folder = os.path.join('logs', 'conv_gru_bass')
+model = load_model(os.path.join(model_folder, 'conv_gru_bass.h5'))
 model.summary()
 
 # Retrieve the true labels
@@ -58,7 +61,6 @@ with tf.Session() as sess:
     for i in range(TEST_STEPS):
         data = sess.run(y)
         test_truth.append(data)
-        create_dezrann_annotations(test_truth[-1], n=TEST_INDICES[i], batch_size=BATCH_SIZE, type='true')
 
 # Predict new labels and view the difference
 test_predict = []  # It will have shape: [pieces, features, (batch size, length of sonata, feature size)]
@@ -67,10 +69,12 @@ for i in range(TEST_STEPS):
     temp = model.predict(test_data.skip(i), steps=1, verbose=False)
     test_predict.append(temp)
 
-    visualize_data(mode='predictions')
+    # visualize_data(mode='predictions')
     # visualize_data(mode='probabilities')
 
-    create_dezrann_annotations(test_predict[-1], n=TEST_INDICES[i], batch_size=BATCH_SIZE, type='pred')
+for i in range(TEST_STEPS):
+    create_dezrann_annotations(test_truth[i], test_predict[i], n=TEST_INDICES[i], batch_size=BATCH_SIZE,
+                               model_folder=model_folder)
 
 # Calculate accuracy etc.
 func_tp, symb_tp, total = 0, 0, 0
@@ -89,6 +93,8 @@ for i in range(TEST_STEPS):
 acc = tp / total
 func_acc = func_tp / total
 symb_acc = symb_tp / total
-print(f"accuracy for the different items: {acc}")
-print(f"global accuracy with functional chord prediction: {func_acc}")
-print(f"global accuracy with symbolic chord prediction: {symb_acc}")
+print(f"accuracy for the different items:")
+for f, a in zip(FEATURES, acc):
+    print(f"{f:10} : {a:.3f}")
+print(f"global functional : {func_acc:.3f}")
+print(f"global symbolic   : {symb_acc:.3f}")

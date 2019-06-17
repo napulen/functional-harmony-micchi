@@ -185,51 +185,67 @@ def visualize_data(data):
     return
 
 
-def create_dezrann_annotations(output, n, batch_size, type, model_folder):
+def create_dezrann_annotations(true, pred, n, batch_size, model_folder):
     """
     Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net
     This allows for a nice visualization of the analysis on top of the partition.
-    :param output: The output of the machine learning model.
+    :param true: The output of the machine learning model.
     :param n: the number of beethoven sonata
     :param batch_size: Just a check. It needs to be one
-    :param type: either "true" or "pred"
     :return:
     """
 
     if batch_size != 1:
         raise NotImplementedError("This script only works for a batch size of one!")
-    if type not in ['true', 'pred']:
-        raise ValueError(f"The type should be either true or pred, not {type}")
 
     for j in range(7):
-        data = output[j]
+        data_true = true[j]
+        data_pred = pred[j]
         feature = FEATURES[j]
         x = {
             "meta": {
                 'title': f"Beethoven sonata no.{n}",
-                'name': f"{n} - {feature} {type}",
+                'name': f"{n} - {feature}",
                 'date': str(datetime.now()),
                 'producer': 'Algomus team'
             }
         }
-        data = data[0]
-        data = np.argmax(data, axis=-1)
+        data_true = np.argmax(data_true[0], axis=-1)
+        data_pred = np.argmax(data_pred[0], axis=-1)
+        assert len(data_pred) == len(data_true)
+        length = len(data_true)
+
         labels = []
-        start = 0
-        for t in range(len(data)):
+        start_true, start_pred = 0, 0
+        for t in range(length):
             if t > 0:
-                if data[t] != data[t - 1] or t == len(data) - 1:
-                    duration = t / 2 - start
+                if data_true[t] != data_true[t - 1] or t == length - 1:
+                    duration_true = t / 2 - start_true
                     labels.append({
                         "type": feature,
-                        "start": start,
-                        "duration": duration,
-                        "staff": "top.1" if type == "true" else "top.2",
-                        "tag": TICK_LABELS[j][data[-1]]
+                        "start": start_true,
+                        "duration": duration_true,
+                        'layers': ['true'],
+                        "tag": TICK_LABELS[j][data_true[t-1]]
                     })
-                    start = t / 2
+                    start_true = t / 2
+                if data_pred[t] != data_pred[t - 1] or t == length - 1:
+                    duration_pred = t / 2 - start_pred
+                    labels.append({
+                        "type": feature,
+                        "start": start_pred,
+                        "duration": duration_pred,
+                        "layers": ['pred'],
+                        "tag": TICK_LABELS[j][data_true[t-1]]
+                    })
+                    start_pred = t / 2
         x['labels'] = labels
-        with open(os.path.join(model_folder, 'analyses', f'analysis_sonata{n}_{j}_{type}.json'), 'w') as fp:
+        try:
+            os.makedirs(os.path.join(model_folder, 'analyses'))
+        except OSError:
+            pass
+
+        with open(os.path.join(model_folder, 'analyses', f'analysis_sonata{n}_{feature}.dez'), 'w') as fp:
             json.dump(x, fp)
     return
 
