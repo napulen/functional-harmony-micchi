@@ -28,20 +28,20 @@ def visualize_results(mode='probabilities'):
             a = (a == np.max(a, axis=-1, keepdims=True))
             x = b - a
             x[b == 1] += 1
-            # x = x.transpose()
-            ax = sns.heatmap(x, cmap=cmap, vmin=-1, vmax=2, xticklabels=TICK_LABELS[j])
+            x = x.transpose()
+            ax = sns.heatmap(x, cmap=cmap, vmin=-1, vmax=2, yticklabels=TICK_LABELS[j])
             colorbar = ax.collections[0].colorbar
             colorbar.set_ticks([-5 / 8, 1 / 8, 7 / 8, 13 / 8])
             colorbar.set_ticklabels(['False Pos', 'True Neg', 'True Pos', 'False Neg'])
         else:
             x = b - a
-            # x = x.transpose()
-            ax = sns.heatmap(x, cmap=cmap, center=0, vmin=-1, vmax=1, xticklabels=TICK_LABELS[j])
+            x = x.transpose()
+            ax = sns.heatmap(x, cmap=cmap, center=0, vmin=-1, vmax=1, yticklabels=TICK_LABELS[j])
             colorbar = ax.collections[0].colorbar
             colorbar.set_ticks([-1, 0, +1])
             colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
 
-        ax.set(xlabel=FEATURES[j], ylabel='time',
+        ax.set(ylabel=FEATURES[j], xlabel='time',
                title=f"Sonata {TEST_INDICES[i]} - {FEATURES[j]}")
         figManager = plt.get_current_fig_manager()
         figManager.window.showMaximized()
