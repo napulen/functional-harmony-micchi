@@ -25,7 +25,7 @@ import xlrd
 
 from config import DATASET_FOLDER, TRAIN_INDICES, VALID_INDICES, TEST_INDICES, TRAIN_TFRECORDS, VALID_TFRECORDS, \
     TEST_TFRECORDS, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, DATA_FOLDER, NOTES
-from utils import _find_chord_symbol, _encode_key, _encode_degree, _encode_quality, _encode_symbol
+from utils import find_chord_symbol, _encode_key, _encode_degree, _encode_quality, _encode_symbol
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -119,7 +119,7 @@ def segment_chord_labels(chord_labels, n_frames, t0, hsize=4, fpq=8):
             raise HarmonicAnalysisError(f"Cannot read label for Sonata N.{i} at frame {n}")
 
         # TODO: clearly not optimal, since I'm calculating every chord separately
-        labels.append((label['key'], label['degree'], label['quality'], label['inversion'], _find_chord_symbol(label)))
+        labels.append((label['key'], label['degree'], label['quality'], label['inversion'], find_chord_symbol(label)))
     return labels
 
 

@@ -95,7 +95,7 @@ def _find_enharmonic_equivalent(note):
     return note
 
 
-def _find_chord_symbol(chord):
+def find_chord_symbol(chord):
     """
     Translate roman numeral representations into chord symbols.
     :param chord:
@@ -226,7 +226,7 @@ def create_dezrann_annotations(true, pred, n, batch_size, model_folder):
                         "start": start_true,
                         "duration": duration_true,
                         'layers': ['true'],
-                        "tag": TICK_LABELS[j][data_true[t-1]]
+                        "tag": TICK_LABELS[j][data_true[t - 1]]
                     })
                     start_true = t / 2
                 if data_pred[t] != data_pred[t - 1] or t == length - 1:
@@ -236,7 +236,7 @@ def create_dezrann_annotations(true, pred, n, batch_size, model_folder):
                         "start": start_pred,
                         "duration": duration_pred,
                         "layers": ['pred'],
-                        "tag": TICK_LABELS[j][data_true[t-1]]
+                        "tag": TICK_LABELS[j][data_true[t - 1]]
                     })
                     start_pred = t / 2
         x['labels'] = labels
