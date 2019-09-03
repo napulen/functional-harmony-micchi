@@ -1,14 +1,12 @@
 import os
 
 DATASET_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'BPS_FH_Dataset')
-TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3]
+TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3, 1, 14, 23, 15, 10, 25, 7]
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
-TEST_INDICES = [1, 14, 23, 15, 10, 25, 7]
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 MUSICXML_FOLDER = os.path.join(DATA_FOLDER, 'musicXML')
-TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, 'train.tfrecords')
-VALID_TFRECORDS = os.path.join(DATA_FOLDER, 'valid.tfrecords')
-TEST_TFRECORDS = os.path.join(DATA_FOLDER, 'test.tfrecords')
+TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, 'train_pitchclass.tfrecords')
+VALID_TFRECORDS = os.path.join(DATA_FOLDER, 'valid_pitchclass.tfrecords')
 
 HSIZE = 4  # hopping size between frames in 32nd notes, equivalent to 2 frames per quarter note
 FPQ = 8  # number of frames per quarter note with 32nd note quantization (check: HSIZE * FPQ = 32)
@@ -39,16 +37,15 @@ SCALES = {
     'G-': ['G-', 'A-', 'B-', 'C-', 'D-', 'E-', 'F'], 'e-': ['E-', 'F', 'G-', 'A-', 'B-', 'C-', 'D'],
     'C-': ['C-', 'D-', 'E-', 'F-', 'G-', 'A-', 'B-'], 'a-': ['A-', 'B-', 'C-', 'D-', 'E-', 'F-', 'G'],
     'F-': ['F-', 'G-', 'A-', 'B--', 'C-', 'D-', 'E-'], 'd-': ['D-', 'E-', 'F-', 'G-', 'A-', 'B--', 'C']}
-QUALITY = ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'a6']
+QUALITY = ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6', 'It+6', 'Fr+6']
 SYMBOL = ['M', 'm', 'M7', 'm7', '7', 'aug', 'dim', 'dim7', 'm7(b5)']  # quality as encoded in chord symbols
 CLASSES_BASS = 12  # the twelve notes without enharmonic duplicates
 CLASSES_KEY = 24  # Major keys: 0-11, Minor keys: 12-23
 CLASSES_DEGREE = 21  # 7 degrees * 3: regular, diminished, augmented
-CLASSES_QUALITY = 10  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'a6']
+CLASSES_QUALITY = len(QUALITY)  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'a6']
 CLASSES_INVERSION = 4  # root position, 1st, 2nd, and 3rd inversion (the last only for seventh chords)
 CLASSES_ROOT = 12  # the twelve notes without enharmonic duplicates
-CLASSES_SYMBOL = 10  # ['M', 'm', 'M7', 'm7', '7', 'aug', 'dim', 'dim7', 'm7(b5)']
-CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT + CLASSES_SYMBOL
+CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT
 
 CIRCLE_OF_FIFTH = [8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1]
 CIRCLE_OF_FIFTH += [x + 12 for x in CIRCLE_OF_FIFTH]
@@ -69,9 +66,7 @@ TICK_LABELS = [
 BATCH_SIZE = 1
 SHUFFLE_BUFFER = 100_000
 EPOCHS = 100
-N_TRAIN = 216  # number of records in the training dataset as coming from the utils.count_tfrecords function
+N_TRAIN = 300  # number of records in the training dataset as coming from the utils.count_tfrecords function
 N_VALIDATION = 84  # number of records in the validation dataset as coming from the utils.count_tfrecords function
-N_TEST = 7  # number of records in the validation dataset as coming from the utils.count_tfrecords function
 STEPS_PER_EPOCH = N_TRAIN // BATCH_SIZE
 VALIDATION_STEPS = N_VALIDATION // BATCH_SIZE
-TEST_STEPS = N_TEST // BATCH_SIZE

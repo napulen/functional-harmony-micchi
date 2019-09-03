@@ -18,10 +18,10 @@ valid_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFE
 
 if exploratory:
     visualize_data(train_data)
+model_name = 'conv_gru_pitch_class'
+model_folder = os.path.join('logs', model_name)
 
-model_folder = os.path.join('logs', 'conv_dil_2')
-
-model = create_model()
+model = create_model(name=model_name)
 model.summary()
 
 callbacks = [
@@ -34,4 +34,4 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 model.fit(train_data, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, validation_data=valid_data,
           validation_steps=VALIDATION_STEPS, callbacks=callbacks)
 
-model.save(os.path.join(model_folder, 'conv_dil.h5'))
+model.save(os.path.join(model_folder, model_name + '.h5'))

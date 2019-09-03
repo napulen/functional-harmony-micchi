@@ -15,30 +15,51 @@ ATTENTION: despite the name, the secondary_degree is actually "more important" t
 since the latter is almost always equal to 1.
 """
 
-import logging
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import tensorflow as tf
 import xlrd
 from music21 import converter
 from music21.chord import Chord
 from music21.repeat import ExpanderException
 
-from config import DATASET_FOLDER, TRAIN_INDICES, VALID_INDICES, TEST_INDICES, TRAIN_TFRECORDS, VALID_TFRECORDS, \
-    TEST_TFRECORDS, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, DATA_FOLDER, NOTES
-from utils import find_chord_symbol, _encode_key, _encode_degree, _encode_quality, _encode_symbol
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from config import DATASET_FOLDER, PITCH_LOW, NOTES
+from utils import find_chord_root, _encode_key, _encode_degree, _encode_quality, _encode_root
 
 
 class HarmonicAnalysisError(Exception):
     """ Raised when the harmonic analysis associated to a certain time can't be found """
     pass
+
+
+def load_score_pitch_class(i, fpq):
+    score_file = os.path.join(DATASET_FOLDER, str(i).zfill(2), "score.mxl")
+    try:
+        score = converter.parse(score_file).expandRepeats()
+    except ExpanderException:
+        score = converter.parse(score_file)
+        print("Could not expand repeats. Maybe there are no repeats in the piece? Please check.")
+    n_frames = int(score.duration.quarterLength * fpq)
+    measure_offset = list(score.measureOffsetMap().keys())
+    measure_length = np.diff(measure_offset)
+    t0 = - measure_offset[1] if measure_length[0] != measure_length[1] else 0  # Pickup time
+    score = score.chordify()
+    piano_roll = np.zeros(shape=(24, n_frames), dtype=np.int32)
+    for n in score.flat.notes:
+        pitches = np.array(n.pitchClasses)
+        start = int(round(n.offset * fpq))
+        end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
+        time = np.arange(start, end)
+        # p = sns.heatmap(piano_roll[:, :end])
+        # plt.show(p)
+        for p in pitches:  # add notes to piano_roll
+            piano_roll[p, time] = 1
+        piano_roll[pitches[0] + 12, time] = 1
+    sns.heatmap(piano_roll)
+    # plt.show()
+    return piano_roll, t0
 
 
 def load_score(i, fpq, pitch_low=0, pitch_high=128):
@@ -56,7 +77,7 @@ def load_score(i, fpq, pitch_low=0, pitch_high=128):
         score = converter.parse(score_file).expandRepeats()
     except ExpanderException:
         score = converter.parse(score_file)
-        logger.warning("Could not expand repeats. Maybe there are no repeats in the piece? Please check.")
+        print("Could not expand repeats. Maybe there are no repeats in the piece? Please check.")
     n_frames = int(score.duration.quarterLength * fpq)
     measure_offset = list(score.measureOffsetMap().keys())
     measure_length = np.diff(measure_offset)
@@ -102,6 +123,8 @@ def load_chord_labels(i):
         # xlrd.open_workbook automatically casts strings to float if they are compatible. Revert this.
         if isinstance(cols[3], float):  # if type(degree) == float
             cols[3] = str(int(cols[3]))
+        if cols[4] == 'a6':  # in the case of aug 6 chords, verify if they're italian, german, or french
+            cols[4] = cols[6].split('/')[0]
         chords.append(tuple(cols))
     return np.array(chords, dtype=dt)  # convert to structured array
 
@@ -126,9 +149,10 @@ def shift_chord_labels(chord_labels, s):
     return new_labels
 
 
-def segment_chord_labels(chord_labels, n_frames, t0, hsize=4, fpq=8):
+def segment_chord_labels(i, chord_labels, n_frames, t0, hsize=4, fpq=8):
     """
 
+    :param i: sonata number
     :param chord_labels:
     :param n_frames: total frames of the analysis
     :param t0:
@@ -147,7 +171,7 @@ def segment_chord_labels(chord_labels, n_frames, t0, hsize=4, fpq=8):
             raise HarmonicAnalysisError(f"Cannot read label for Sonata N.{i} at frame {n}, time {seg_time}")
 
         # TODO: clearly not optimal, since I'm calculating every chord separately
-        labels.append((label['key'], label['degree'], label['quality'], label['inversion'], find_chord_symbol(label)))
+        labels.append((label['key'], label['degree'], label['quality'], label['inversion'], find_chord_root(label)))
     return labels
 
 
@@ -164,9 +188,9 @@ def encode_chords(chords):
         degree_p_enc, degree_s_enc = _encode_degree(str(chord[1]))
         quality_enc = _encode_quality(str(chord[2]))
         inversion_enc = int(chord[3])
-        root_enc, symbol_enc = _encode_symbol(str(chord[4]))
+        root_enc = _encode_root(str(chord[4]))
 
-        chords_enc.append((key_enc, degree_p_enc, degree_s_enc, quality_enc, inversion_enc, root_enc, symbol_enc))
+        chords_enc.append((key_enc, degree_p_enc, degree_s_enc, quality_enc, inversion_enc, root_enc))
 
     return chords_enc
 
@@ -182,95 +206,3 @@ def find_bass_notes(piano_roll):
     bass = np.argmax(piano_roll, axis=0)
     bass = np.array([np.min(bass[4 * i:4 * (i + 1)]) for i in range(len(bass) // 4)])
     return bass + PITCH_LOW - 60  # C4 is the midi pitch 60
-
-
-if __name__ == '__main__':
-
-    indices = [TRAIN_INDICES, VALID_INDICES, TEST_INDICES]
-    tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_TFRECORDS]
-    if os.path.isfile(TRAIN_TFRECORDS):
-        answer = input(
-            "tfrecords exist already. Do you want to erase them, backup them, write into a temporary file, or abort the calculation? "
-            "[erase/backup/temp/abort]\n")
-        while answer.lower().strip() not in ['erase', 'backup', 'temp', 'abort']:
-            answer = input(
-                "I didn't understand. Please choose an option (abort is safest). [erase/backup/temp/abort]\n")
-        if answer.lower().strip() == 'abort':
-            print("You decided not to replace them. I guess, better safe than sorry. Goodbye!")
-            quit()
-
-        elif answer.lower().strip() == 'temp':
-            print("I'm going to write the files to train_temp.tfrecords and similar!")
-            tfrecords_temp = [f.split(".") for f in tfrecords]
-            for ft in tfrecords_temp:
-                ft[0] += '_temp'
-            tfrecords = ['.'.join(ft) for ft in tfrecords_temp]
-
-        elif answer.lower().strip() == 'backup':
-            i = 0
-            tfrecords_backup = [f.split(".") for f in tfrecords]
-            for fb in tfrecords_backup:
-                fb[0] += f'_backup_{i}'
-            tfrecords_backup = ['.'.join(fb) for fb in tfrecords_backup]
-            while any([d in os.listdir(DATA_FOLDER) for d in tfrecords_backup]):
-                i += 1
-                tfrecords_backup = [f.split(".") for f in tfrecords]
-                for fb in tfrecords_backup:
-                    fb[0] += f'_backup_{i}'
-                tfrecords_backup = ['.'.join(fb) for fb in tfrecords_backup]
-
-            for src, dst in zip(tfrecords, tfrecords_backup):
-                os.rename(src, dst)
-            print(f"data backed up with backup index {i}")
-
-    k = 0
-    for indices, output_file in zip(indices, tfrecords):
-        k += 1
-        with tf.io.TFRecordWriter(output_file) as writer:
-            logger.info(f'Working on {os.path.basename(output_file)}.')
-
-            for i in indices:
-                logger.info(f"Sonata N.{i}")
-                piano_roll, t0 = load_score(i, FPQ, PITCH_LOW, PITCH_HIGH)
-                # for j in range(len(piano_roll[0]) - 128, len(piano_roll[0]), 128):
-                #     visualize_piano_roll(piano_roll, i, FPQ, j, j+FPQ*16)
-                # Adjust the length of the piano roll to be an exact multiple of the HSIZE
-                npad = (- piano_roll.shape[1]) % HSIZE
-                piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant',
-                                    constant_values=0)  # shape(PITCH_HIGH - PITCH_LOW, frames)
-                n_frames_analysis = piano_roll.shape[1] // HSIZE
-
-                chord_labels = load_chord_labels(i)
-                # structure, score = load_structure(i)
-                # structure_labels = segment_structure(structure, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
-
-                for s in range(-6, 6):
-                    if k == 3 and s != 0:  # don't store all 12 transpositions for test data
-                        continue
-                    pr_shifted = np.roll(piano_roll, shift=s, axis=0)
-                    bass = find_bass_notes(pr_shifted)
-
-                    cl_shifted = shift_chord_labels(chord_labels, s)
-                    cl_segments = segment_chord_labels(cl_shifted, n_frames_analysis, t0, hsize=HSIZE, fpq=FPQ)
-                    cl_encoded = encode_chords(cl_segments)
-                    feature = {
-                        'piano_roll': tf.train.Feature(float_list=tf.train.FloatList(value=pr_shifted.reshape(-1))),
-                        'bass': tf.train.Feature(int64_list=tf.train.Int64List(value=[b for b in bass])),
-                        # 'label_structure': tf.train.Feature(
-                        #     int64_list=tf.train.Int64List(value=[l for l in structure_labels])),
-                        'label_key': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[0] for c in cl_encoded])),
-                        'label_degree_primary': tf.train.Feature(
-                            int64_list=tf.train.Int64List(value=[c[1] for c in cl_encoded])),
-                        'label_degree_secondary': tf.train.Feature(
-                            int64_list=tf.train.Int64List(value=[c[2] for c in cl_encoded])),
-                        'label_quality': tf.train.Feature(
-                            int64_list=tf.train.Int64List(value=[c[3] for c in cl_encoded])),
-                        'label_inversion': tf.train.Feature(
-                            int64_list=tf.train.Int64List(value=[c[4] for c in cl_encoded])),
-                        'label_root': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[5] for c in cl_encoded])),
-                        'label_symbol': tf.train.Feature(
-                            int64_list=tf.train.Int64List(value=[c[6] for c in cl_encoded])),
-                        'sonata': tf.train.Feature(int64_list=tf.train.Int64List(value=[i])),
-                        'transposed': tf.train.Feature(int64_list=tf.train.Int64List(value=[s])),
-                    }
-                    writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
