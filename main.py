@@ -9,7 +9,7 @@ from load_data import create_tfrecords_dataset
 from model import create_model
 from utils import visualize_data
 
-exploratory = False
+exploratory = True
 if exploratory:
     enable_eager_execution()
 
