@@ -1,11 +1,11 @@
+import json
 import os
 from datetime import datetime
 
 import matplotlib.pyplot as plt
-import seaborn as sns
-import tensorflow as tf
-import json
 import numpy as np
+import pandas as pd
+import seaborn as sns
 
 from config import VALID_TFRECORDS, TRAIN_TFRECORDS, TEST_TFRECORDS, ROOTS, NOTES, SCALES, QUALITY, SYMBOL, FEATURES, \
     TICK_LABELS
@@ -107,7 +107,7 @@ def find_chord_symbol(chord):
     degree_str = chord['degree']
     quality = chord['quality']
 
-    try:
+    try:  # check if we have already seen the same chord (F2S = features to symbol)
         return F2S[','.join([key, degree_str, quality])]
     except KeyError:
         pass
@@ -161,18 +161,6 @@ def _flat_alteration(note):
 def _is_major(key):
     """ The input needs to be a string like "A-" for A flat major, "b" for b minor, etc. """
     return key[0].isupper()
-
-
-def count_records(tfrecord):
-    """ Count the number of lines in a tfrecord file. This is useful to establish 'steps_per_epoch' when training """
-    c = 0
-    if tf.__version__ == '1.12.0':
-        for _ in tf.io.tf_record_iterator(tfrecord):
-            c += 1
-    else:
-        for _ in tf.data.TFRecordDataset(tfrecord):
-            c += 1
-    return c
 
 
 def visualize_data(data):
@@ -250,10 +238,40 @@ def create_dezrann_annotations(true, pred, n, batch_size, model_folder):
     return
 
 
-if __name__ == '__main__':
-    c = count_records(TRAIN_TFRECORDS)
-    print(f'There is a total of {c} records in the train file')
-    c = count_records(VALID_TFRECORDS)
-    print(f'There is a total of {c} records in the validation file')
-    c = count_records(TEST_TFRECORDS)
-    print(f'There is a total of {c} records in the test file')
+def _fill_level(l, i_p=None):
+    """
+    Fill a given level of the structural analysis with hold tokens.
+    This is done to distinguish when a missing data should be interpreted as a continuation of the previous section or
+    as a missing section. It uses the knowledge of section borders coming from the previous level because they enforce
+    borders on the current level as well (a section in level n+1 can't span two section of level n, not even partially)
+
+    :param l: the current level as coming from Mark Gotham's analysis
+    :param i_p: the borders of the sections of the previous levels, leave None if it's the first level
+    :return: a list filled with hold tokens when needed, and the list with all the borders from the current level
+    """
+    i_c = np.array([i for i, r in enumerate(l) if not pd.isna(r)])  # beginning of sections in this level
+    if i_p is None:
+        i_p = [len(l)]
+    c, p = 0, 0  # indices over borders of current and previous level
+    v = np.nan  # current value (the section)
+    y, i_o = [], []
+    for i, x in enumerate(l):
+        hold = True  # becomes False when a new section starts
+        if c < len(i_c) and i == i_c[c]:  # a new section in this level starts
+            v = x
+            c += 1
+            i_o.append(i)
+            hold = False
+        if p < len(i_p) and i == i_p[p]:  # a new section in the previous level starts
+            v = x  # this is nan if no new section in this level starts at this index
+            p += 1
+            if hold:  # if not hold, it means we have already added this border when checking i_c
+                i_o.append(i)
+            hold = False
+        if pd.isna(v):
+            y.append("Empty")
+        elif not hold:
+            y.append(v)
+        else:
+            y.append("Hold")
+    return y, i_o

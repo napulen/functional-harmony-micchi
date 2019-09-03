@@ -5,11 +5,12 @@ TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2,
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
 TEST_INDICES = [1, 14, 23, 15, 10, 25, 7]
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+MUSICXML_FOLDER = os.path.join(DATA_FOLDER, 'musicXML')
 TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, 'train.tfrecords')
 VALID_TFRECORDS = os.path.join(DATA_FOLDER, 'valid.tfrecords')
 TEST_TFRECORDS = os.path.join(DATA_FOLDER, 'test.tfrecords')
 
-HSIZE = 4  # hopping size between frames in 32nd notes
+HSIZE = 4  # hopping size between frames in 32nd notes, equivalent to 2 frames per quarter note
 FPQ = 8  # number of frames per quarter note with 32nd note quantization (check: HSIZE * FPQ = 32)
 PITCH_LOW = 18  # lowest midi pitch used, as returned by preprocessing.find_pitch_extremes()
 PITCH_HIGH = 107  # lowest midi pitch not used, i.e., piano_roll = piano_roll[PITCH_LOW:PITCH_HIGH]

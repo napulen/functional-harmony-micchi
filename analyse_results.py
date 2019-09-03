@@ -43,8 +43,8 @@ def visualize_results(mode='probabilities'):
 
         ax.set(ylabel=FEATURES[j], xlabel='time',
                title=f"Sonata {TEST_INDICES[i]} - {FEATURES[j]}")
-        figManager = plt.get_current_fig_manager()
-        figManager.window.showMaximized()
+        # figManager = plt.get_current_fig_manager()
+        # figManager.window.showMaximized()
         plt.show()
 
 

@@ -37,14 +37,6 @@ def _parse_function(proto):
 
 
 def create_tfrecords_dataset(input_path, batch_size, shuffle_buffer):
-    """
-    Create an iterator over the TFRecords file with chroma features.
-    :param input_path: can accept both a file and a folder
-    :param batch_size:
-    :param shuffle_buffer: if None, don't shuffle
-    :return:
-    """
-    dataset = tf.data.TFRecordDataset(input_path)
-    dataset = dataset.map(_parse_function, num_parallel_calls=16).shuffle(shuffle_buffer).repeat().batch(
-        batch_size).prefetch(2)
+    dataset = tf.data.TFRecordDataset(input_path).map(_parse_function, num_parallel_calls=16).shuffle(
+        shuffle_buffer).repeat().batch(batch_size).prefetch(2)
     return dataset
