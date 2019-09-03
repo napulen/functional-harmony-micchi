@@ -9,7 +9,7 @@ from load_data import create_tfrecords_dataset
 from model import create_model
 from utils import visualize_data
 
-exploratory = False
+exploratory = True
 if exploratory:
     enable_eager_execution()
 
@@ -18,10 +18,10 @@ valid_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFE
 
 if exploratory:
     visualize_data(train_data)
+model_name = 'conv_gru_pitch_class'
+model_folder = os.path.join('logs', model_name)
 
-model_folder = os.path.join('logs', 'conv_dil_2')
-
-model = create_model()
+model = create_model(name=model_name)
 model.summary()
 
 callbacks = [

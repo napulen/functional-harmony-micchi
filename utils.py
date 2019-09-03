@@ -7,16 +7,15 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from config import VALID_TFRECORDS, TRAIN_TFRECORDS, TEST_TFRECORDS, ROOTS, NOTES, SCALES, QUALITY, SYMBOL, FEATURES, \
-    TICK_LABELS
+from config import ROOTS, NOTES, SCALES, QUALITY, SYMBOL, FEATURES, TICK_LABELS
 
 F2S = dict()
-R2I = dict([(e[1], e[0]) for e in enumerate(ROOTS)])
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
 Q2I = dict([(e[1], e[0]) for e in enumerate(QUALITY)])
 S2I = dict([(e[1], e[0]) for e in enumerate(SYMBOL)])
 Q2S = {'M': 'M', 'm': 'm', 'M7': 'M7', 'm7': 'm7', 'D7': '7', 'a': 'aug', 'd': 'dim', 'd7': 'dim7',
-       'h7': 'm7(b5)', 'a6': '7'}  # necessary only because the data is stored in non-standard notation
+       'h7': 'm7(b5)', 'Gr+6': 'Gr+6', 'It+6': 'It+6',
+       'Fr+6': 'Fr+6'}  # necessary only because the data is stored in non-standard notation
 
 
 def _encode_key(key):
@@ -57,15 +56,8 @@ def _encode_quality(quality):
     return Q2I[quality]
 
 
-def _encode_symbol(symbol):
-    if '+' not in symbol and '-' not in symbol:
-        chord_root = symbol[0]
-        quality = symbol[1:]
-    else:
-        chord_root = symbol[:2]
-        quality = symbol[2:]
-
-    return N2I[chord_root], S2I[quality]
+def _encode_root(root):
+    return N2I[root]
 
 
 def _find_enharmonic_equivalent(note):
@@ -95,9 +87,9 @@ def _find_enharmonic_equivalent(note):
     return note
 
 
-def find_chord_symbol(chord):
+def find_chord_root(chord):
     """
-    Translate roman numeral representations into chord symbols.
+    Get the chord root from the roman numeral representation.
     :param chord:
     :return: chords_full
     """
@@ -118,10 +110,9 @@ def find_chord_symbol(chord):
         root = SCALES[key][degree - 1]
 
     elif degree_str == '+4':  # case: augmented 6th
-        degree = 6
+        degree = 4
         root = SCALES[key][degree - 1]
-        if _is_major(key):  # case: major key
-            root = _flat_alteration(root)  # lower the sixth in a major key
+        root = _sharp_alteration(root)  # lower the sixth in a major key
 
     # TODO: Verify these cases!
     elif degree_str[0] == '-':  # case: chords on flattened degree
@@ -147,15 +138,18 @@ def find_chord_symbol(chord):
 
     root = _find_enharmonic_equivalent(root)
 
-    quality_out = Q2S[quality]
-    chord_symbol = root + quality_out
-    F2S[','.join([key, degree_str, quality])] = chord_symbol
-    return chord_symbol
+    F2S[','.join([key, degree_str, quality])] = root
+    return root
 
 
 def _flat_alteration(note):
     """ Ex: _flat_alteration(G) = G-,  _flat_alteration(G+) = G """
     return note[:-1] if '+' in note else note + '-'
+
+
+def _sharp_alteration(note):
+    """ Ex: _sharp_alteration(G) = G+,  _sharp_alteration(G-) = G """
+    return note[:-1] if '-' in note else note + '+'
 
 
 def _is_major(key):

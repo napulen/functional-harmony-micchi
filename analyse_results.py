@@ -9,7 +9,7 @@ from tensorflow.python.keras.models import load_model
 from config import BATCH_SIZE, TEST_STEPS, TEST_INDICES, FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, TEST_TFRECORDS, \
     QUALITY, NOTES
 from load_data import create_tfrecords_dataset
-from utils import create_dezrann_annotations, find_chord_symbol, Q2S, S2I
+from utils import create_dezrann_annotations, find_chord_root, Q2S, S2I
 
 
 def check_predictions(y_true, y_pred, index):
