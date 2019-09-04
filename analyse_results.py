@@ -117,8 +117,8 @@ test_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, shuffle_buffer
 test_data_iter = test_data.make_one_shot_iterator()
 x, y = test_data_iter.get_next()
 
-# mode = 'pitch_class'
-mode = 'midi_number'
+mode = 'pitch_class'
+# mode = 'midi_number'
 model_name = 'conv_dil_' + mode
 model_folder = os.path.join('logs', model_name)
 model = load_model(os.path.join(model_folder, model_name + '.h5'))

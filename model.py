@@ -55,13 +55,13 @@ def create_model(name, n):
     :return:
     """
     notes = Input(shape=(None, n), name="piano_roll_input")
-    x = DenseNetLayer(notes, 4, 12, n=1)
+    x = DenseNetLayer(notes, 4, 5, n=1)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
-    x = DenseNetLayer(x, 4, 12, n=2)
+    x = DenseNetLayer(x, 4, 5, n=2)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
     # x = Bidirectional(GRU(256, return_sequences=True, dropout=0.3))(x)
-    x = DilatedConvLayer(x, 4, 256)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measure before and after
-    x = TimeDistributed(Dense(256, activation='tanh'))(x)
+    x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measure before and after
+    x = TimeDistributed(Dense(64, activation='tanh'))(x)
     y = MultiTaskLayer(x)
     model = Model(inputs=notes, outputs=y, name=name)
     return model

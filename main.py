@@ -21,7 +21,7 @@ valid_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFE
 if exploratory:
     visualize_data(train_data)
 
-model_name = 'conv_dil_' + mode
+model_name = 'conv_dil_reduced_' + mode
 model_folder = os.path.join('logs', model_name)
 
 n = 24 if mode == 'pitch_class' else N_PITCHES
