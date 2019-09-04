@@ -11,7 +11,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-mode = 'pitch_class'
+# mode = 'pitch_class'
+mode = 'midi_number'
 
 
 def check_existence_tfrecords(tfrecords):
@@ -57,6 +58,8 @@ if __name__ == '__main__':
     tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS]
     tfrecords = check_existence_tfrecords(tfrecords)
 
+    if mode not in ['pitch_class', 'midi_number']:
+        raise ValueError('Please assign only the values "pitch_class" or "midi_number" to mode')
     k = 0
     for indices, output_file in zip(indices, tfrecords):
         k += 1
@@ -67,7 +70,7 @@ if __name__ == '__main__':
                 logger.info(f"Sonata N.{i}")
                 if mode == 'pitch_class':
                     piano_roll, t0 = load_score_pitch_class(i, FPQ)
-                else:
+                elif mode == 'midi_number':
                     piano_roll, t0 = load_score(i, FPQ, PITCH_LOW, PITCH_HIGH)
                 # visualize piano rolls excerpts (indexed by j)
                 # for j in range(len(piano_roll[0]) - 128, len(piano_roll[0]), 128):
@@ -87,9 +90,9 @@ if __name__ == '__main__':
                     if mode == 'pitch_class':
                         pr_shifted = np.zeros(piano_roll.shape, dtype=np.int32)
                         for i in range(12):
-                            pr_shifted[i, :] = piano_roll[(i-s) % 12, :]  # the minus sign is correct!
-                            pr_shifted[i+12, :] = piano_roll[((i-s) % 12) + 12, :]
-                    else:
+                            pr_shifted[i, :] = piano_roll[(i - s) % 12, :]  # the minus sign is correct!
+                            pr_shifted[i + 12, :] = piano_roll[((i - s) % 12) + 12, :]
+                    elif mode == 'midi_number':
                         pr_shifted = np.roll(piano_roll, shift=s, axis=0)
 
                     cl_shifted = shift_chord_labels(chord_labels, s)

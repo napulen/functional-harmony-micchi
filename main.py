@@ -4,7 +4,7 @@ from tensorflow import enable_eager_execution
 from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard
 
 from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, VALID_TFRECORDS, EPOCHS, STEPS_PER_EPOCH, \
-    VALID_STEPS
+    VALID_STEPS, N_PITCHES
 from load_data import create_tfrecords_dataset
 from model import create_model
 from utils import visualize_data
@@ -13,15 +13,19 @@ exploratory = False
 if exploratory:
     enable_eager_execution()
 
+# mode = 'pitch_class'
+mode = 'midi_number'
 train_data = create_tfrecords_dataset(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
 valid_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
 
 if exploratory:
     visualize_data(train_data)
-model_name = 'conv_dil_pitch_class'
+
+model_name = 'conv_dil_' + mode
 model_folder = os.path.join('logs', model_name)
 
-model = create_model(name=model_name)
+n = 24 if mode == 'pitch_class' else N_PITCHES
+model = create_model(model_name, n)
 model.summary()
 
 callbacks = [

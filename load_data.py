@@ -19,8 +19,8 @@ def _parse_function(proto):
     }
 
     parsed_features = tf.io.parse_single_example(proto, feature)
-    # piano_roll = tf.transpose(tf.reshape(parsed_features['piano_roll'], (N_PITCHES, -1)))
-    piano_roll = tf.transpose(tf.reshape(parsed_features['piano_roll'], (24, -1)))
+    piano_roll = tf.transpose(tf.reshape(parsed_features['piano_roll'], (N_PITCHES, -1)))
+    # piano_roll = tf.transpose(tf.reshape(parsed_features['piano_roll'], (24, -1)))
     y_key = tf.one_hot(parsed_features['label_key'], depth=CLASSES_KEY)
     y_dg1 = tf.one_hot(parsed_features['label_degree_primary'], depth=CLASSES_DEGREE)
     y_dg2 = tf.one_hot(parsed_features['label_degree_secondary'], depth=CLASSES_DEGREE)

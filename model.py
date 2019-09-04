@@ -47,8 +47,14 @@ def MultiTaskLayer(x):
     return [o1, o2, o3, o4, o5, o6]
 
 
-def create_model(name):
-    notes = Input(shape=(None, 24), name="piano_roll_input")
+def create_model(name, n):
+    """
+
+    :param name:
+    :param n: number of input features
+    :return:
+    """
+    notes = Input(shape=(None, n), name="piano_roll_input")
     x = DenseNetLayer(notes, 4, 12, n=1)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
     x = DenseNetLayer(x, 4, 12, n=2)
