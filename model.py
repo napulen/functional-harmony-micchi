@@ -53,9 +53,8 @@ def create_model(name):
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
     x = DenseNetLayer(x, 4, 12, n=2)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
-    x = Bidirectional(GRU(256, return_sequences=True, dropout=0.3))(x)
-    # x = DilatedConvLayer(x, 6, 256)
-    # x = Concatenate(name=f"concatenate_bass")([x, bass])
+    # x = Bidirectional(GRU(256, return_sequences=True, dropout=0.3))(x)
+    x = DilatedConvLayer(x, 4, 256)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measure before and after
     x = TimeDistributed(Dense(256, activation='tanh'))(x)
     y = MultiTaskLayer(x)
     model = Model(inputs=notes, outputs=y, name=name)

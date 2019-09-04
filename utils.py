@@ -25,7 +25,7 @@ def _encode_key(key):
 
 def _encode_degree(degree):
     """
-    7 diatonics *  3 chromatics  = 21: {0-6 diatonic, 7-13 sharp, 14-20 flat)
+    7 diatonics *  3 chromatics  = 21; (0-6 diatonic, 7-13 sharp, 14-20 flat)
     :return: primary_degree, secondary_degree
     """
 
@@ -44,7 +44,7 @@ def _translate_degree(degree_str):
         offset = 14
     elif degree_str[0] == '+':
         offset = 7
-    elif len(degree_str) == 2 and degree_str[1] == '+':
+    elif len(degree_str) == 2 and degree_str[1] == '+':  # the case of augmented chords (only 1+ ?)
         degree_str = degree_str[0]
         offset = 0
     else:

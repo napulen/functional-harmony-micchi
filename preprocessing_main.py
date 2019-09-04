@@ -82,13 +82,13 @@ if __name__ == '__main__':
                 chord_labels = load_chord_labels(i)
 
                 for s in range(-6, 6):
-                    if k == 2 and s != 0:  # don't store all 12 transpositions for test data
+                    if k == 2 and s != 0:  # don't store all 12 transpositions for validation data
                         continue
                     if mode == 'pitch_class':
-                        pr_shifted = np.zeros(piano_roll.shape)
+                        pr_shifted = np.zeros(piano_roll.shape, dtype=np.int32)
                         for i in range(12):
-                            pr_shifted[i, :] = piano_roll[(i+s) % 12, :]
-                            pr_shifted[i+12, :] = piano_roll[((i+s) % 12) + 12, :]
+                            pr_shifted[i, :] = piano_roll[(i-s) % 12, :]  # the minus sign is correct!
+                            pr_shifted[i+12, :] = piano_roll[((i-s) % 12) + 12, :]
                     else:
                         pr_shifted = np.roll(piano_roll, shift=s, axis=0)
 

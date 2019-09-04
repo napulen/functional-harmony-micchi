@@ -14,7 +14,7 @@ PITCH_LOW = 18  # lowest midi pitch used, as returned by preprocessing.find_pitc
 PITCH_HIGH = 107  # lowest midi pitch not used, i.e., piano_roll = piano_roll[PITCH_LOW:PITCH_HIGH]
 N_PITCHES = PITCH_HIGH - PITCH_LOW  # number of pitches kept out of total 128 midi pitches
 
-FEATURES = ['key', 'degree 1', 'degree 2', 'quality', 'inversion', 'root', 'symbol']
+FEATURES = ['key', 'degree 1', 'degree 2', 'quality', 'inversion', 'root']
 ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 NOTES = ['C', 'C+', 'D', 'D+', 'E', 'F', 'F+', 'G', 'G+', 'A', 'A+', 'B']
 SCALES = {
@@ -60,13 +60,12 @@ TICK_LABELS = [
     QUALITY,
     [str(x) for x in range(4)],
     NOTES,
-    SYMBOL
 ]
 
 BATCH_SIZE = 1
 SHUFFLE_BUFFER = 100_000
 EPOCHS = 100
 N_TRAIN = 300  # number of records in the training dataset as coming from the utils.count_tfrecords function
-N_VALIDATION = 84  # number of records in the validation dataset as coming from the utils.count_tfrecords function
+N_VALID = 7  # number of records in the validation dataset as coming from the utils.count_tfrecords function
 STEPS_PER_EPOCH = N_TRAIN // BATCH_SIZE
-VALIDATION_STEPS = N_VALIDATION // BATCH_SIZE
+VALID_STEPS = N_VALID // BATCH_SIZE

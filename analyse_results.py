@@ -6,13 +6,21 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow.python.keras.models import load_model
 
-from config import BATCH_SIZE, TEST_STEPS, TEST_INDICES, FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, TEST_TFRECORDS, \
-    QUALITY, NOTES
+from config import BATCH_SIZE, FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, QUALITY, NOTES, \
+    VALID_TFRECORDS, VALID_STEPS, VALID_INDICES
 from load_data import create_tfrecords_dataset
-from utils import create_dezrann_annotations, find_chord_root, Q2S, S2I
+from utils import create_dezrann_annotations, Q2S, S2I
 
 
 def check_predictions(y_true, y_pred, index):
+    """
+    Check if the predictions are correct independently for each feature and each timestep.
+
+    :param y_true:
+    :param y_pred:
+    :param index:
+    :return: a boolean vector of dimension [features, samples]
+    """
     return np.argmax(y_true[index], axis=-1) == np.argmax(y_pred[index], axis=-1)
 
 
@@ -21,7 +29,7 @@ def visualize_results(mode='probabilities'):
         raise ValueError('mode should be either probabilities or predictions')
     cmap = sns.color_palette(['#d73027', '#f7f7f7', '#3027d7', '#000000']) if mode == 'predictions' else 'RdGy'
 
-    for j in range(7):
+    for j in range(6):
         a = test_predict[i][j][0] if j > 0 else test_predict[i][j][0][:, CIRCLE_OF_FIFTH]
         b = test_truth[i][j][0] if j > 0 else test_truth[i][j][0][:, CIRCLE_OF_FIFTH]
         if mode == 'predictions':
@@ -42,7 +50,7 @@ def visualize_results(mode='probabilities'):
             colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
 
         ax.set(ylabel=FEATURES[j], xlabel='time',
-               title=f"Sonata {TEST_INDICES[i]} - {FEATURES[j]}")
+               title=f"Sonata {VALID_INDICES[i]} - {FEATURES[j]}")
         # figManager = plt.get_current_fig_manager()
         # figManager.window.showMaximized()
         plt.show()
@@ -51,7 +59,7 @@ def visualize_results(mode='probabilities'):
 def visualize_piano_roll(pr, i):
     ax = sns.heatmap(pr[i].transpose(), vmin=0, vmax=1)
     ax.set(xlabel='time', ylabel='notes',
-           title=f"Sonata {TEST_INDICES[i]} - piano roll data")
+           title=f"Sonata {VALID_INDICES[i]} - piano roll data")
     plt.show()
     return
 
@@ -72,6 +80,13 @@ def plot_coherence(y_symb, y_func, n_classes, sonata):
 
 
 def find_root_from_output(y_pred):
+    """
+    Calculate the root of the chord given the output prediction of the neural network.
+    It uses key, primary degree and secondary degree.
+
+    :param y_pred:
+    :return:
+    """
     key, degree_den, degree_num = np.argmax(y_pred[0][0], axis=-1), np.argmax(y_pred[1][0], axis=-1), np.argmax(
         y_pred[2][0], axis=-1)
     deg2sem_maj = [0, 2, 4, 5, 7, 9, 11]
@@ -79,34 +94,39 @@ def find_root_from_output(y_pred):
 
     root_pred = []
     for i in range(len(key)):
-        deg2sem = deg2sem_maj if key[i] // 2 == 0 else deg2sem_min
-        n_den = deg2sem[degree_den[i] % 7]
-        if degree_den[i] // 7 == 1:
-            n_den -= 1
-        elif degree_den[i] // 7 == 2:
+        deg2sem = deg2sem_maj if key[i] // 12 == 0 else deg2sem_min  # keys 0-11 are major, 12-23 minor
+        n_den = deg2sem[degree_den[i] % 7]  # (0-6 diatonic, 7-13 sharp, 14-20 flat)
+        if degree_den[i] // 7 == 1:  # raised root
             n_den += 1
+        elif degree_den[i] // 7 == 2:  # lowered root
+            n_den -= 1
         n_num = deg2sem[degree_num[i] % 7]
         if degree_num[i] // 7 == 1:
-            n_num -= 1
-        elif degree_num[i] // 7 == 2:
             n_num += 1
+        elif degree_num[i] // 7 == 2:
+            n_num -= 1
+        # key[i] % 12 finds the root regardless of major and minor, then both degrees are added, then sent back to 0-11
+        # both degrees are added, yes: example: V/IV on C major.
+        # primary degree = IV, secondary degree = V
+        # in C, that corresponds to the dominant on the fourth degree: C -> F -> C again
         root_pred.append((key[i] % 12 + n_num + n_den) % 12)
     return root_pred
 
 
-test_data = create_tfrecords_dataset(TEST_TFRECORDS, BATCH_SIZE, shuffle_buffer=1)
+test_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, shuffle_buffer=1)
 test_data_iter = test_data.make_one_shot_iterator()
 x, y = test_data_iter.get_next()
 
-model_folder = os.path.join('logs', 'conv_gru_bass')
-model = load_model(os.path.join(model_folder, 'conv_gru_bass.h5'))
+model_name = 'conv_gru_pitch_class'
+model_folder = os.path.join('logs', model_name)
+model = load_model(os.path.join(model_folder, model_name + '.h5'))
 model.summary()
 
 # Retrieve the true labels
 piano_rolls = []
 test_truth = []
 with tf.Session() as sess:
-    for i in range(TEST_STEPS):
+    for i in range(VALID_STEPS):
         data = sess.run([x, y])
         piano_rolls.append(data[0][0][0])  # meaning of zeros: x or y, piano roll or bass, first element of batch
         test_truth.append(data[1])
@@ -115,30 +135,30 @@ with tf.Session() as sess:
 
 # Predict new labels and view the difference
 test_predict = []  # It will have shape: [pieces, features, (batch size, length of sonata, feature size)]
-for i in range(TEST_STEPS):
-    print(f"step {i + 1} out of {TEST_STEPS}")
+for i in range(VALID_STEPS):
+    print(f"step {i + 1} out of {VALID_STEPS}")
     temp = model.predict(test_data.skip(i), steps=1, verbose=False)
     test_predict.append(temp)
 
-    visualize_results(mode='predictions')
+    # visualize_results(mode='predictions')
     # visualize_results(mode='probabilities')
 
-for i in range(TEST_STEPS):
-    create_dezrann_annotations(test_truth[i], test_predict[i], n=TEST_INDICES[i], batch_size=BATCH_SIZE,
-                               model_folder=model_folder)
+# for i in range(VALID_STEPS):
+#     create_dezrann_annotations(test_truth[i], test_predict[i], n=VALID_INDICES[i], batch_size=BATCH_SIZE,
+#                                model_folder=model_folder)
 
 # Calculate accuracy etc.
-func_tp, name_tp, root_tp, symb_tp, total = 0, 0, 0, 0, 0
-root_coherence, symb_coherence = 0, 0
+func_tp, name_tp, root_tp, n_predictions = 0, 0, 0, 0
+root_coherence = 0
 degree_tp, secondary_tp, secondary_total = 0, 0, 0
-cp = [[] for _ in range(7)]  # dimensions will be: features, sonatas, frames
-tp = np.zeros(7)
-for i in range(TEST_STEPS):
+cp = [[] for _ in range(6)]  # dimensions will be: features, sonatas, frames
+tp = np.zeros(6)  # true positives for each separate feature
+for i in range(VALID_STEPS):
     y_true, y_pred = test_truth[i], test_predict[i]
-    total += y_true[0].shape[1]
-    for j in range(7):
+    n_predictions += y_true[0].shape[1]
+    for j in range(6):
         for a in check_predictions(y_true, y_pred, j):
-            cp[j].append(a)  # cp has shape (7, batch_size*(i+1), l) where l varies
+            cp[j].append(a)  # cp has shape (features, batch_size*(i+1), l) where l varies
     # can't vectorialize the next three lines because the length of each sonata l is different
     tp += np.sum(np.array([a[-1] for a in cp]), axis=-1)
     func_tp += np.sum(np.prod(np.array([a[-1] for a in cp[:4]]), axis=0), axis=-1)
@@ -148,25 +168,20 @@ for i in range(TEST_STEPS):
     secondary_total += sum(secondary_msk)
     secondary_tp += np.sum(np.prod(np.array([a[-1] for a in cp[1:3]]), axis=0)[secondary_msk], axis=-1)
     root_pred = find_root_from_output(y_pred)
-    symb_pred = np.array([S2I[Q2S[QUALITY[np.argmax(q, axis=-1)]]] for q in y_pred[3][0]])
-    # plot_coherence(np.argmax(y_pred[5], axis=-1)[0], root_pred, n_classes=12, sonata=TEST_INDICES[i])
+    # plot_coherence(np.argmax(y_pred[5], axis=-1)[0], root_pred, n_classes=12, sonata=VALID_INDICES[i])
     root_coherence += np.sum(root_pred == np.argmax(y_pred[5], axis=-1))
-    symb_coherence += np.sum(symb_pred == np.argmax(y_pred[6], axis=-1))
     root_tp += np.sum(root_pred == np.argmax(y_true[5], axis=-1))
-    symb_tp += np.sum(symb_pred == np.argmax(y_true[6], axis=-1))
-acc = tp / total
-degree_acc = degree_tp / total
+acc = tp / n_predictions
+degree_acc = degree_tp / n_predictions
 secondary_acc = secondary_tp / secondary_total
-func_acc = func_tp / total
-name_acc = name_tp / total
+func_acc = func_tp / n_predictions
+name_acc = name_tp / n_predictions
 print(f"accuracy for the different items:")
 for f, a in zip(FEATURES, acc):
     print(f"{f:10} : {a:.4f}")
-print(f'degree     : {degree_tp / total:.4f}')
+print(f'degree     : {degree_tp / n_predictions:.4f}')
 print(f'secondary  : {secondary_tp / secondary_total:.4f}')
-print(f'func root  : {root_tp / total:.4f}')
-print(f'func symb  : {symb_tp / total:.4f}')
+print(f'func root  : {root_tp / n_predictions:.4f}')
 print(f"global functional : {func_acc:.4f}")
 print(f"global symbolic   : {name_acc:.4f}")
-print(f'root_coherence: {root_coherence / total:.4f}')
-print(f'symb_coherence: {symb_coherence / total:.4f}')
+print(f'root_coherence: {root_coherence / n_predictions:.4f}')
