@@ -5,8 +5,12 @@ TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2,
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 MUSICXML_FOLDER = os.path.join(DATA_FOLDER, 'musicXML')
-TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, 'train_midi_number.tfrecords')
-VALID_TFRECORDS = os.path.join(DATA_FOLDER, 'valid_midi_number.tfrecords')
+# TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, 'train_pitch_class_beat_strength.tfrecords')
+# VALID_TFRECORDS = os.path.join(DATA_FOLDER, 'valid_pitch_class_beat_strength.tfrecords')
+TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, 'train_pitch_class.tfrecords')
+VALID_TFRECORDS = os.path.join(DATA_FOLDER, 'valid_pitch_class.tfrecords')
+# TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, 'train_midi_number.tfrecords')
+# VALID_TFRECORDS = os.path.join(DATA_FOLDER, 'valid_midi_number.tfrecords')
 
 HSIZE = 4  # hopping size between frames in 32nd notes, equivalent to 2 frames per quarter note
 FPQ = 8  # number of frames per quarter note with 32nd note quantization (check: HSIZE * FPQ = 32)
