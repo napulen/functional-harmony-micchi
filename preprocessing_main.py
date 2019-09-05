@@ -1,26 +1,30 @@
 import logging
 import os
+
 import numpy as np
 import tensorflow as tf
+
 from config import TRAIN_INDICES, VALID_INDICES, VALID_TFRECORDS, TRAIN_TFRECORDS, \
     DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE
 from preprocessing import load_score, load_chord_labels, shift_chord_labels, segment_chord_labels, \
-    encode_chords, load_score_pitch_class
+    encode_chords, load_score_pitch_class, load_score_beat_strength
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # mode = 'pitch_class'
-mode = 'midi_number'
+mode = 'pitch_class_beat_strength'
+# mode = 'midi_number'
 
 
 def check_existence_tfrecords(tfrecords):
     if os.path.isfile(TRAIN_TFRECORDS):
         answer = input(
-            "tfrecords exist already. Do you want to erase them, backup them, write into a temporary file, or abort the calculation? "
-            "[erase/backup/temp/abort]\n")
-        while answer.lower().strip() not in ['erase', 'backup', 'temp', 'abort']:
+            f"{os.path.basename(TRAIN_TFRECORDS)} exists already. "
+            "Do you want to replace the tfrecords, backup them, write into a temporary file, or abort the calculation? "
+            "[replace/backup/temp/abort]\n")
+        while answer.lower().strip() not in ['replace', 'backup', 'temp', 'abort']:
             answer = input(
                 "I didn't understand. Please choose an option (abort is safest). [erase/backup/temp/abort]\n")
         if answer.lower().strip() == 'abort':
@@ -58,8 +62,8 @@ if __name__ == '__main__':
     tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS]
     tfrecords = check_existence_tfrecords(tfrecords)
 
-    if mode not in ['pitch_class', 'midi_number']:
-        raise ValueError('Please assign only the values "pitch_class" or "midi_number" to mode')
+    if mode not in ['pitch_class', 'midi_number', 'pitch_class_beat_strength']:
+        raise ValueError('Please verify the value of mode')
     k = 0
     for indices, output_file in zip(indices, tfrecords):
         k += 1
@@ -70,6 +74,10 @@ if __name__ == '__main__':
                 logger.info(f"Sonata N.{i}")
                 if mode == 'pitch_class':
                     piano_roll, t0 = load_score_pitch_class(i, FPQ)
+                elif mode == 'pitch_class_beat_strength':
+                    piano_roll, t0 = load_score_pitch_class(i, FPQ)
+                    beat_strength = load_score_beat_strength(i, FPQ)
+                    piano_roll = np.append(piano_roll, beat_strength, axis=0)
                 elif mode == 'midi_number':
                     piano_roll, t0 = load_score(i, FPQ, PITCH_LOW, PITCH_HIGH)
                 # visualize piano rolls excerpts (indexed by j)
@@ -87,11 +95,13 @@ if __name__ == '__main__':
                 for s in range(-6, 6):
                     if k == 2 and s != 0:  # don't store all 12 transpositions for validation data
                         continue
-                    if mode == 'pitch_class':
+                    if mode == 'pitch_class' or mode == 'pitch_class_beat_strength':
                         pr_shifted = np.zeros(piano_roll.shape, dtype=np.int32)
                         for i in range(12):
                             pr_shifted[i, :] = piano_roll[(i - s) % 12, :]  # the minus sign is correct!
                             pr_shifted[i + 12, :] = piano_roll[((i - s) % 12) + 12, :]
+                        for i in range(24, len(pr_shifted)):
+                            pr_shifted[i, :] = piano_roll[i, :]
                     elif mode == 'midi_number':
                         pr_shifted = np.roll(piano_roll, shift=s, axis=0)
 

@@ -119,7 +119,8 @@ x, y = test_data_iter.get_next()
 
 mode = 'pitch_class'
 # mode = 'midi_number'
-model_name = 'conv_dil_reduced_' + mode
+# model_name = 'conv_gru'
+model_name = 'conv_gru_reduced_' + mode
 model_folder = os.path.join('logs', model_name)
 model = load_model(os.path.join(model_folder, model_name + '.h5'))
 model.summary()

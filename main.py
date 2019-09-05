@@ -13,18 +13,25 @@ exploratory = False
 if exploratory:
     enable_eager_execution()
 
-mode = 'pitch_class'
+mode = 'pitch_class_beat_strength'
+# mode = 'pitch_class'
 # mode = 'midi_number'
-train_data = create_tfrecords_dataset(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
-valid_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
+mode2input_shape = {
+    'pitch_class': 24,
+    'pitch_class_beat_strength': 27,
+    'midi_number': N_PITCHES
+}
+n = mode2input_shape[mode]
+
+train_data = create_tfrecords_dataset(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER, n)
+valid_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER, n)
 
 if exploratory:
     visualize_data(train_data)
 
-model_name = 'conv_gru_reduced_' + mode
+model_name = 'conv_dil_reduced_' + mode
 model_folder = os.path.join('logs', model_name)
 
-n = 24 if mode == 'pitch_class' else N_PITCHES
 model = create_model(model_name, n)
 model.summary()
 

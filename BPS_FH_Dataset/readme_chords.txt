@@ -1,7 +1,7 @@
 Explication of the columns in the chords.xlsx files:
 
-A: start beat (inclusive, 0-indexed, pickup measures are indexed with negative numbers)
-B: end measure (exclusive)
+A: start offset (inclusive, 0-indexed, in quarter lengths, pickup measures are indexed with negative numbers)
+B: end offset (exclusive)
 
 ------
 
@@ -40,11 +40,15 @@ When there is no denominator, a 1 is understood. So, most primary degrees are 1.
 E: Chord Quality
 M = major
 m = minor
+d = diminished
+a = augmented chord (1+)
 M7 = major 7th
 m7 = minor 7th
 D7 = dominant 7th
-a = augmented chord (1+)
+d7 = diminished 7th
+h7 = half-diminished 7th
 a6 = augmented 6th (+4: It+6, Fr+6, Gr+6)
+(a6 has been replaced in our code by the three separate versions)
 
 --
 

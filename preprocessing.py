@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import xlrd
-from music21 import converter
+from music21 import converter, note
 from music21.chord import Chord
 from music21.repeat import ExpanderException
 
@@ -32,6 +32,43 @@ from utils import find_chord_root, _encode_key, _encode_degree, _encode_quality,
 class HarmonicAnalysisError(Exception):
     """ Raised when the harmonic analysis associated to a certain time can't be found """
     pass
+
+
+def load_score_beat_strength(i, fpq):
+    """
+
+    :param i:
+    :param fpq:
+    :return:
+    """
+    score_file = os.path.join(DATASET_FOLDER, str(i).zfill(2), "score.mxl")
+    try:
+        score = converter.parse(score_file).expandRepeats()
+    except ExpanderException:
+        score = converter.parse(score_file)
+        print("Could not expand repeats. Maybe there are no repeats in the piece? Please check.")
+    n_frames = int(score.duration.quarterLength * fpq)
+    beat_strength = np.zeros(shape=(3, n_frames), dtype=np.int32)
+    # Throw away all notes in the score, we shouldn't use this score for anything except finding beat strength structure
+    score = score.template()
+    n = note.Note('C')
+    n.duration.quarterLength = 1. / fpq
+    offsets = np.arange(n_frames) / fpq
+    score.repeatInsert(n, offsets)
+    for n in score.flat.notes:
+        bs = n.beatStrength
+        if bs == 1.:
+            i = 0
+        elif bs == 0.5:
+            i = 1
+        else:
+            i = 2
+        time = int(round(n.offset * fpq))
+        beat_strength[i, time] = 1
+    # x = beat_strength[:, -120:]
+    # sns.heatmap(x)
+    # plt.show()
+    return beat_strength
 
 
 def load_score_pitch_class(i, fpq):
@@ -57,7 +94,7 @@ def load_score_pitch_class(i, fpq):
         for p in pitches:  # add notes to piano_roll
             piano_roll[p, time] = 1
         piano_roll[pitches[0] + 12, time] = 1
-    sns.heatmap(piano_roll)
+    # sns.heatmap(piano_roll)
     # plt.show()
     return piano_roll, t0
 

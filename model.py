@@ -59,8 +59,8 @@ def create_model(name, n):
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
     x = DenseNetLayer(x, 4, 5, n=2)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
-    x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
-    # x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measure before and after
+    # x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
+    x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measure before and after
     x = TimeDistributed(Dense(64, activation='tanh'))(x)
     y = MultiTaskLayer(x)
     model = Model(inputs=notes, outputs=y, name=name)
