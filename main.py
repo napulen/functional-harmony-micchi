@@ -13,11 +13,13 @@ exploratory = False
 if exploratory:
     enable_eager_execution()
 
-mode = 'pitch_class_beat_strength'
+# mode = 'pitch_class_beat_strength'
 # mode = 'pitch_class'
+mode = 'pitch_class_weighted_loss'
 # mode = 'midi_number'
 mode2input_shape = {
     'pitch_class': 24,
+    'pitch_class_weighted_loss': 24,
     'pitch_class_beat_strength': 27,
     'midi_number': N_PITCHES
 }
@@ -40,6 +42,7 @@ callbacks = [
     TensorBoard(log_dir=model_folder)
 ]
 weights = [1., 0.5, 1., 1., 0.5, 2.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
+# weights = [1., 1. 1., 1., 1., 1.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
 model.compile(loss='categorical_crossentropy', loss_weights=weights, optimizer='adam', metrics=['accuracy'])
 
 model.fit(train_data, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, validation_data=valid_data,
