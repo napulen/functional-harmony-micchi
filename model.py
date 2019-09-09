@@ -66,7 +66,7 @@ def create_model(name, n):
     x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measure before and after
     x = TimeDistributed(Dense(64, activation='tanh'))(x)
     y = MultiTaskLayer(x)
-    y.append(Lambda(find_root, arguments=[y[0], y[1], y[2]]))  # Derive the root from all other information
+    y.append(Lambda(find_root, name='root')(y))  # Derive the root from all other information
     model = Model(inputs=notes, outputs=y, name=name)
     return model
 
@@ -98,4 +98,4 @@ def find_root(x):
     # primary degree = IV, secondary degree = V
     # in C, that corresponds to the dominant on the fourth degree: C -> F -> C again
     root_pred = (key % 12 + n_num + n_den) % 12
-    return tf.one_hot(root_pred, depth=CLASSES_ROOT)
+    return tf.one_hot(root_pred, depth=CLASSES_ROOT, axis=-1)
