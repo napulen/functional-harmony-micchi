@@ -6,10 +6,10 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow.python.keras.models import load_model
 
-from config import BATCH_SIZE, FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, QUALITY, NOTES, \
+from config import BATCH_SIZE, FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, NOTES, \
     VALID_TFRECORDS, VALID_STEPS, VALID_INDICES
 from load_data import create_tfrecords_dataset
-from utils import create_dezrann_annotations, Q2S, S2I
+from utils import find_root_full_output
 
 
 def check_predictions(y_true, y_pred, index):
@@ -79,40 +79,6 @@ def plot_coherence(y_symb, y_func, n_classes, sonata):
     return
 
 
-def find_root_from_output(y_pred):
-    """
-    Calculate the root of the chord given the output prediction of the neural network.
-    It uses key, primary degree and secondary degree.
-
-    :param y_pred:
-    :return:
-    """
-    key, degree_den, degree_num = np.argmax(y_pred[0][0], axis=-1), np.argmax(y_pred[1][0], axis=-1), np.argmax(
-        y_pred[2][0], axis=-1)
-    deg2sem_maj = [0, 2, 4, 5, 7, 9, 11]
-    deg2sem_min = [0, 2, 3, 5, 7, 8, 10]
-
-    root_pred = []
-    for i in range(len(key)):
-        deg2sem = deg2sem_maj if key[i] // 12 == 0 else deg2sem_min  # keys 0-11 are major, 12-23 minor
-        n_den = deg2sem[degree_den[i] % 7]  # (0-6 diatonic, 7-13 sharp, 14-20 flat)
-        if degree_den[i] // 7 == 1:  # raised root
-            n_den += 1
-        elif degree_den[i] // 7 == 2:  # lowered root
-            n_den -= 1
-        n_num = deg2sem[degree_num[i] % 7]
-        if degree_num[i] // 7 == 1:
-            n_num += 1
-        elif degree_num[i] // 7 == 2:
-            n_num -= 1
-        # key[i] % 12 finds the root regardless of major and minor, then both degrees are added, then sent back to 0-11
-        # both degrees are added, yes: example: V/IV on C major.
-        # primary degree = IV, secondary degree = V
-        # in C, that corresponds to the dominant on the fourth degree: C -> F -> C again
-        root_pred.append((key[i] % 12 + n_num + n_den) % 12)
-    return root_pred
-
-
 test_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, shuffle_buffer=1)
 test_data_iter = test_data.make_one_shot_iterator()
 x, y = test_data_iter.get_next()
@@ -170,7 +136,7 @@ for i in range(VALID_STEPS):
     secondary_msk = (np.argmax(y_true[1][0], axis=-1) != 0)
     secondary_total += sum(secondary_msk)
     secondary_tp += np.sum(np.prod(np.array([a[-1] for a in cp[1:3]]), axis=0)[secondary_msk], axis=-1)
-    root_pred = find_root_from_output(y_pred)
+    root_pred = find_root_full_output(y_pred)
     # plot_coherence(np.argmax(y_pred[5], axis=-1)[0], root_pred, n_classes=12, sonata=VALID_INDICES[i])
     root_coherence += np.sum(root_pred == np.argmax(y_pred[5], axis=-1))
     root_tp += np.sum(root_pred == np.argmax(y_true[5], axis=-1))

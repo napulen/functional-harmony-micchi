@@ -25,7 +25,7 @@ from music21 import converter, note
 from music21.chord import Chord
 from music21.repeat import ExpanderException
 
-from config import DATASET_FOLDER, PITCH_LOW, NOTES
+from config import BPS_FH_FOLDER, PITCH_LOW, NOTES
 from utils import find_chord_root, _encode_key, _encode_degree, _encode_quality, _encode_root
 
 
@@ -41,7 +41,7 @@ def load_score_beat_strength(i, fpq):
     :param fpq:
     :return:
     """
-    score_file = os.path.join(DATASET_FOLDER, str(i).zfill(2), "score.mxl")
+    score_file = os.path.join(BPS_FH_FOLDER, str(i).zfill(2), "score.mxl")
     try:
         score = converter.parse(score_file).expandRepeats()
     except ExpanderException:
@@ -65,14 +65,14 @@ def load_score_beat_strength(i, fpq):
             i = 2
         time = int(round(n.offset * fpq))
         beat_strength[i, time] = 1
-    # x = beat_strength[:, -120:]
-    # sns.heatmap(x)
-    # plt.show()
+    x = beat_strength[:, -120:]
+    sns.heatmap(x)
+    plt.show()
     return beat_strength
 
 
 def load_score_pitch_class(i, fpq):
-    score_file = os.path.join(DATASET_FOLDER, str(i).zfill(2), "score.mxl")
+    score_file = os.path.join(BPS_FH_FOLDER, str(i).zfill(2), "score.mxl")
     try:
         score = converter.parse(score_file).expandRepeats()
     except ExpanderException:
@@ -94,8 +94,8 @@ def load_score_pitch_class(i, fpq):
         for p in pitches:  # add notes to piano_roll
             piano_roll[p, time] = 1
         piano_roll[pitches[0] + 12, time] = 1
-    # sns.heatmap(piano_roll)
-    # plt.show()
+    sns.heatmap(piano_roll)
+    plt.show()
     return piano_roll, t0
 
 
@@ -109,7 +109,7 @@ def load_score(i, fpq, pitch_low=0, pitch_high=128):
     :return: pieces, tdeviation
     """
 
-    score_file = os.path.join(DATASET_FOLDER, str(i).zfill(2), "score.mxl")
+    score_file = os.path.join(BPS_FH_FOLDER, str(i).zfill(2), "score.mxl")
     try:
         score = converter.parse(score_file).expandRepeats()
     except ExpanderException:
@@ -150,7 +150,7 @@ def load_chord_labels(i):
 
     dt = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
           ('inversion', 'int'), ('chord_function', '<U10')]  # datatype
-    chords_file = os.path.join(DATASET_FOLDER, str(i).zfill(2), "chords.xlsx")
+    chords_file = os.path.join(BPS_FH_FOLDER, str(i).zfill(2), "chords.xlsx")
 
     workbook = xlrd.open_workbook(chords_file)
     sheet = workbook.sheet_by_index(0)

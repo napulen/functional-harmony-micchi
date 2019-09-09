@@ -269,3 +269,38 @@ def _fill_level(l, i_p=None):
         else:
             y.append("Hold")
     return y, i_o
+
+
+def find_root_full_output(y_pred_full):
+    """
+    Calculate the root of the chord given the output prediction of the neural network.
+    It uses key, primary degree and secondary degree.
+
+    :param y_pred_full: the prediction as a list over different timesteps
+    :return:
+    """
+    key, degree_den, degree_num = np.argmax(y_pred_full[0][0], axis=-1), np.argmax(y_pred_full[1][0],
+                                                                                   axis=-1), np.argmax(
+        y_pred_full[2][0], axis=-1)
+    deg2sem_maj = [0, 2, 4, 5, 7, 9, 11]
+    deg2sem_min = [0, 2, 3, 5, 7, 8, 10]
+
+    root_pred = []
+    for i in range(len(key)):
+        deg2sem = deg2sem_maj if key[i] // 12 == 0 else deg2sem_min  # keys 0-11 are major, 12-23 minor
+        n_den = deg2sem[degree_den[i] % 7]  # (0-6 diatonic, 7-13 sharp, 14-20 flat)
+        if degree_den[i] // 7 == 1:  # raised root
+            n_den += 1
+        elif degree_den[i] // 7 == 2:  # lowered root
+            n_den -= 1
+        n_num = deg2sem[degree_num[i] % 7]
+        if degree_num[i] // 7 == 1:
+            n_num += 1
+        elif degree_num[i] // 7 == 2:
+            n_num -= 1
+        # key[i] % 12 finds the root regardless of major and minor, then both degrees are added, then sent back to 0-11
+        # both degrees are added, yes: example: V/IV on C major.
+        # primary degree = IV, secondary degree = V
+        # in C, that corresponds to the dominant on the fourth degree: C -> F -> C again
+        root_pred.append((key[i] % 12 + n_num + n_den) % 12)
+    return root_pred
