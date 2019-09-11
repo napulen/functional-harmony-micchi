@@ -25,8 +25,9 @@ from music21 import converter, note
 from music21.chord import Chord
 from music21.repeat import ExpanderException
 
-from config import BPS_FH_FOLDER, PITCH_LOW, NOTES
-from utils import find_chord_root, _encode_key, _encode_degree, _encode_quality, _encode_root
+from config import BPS_FH_FOLDER, PITCH_LOW, NOTES, PITCH_LINE
+from utils import find_chord_root, _encode_key, _encode_degree, _encode_quality, _encode_root, P2I, N2I, \
+    find_enharmonic_equivalent
 
 
 class HarmonicAnalysisError(Exception):
@@ -34,44 +35,7 @@ class HarmonicAnalysisError(Exception):
     pass
 
 
-def load_score_beat_strength(i, fpq):
-    """
-
-    :param i:
-    :param fpq:
-    :return:
-    """
-    score_file = os.path.join(BPS_FH_FOLDER, str(i).zfill(2), "score.mxl")
-    try:
-        score = converter.parse(score_file).expandRepeats()
-    except ExpanderException:
-        score = converter.parse(score_file)
-        print("Could not expand repeats. Maybe there are no repeats in the piece? Please check.")
-    n_frames = int(score.duration.quarterLength * fpq)
-    beat_strength = np.zeros(shape=(3, n_frames), dtype=np.int32)
-    # Throw away all notes in the score, we shouldn't use this score for anything except finding beat strength structure
-    score = score.template()
-    n = note.Note('C')
-    n.duration.quarterLength = 1. / fpq
-    offsets = np.arange(n_frames) / fpq
-    score.repeatInsert(n, offsets)
-    for n in score.flat.notes:
-        bs = n.beatStrength
-        if bs == 1.:
-            i = 0
-        elif bs == 0.5:
-            i = 1
-        else:
-            i = 2
-        time = int(round(n.offset * fpq))
-        beat_strength[i, time] = 1
-    x = beat_strength[:, -120:]
-    sns.heatmap(x)
-    plt.show()
-    return beat_strength
-
-
-def load_score_pitch_class(i, fpq):
+def _load_score(i, fpq):
     score_file = os.path.join(BPS_FH_FOLDER, str(i).zfill(2), "score.mxl")
     try:
         score = converter.parse(score_file).expandRepeats()
@@ -82,6 +46,71 @@ def load_score_pitch_class(i, fpq):
     measure_offset = list(score.measureOffsetMap().keys())
     measure_length = np.diff(measure_offset)
     t0 = - measure_offset[1] if measure_length[0] != measure_length[1] else 0  # Pickup time
+    return score, t0, n_frames
+
+
+def load_score_beat_strength(i, fpq):
+    """
+
+    :param i:
+    :param fpq:
+    :return:
+    """
+    score, _, n_frames = _load_score(i, fpq)
+    # Throw away all notes in the score, we shouldn't use this score for anything except finding beat strength structure
+    score = score.template()
+    # Insert fake notes and use them to derive the beat strength through music21
+    n = note.Note('C')
+    n.duration.quarterLength = 1. / fpq
+    offsets = np.arange(n_frames) / fpq
+    score.repeatInsert(n, offsets)
+    beat_strength = np.zeros(shape=(3, n_frames), dtype=np.int32)
+    for n in score.flat.notes:
+        bs = n.beatStrength
+        if bs == 1.:
+            i = 0
+        elif bs == 0.5:
+            i = 1
+        else:
+            i = 2
+        time = int(round(n.offset * fpq))
+        beat_strength[i, time] = 1
+    # Show the result
+    # x = beat_strength[:, -120:]
+    # sns.heatmap(x)
+    # plt.show()
+    return beat_strength
+
+
+def load_score_pitch_spelling(i, fpq):
+    score, t0, n_frames = _load_score(i, fpq)
+    score = score.chordify()
+    piano_roll = np.zeros(shape=(35 * 2, n_frames), dtype=np.int32)
+    flattest, sharpest = 35, 0
+    numFlatwards, numSharpwards = 0, 0
+    for chord in score.flat.notes:
+        start = int(round(chord.offset * fpq))
+        end = start + max(int(round(chord.duration.quarterLength * fpq)), 1)
+        time = np.arange(start, end)
+        for i, note in enumerate(chord):
+            nn = note.pitch.name
+            idx = P2I[nn]
+            flattest = min(flattest, idx)
+            sharpest = max(sharpest, idx)
+            piano_roll[idx, time] = 1
+            if i == 0:
+                piano_roll[idx + 35, time] = 1
+
+        numFlatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
+        numSharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
+    # Show the result
+    # sns.heatmap(piano_roll)
+    # plt.show()
+    return piano_roll, t0, numFlatwards, numSharpwards
+
+
+def load_score_pitch_class(i, fpq):
+    score, t0, n_frames = _load_score(i, fpq)
     score = score.chordify()
     piano_roll = np.zeros(shape=(24, n_frames), dtype=np.int32)
     for n in score.flat.notes:
@@ -94,12 +123,13 @@ def load_score_pitch_class(i, fpq):
         for p in pitches:  # add notes to piano_roll
             piano_roll[p, time] = 1
         piano_roll[pitches[0] + 12, time] = 1
-    sns.heatmap(piano_roll)
-    plt.show()
+    # Show the result
+    # sns.heatmap(piano_roll)
+    # plt.show()
     return piano_roll, t0
 
 
-def load_score(i, fpq, pitch_low=0, pitch_high=128):
+def load_score_midi_number(i, fpq, pitch_low=0, pitch_high=128):
     """
     Load notes in each piece, which is then represented as piano roll.
     :param pitch_low:
@@ -108,17 +138,7 @@ def load_score(i, fpq, pitch_low=0, pitch_high=128):
     :param fpq: frames per quarter note, default =  8 (that is, 32th note as 1 unit in piano roll)
     :return: pieces, tdeviation
     """
-
-    score_file = os.path.join(BPS_FH_FOLDER, str(i).zfill(2), "score.mxl")
-    try:
-        score = converter.parse(score_file).expandRepeats()
-    except ExpanderException:
-        score = converter.parse(score_file)
-        print("Could not expand repeats. Maybe there are no repeats in the piece? Please check.")
-    n_frames = int(score.duration.quarterLength * fpq)
-    measure_offset = list(score.measureOffsetMap().keys())
-    measure_length = np.diff(measure_offset)
-    t0 = - measure_offset[1] if measure_length[0] != measure_length[1] else 0  # Pickup time
+    score, t0, n_frames = _load_score(i, fpq)
     piano_roll = np.zeros(shape=(128, n_frames), dtype=np.int32)
     for n in score.flat.notes:
         pitches = np.array([x.midi for x in n.pitches] if isinstance(n, Chord) else [n.pitch.midi])
@@ -129,6 +149,7 @@ def load_score(i, fpq, pitch_low=0, pitch_high=128):
         # plt.show(p)
         for p in pitches:  # add notes to piano_roll
             piano_roll[p, time] = 1
+    # Show the result
     # sns.heatmap(piano_roll)
     # plt.show()
     return piano_roll[pitch_low:pitch_high], t0
@@ -158,6 +179,7 @@ def load_chord_labels(i):
     for rowx in range(sheet.nrows):
         cols = sheet.row_values(rowx)
         # xlrd.open_workbook automatically casts strings to float if they are compatible. Revert this.
+        cols[2] = cols[2].replace('+', '#')  # BPS-FH people use + for sharps, while music21 uses #. We stick to #.
         if isinstance(cols[3], float):  # if type(degree) == float
             cols[3] = str(int(cols[3]))
         if cols[4] == 'a6':  # in the case of aug 6 chords, verify if they're italian, german, or french
@@ -166,27 +188,33 @@ def load_chord_labels(i):
     return np.array(chords, dtype=dt)  # convert to structured array
 
 
-def shift_chord_labels(chord_labels, s):
+def shift_chord_labels(chord_labels, s, mode='semitone'):
     """
 
     :param chord_labels:
     :param s:
+    :param mode: can be either 'semitone' or 'fifth' and describes how transpositions are done.
     :return:
     """
     new_labels = chord_labels.copy()
 
     for i in range(len(new_labels)):
         key = chord_labels[i]['key']
-        if '-' in key:
-            new_key = NOTES[(NOTES.index(key[0].upper()) + s - 1) % 12]
+        if mode == 'semitone':
+            # TODO: This never uses flats for keys!
+            key = find_enharmonic_equivalent(key)
+            idx = ((N2I[key[0].upper()] + s - 1) if ('-' in key) else (N2I[key.upper()] + s)) % 12
+            new_key = NOTES[idx] if key.isupper() else NOTES[idx].lower()
+        elif mode == 'fifth':
+            idx = P2I[key.upper()] + s
+            new_key = PITCH_LINE[idx] if key.isupper() else PITCH_LINE[idx].lower()
         else:
-            new_key = NOTES[(NOTES.index(key.upper()) + s) % 12]
-        new_labels[i]['key'] = new_key if key.isupper() else new_key.lower()
-
+            raise ValueError('mode should be either "semitone" or "fifth"')
+        new_labels[i]['key'] = new_key
     return new_labels
 
 
-def segment_chord_labels(i, chord_labels, n_frames, t0, hsize=4, fpq=8):
+def segment_chord_labels(i, chord_labels, n_frames, t0, hsize=4, fpq=8, pitch_spelling=False):
     """
 
     :param i: sonata number
@@ -195,6 +223,7 @@ def segment_chord_labels(i, chord_labels, n_frames, t0, hsize=4, fpq=8):
     :param t0:
     :param hsize: hop size between different frames
     :param fpq: frames per quarter note
+    :param pitch_spelling: if True, use the correct pitch spelling (e.g., F++ != G)
     :return:
     """
     # Get corresponding chord label (only chord symbol) for each segment
@@ -208,24 +237,26 @@ def segment_chord_labels(i, chord_labels, n_frames, t0, hsize=4, fpq=8):
             raise HarmonicAnalysisError(f"Cannot read label for Sonata N.{i} at frame {n}, time {seg_time}")
 
         # TODO: clearly not optimal, since I'm calculating every chord separately
-        labels.append((label['key'], label['degree'], label['quality'], label['inversion'], find_chord_root(label)))
+        labels.append((label['key'], label['degree'], label['quality'], label['inversion'],
+                       find_chord_root(label, pitch_spelling)))
     return labels
 
 
-def encode_chords(chords):
+def encode_chords(chords, mode='semitone'):
     """
     Associate every chord element with an integer that represents its category.
 
-    :param chord:
+    :param chords:
+    :param mode:
     :return:
     """
     chords_enc = []
     for chord in chords:
-        key_enc = _encode_key(str(chord[0]))
+        key_enc = _encode_key(str(chord[0]), mode)
         degree_p_enc, degree_s_enc = _encode_degree(str(chord[1]))
         quality_enc = _encode_quality(str(chord[2]))
         inversion_enc = int(chord[3])
-        root_enc = _encode_root(str(chord[4]))
+        root_enc = _encode_root(str(chord[4]), mode)
 
         chords_enc.append((key_enc, degree_p_enc, degree_s_enc, quality_enc, inversion_enc, root_enc))
 
@@ -243,3 +274,18 @@ def find_bass_notes(piano_roll):
     bass = np.argmax(piano_roll, axis=0)
     bass = np.array([np.min(bass[4 * i:4 * (i + 1)]) for i in range(len(bass) // 4)])
     return bass + PITCH_LOW - 60  # C4 is the midi pitch 60
+
+
+def calculate_number_transpositions(chords):
+    keys = set([c['key'] for c in chords])
+    nl, nr = 35, 35  # number of transpositions to the left or to the right
+    for k in keys:
+        i = P2I[k.upper()]
+        if k.isupper():
+            l = i - 1  # we don't use the left-most major key (F--)
+            r = 35 - i - 5  # we don't use the 5 right-most major keys AND it is the endpoint of a range
+        else:
+            l = i - 4  # we don't use the 4 left-most minor keys (yes! different from the major case!)
+            r = 35 - i - 5  # we don't use the 5 right-most minor keys AND it is the endpoint of a range
+        nl, nr = min(nl, l), min(nr, r)
+    return nl, nr

@@ -35,6 +35,14 @@ def _parse_function(proto, n):
 
 
 def create_tfrecords_dataset(input_path, batch_size, shuffle_buffer, n):
+    """
+
+    :param input_path:
+    :param batch_size:
+    :param shuffle_buffer:
+    :param n: number of features
+    :return:
+    """
     def _parse(proto):
         return _parse_function(proto, n)
 

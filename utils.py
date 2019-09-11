@@ -7,20 +7,45 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from config import ROOTS, NOTES, SCALES, QUALITY, SYMBOL, FEATURES, TICK_LABELS
+from config import ROOTS, NOTES, SCALES, QUALITY, SYMBOL, FEATURES, TICK_LABELS, PITCH_LINE
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
 Q2I = dict([(e[1], e[0]) for e in enumerate(QUALITY)])
-S2I = dict([(e[1], e[0]) for e in enumerate(SYMBOL)])
+P2I = dict([(e[1], e[0]) for e in enumerate(PITCH_LINE)])
 Q2S = {'M': 'M', 'm': 'm', 'M7': 'M7', 'm7': 'm7', 'D7': '7', 'a': 'aug', 'd': 'dim', 'd7': 'dim7',
        'h7': 'm7(b5)', 'Gr+6': 'Gr+6', 'It+6': 'It+6',
        'Fr+6': 'Fr+6'}  # necessary only because the data is stored in non-standard notation
 
 
-def _encode_key(key):
-    """ Major keys: 0-11, Minor keys: 12-23 """
-    return N2I[key.upper()] + (12 if key.islower() else 0)
+def _encode_key(key, mode):
+    """
+    if mode == 'semitone', Major keys: 0-11, Minor keys: 12-23
+    if mode == 'fifth',
+    """
+    # minor keys are always encoded after major keys
+    if mode == 'semitone':
+        # 12 because there are 12 pitch classes
+        res = N2I[key.upper()] + (12 if key.islower() else 0)
+    elif mode == 'fifth':
+        # -1 because we don't use F-- as a key (it has triple flats) and that is the first element in the PITCH_LINE
+        # + 35 because there are 35 total major keys and this is the theoretical distance between a major key
+        # and its minor equivalent if all keys were used
+        # -9 because we don't use the last 5 major keys (triple sharps) and the first 4 minor keys (triple flats)
+        res = P2I[key.upper()] - 1 + (35 - 9 if key.islower() else 0)
+    else:
+        raise ValueError("_encode_key: Mode not recognized")
+    return res
+
+
+def _encode_root(root, mode):
+    if mode == 'semitone':
+        res = N2I[root]
+    elif mode == 'fifth':
+        res = P2I[root]
+    else:
+        raise ValueError("_encode_root: Mode not recognized")
+    return res
 
 
 def _encode_degree(degree):
@@ -31,15 +56,15 @@ def _encode_degree(degree):
 
     if '/' in degree:
         num, den = degree.split('/')
-        primary = _translate_degree(den)  # 1-indexed as usual in musicology
-        secondary = _translate_degree(num)
+        primary = _encode_degree_no_slash(den)  # 1-indexed as usual in musicology
+        secondary = _encode_degree_no_slash(num)
     else:
         primary = 1  # 1-indexed as usual in musicology
-        secondary = _translate_degree(degree)
+        secondary = _encode_degree_no_slash(degree)
     return primary - 1, secondary - 1  # set 0-indexed
 
 
-def _translate_degree(degree_str):
+def _encode_degree_no_slash(degree_str):  # diatonic 1-7, raised 8-14, lowered 15-21
     if degree_str[0] == '-':
         offset = 14
     elif degree_str[0] == '+':
@@ -49,107 +74,104 @@ def _translate_degree(degree_str):
         offset = 0
     else:
         offset = 0
-    return int(degree_str) + offset
+    return abs(int(degree_str)) + offset  # 1-indexed as usual in musicology
 
 
 def _encode_quality(quality):
     return Q2I[quality]
 
 
-def _encode_root(root):
-    return N2I[root]
+def find_enharmonic_equivalent(note):
+    """ Transform everything into a note with at most one sharp and no flats """
+    note_up = note.upper()
 
+    if note_up in NOTES:
+        return note_up
 
-def _find_enharmonic_equivalent(note):
-    """ Transform everything into one of the notes defined in NOTES """
-    if note in NOTES:
-        return note
-
-    if '++' in note:
-        if 'B' in note or 'E' in note:
-            note = ROOTS[(ROOTS.index(note[0]) + 1) % 7] + '+'
+    if '##' in note_up:
+        if 'B' in note_up or 'E' in note_up:
+            note_up = ROOTS[(ROOTS.index(note_up[0]) + 1) % 7] + '#'
         else:
-            note = ROOTS[ROOTS.index(note[0]) + 1]  # no problem when index == 6 because that's the case B++
-    elif '--' in note:  # if root = x--
-        if 'C' in note or 'F' in note:
-            note = ROOTS[ROOTS.index(note[0]) - 1] + '-'
+            note_up = ROOTS[ROOTS.index(note_up[0]) + 1]  # no problem when index == 6 because that's the case B++
+    elif '--' in note_up:  # if root = x--
+        if 'C' in note_up or 'F' in note_up:
+            note_up = ROOTS[ROOTS.index(note_up[0]) - 1] + '-'
         else:
-            note = ROOTS[ROOTS.index(note[0]) - 1]
+            note_up = ROOTS[ROOTS.index(note_up[0]) - 1]
 
-    if note == 'F-' or note == 'C-':
-        note = ROOTS[ROOTS.index(note[0]) - 1]
-    elif note == 'E+' or note == 'B+':
-        note = ROOTS[(ROOTS.index(note[0]) + 1) % 7]
+    if note_up == 'F-' or note_up == 'C-':
+        note_up = ROOTS[ROOTS.index(note_up[0]) - 1]
+    elif note_up == 'E#' or note_up == 'B#':
+        note_up = ROOTS[(ROOTS.index(note_up[0]) + 1) % 7]
 
-    if note not in NOTES:  # there is a single flat left, and it's on a black key
-        note = ROOTS[ROOTS.index(note[0]) - 1] + '+'
+    if note_up not in NOTES:  # there is a single flat left, and it's on a black key
+        note_up = ROOTS[ROOTS.index(note_up[0]) - 1] + '#'
 
-    return note
+    return note_up if note.isupper() else note_up.lower()
 
 
-def find_chord_root(chord):
+def find_chord_root(chord, pitch_spelling):
     """
     Get the chord root from the roman numeral representation.
     :param chord:
+    :param pitch_spelling: if True, use the correct pitch spelling (e.g., F++ != G)
     :return: chords_full
     """
 
     # Translate chords
     key = chord['key']
     degree_str = chord['degree']
-    quality = chord['quality']
 
     try:  # check if we have already seen the same chord (F2S = features to symbol)
-        return F2S[','.join([key, degree_str, quality])]
+        return F2S[','.join([key, degree_str])]
     except KeyError:
         pass
 
     # FIND THE ROOT OF THE CHORD
-    if len(degree_str) == 1 or (len(degree_str) == 2 and degree_str[1] == '+'):  # case: degree = x, augmented chords
-        degree = int(degree_str[0])
-        root = SCALES[key][degree - 1]
-
-    elif degree_str == '+4':  # case: augmented 6th
-        degree = 4
-        root = SCALES[key][degree - 1]
-        root = _sharp_alteration(root)  # lower the sixth in a major key
-
-    # TODO: Verify these cases!
-    elif degree_str[0] == '-':  # case: chords on flattened degree
-        degree = int(degree_str[1])
-        root = SCALES[key][degree - 1]
-        root = _flat_alteration(root)  # the fundamental of the chord is lowered
-
-    elif '/' in degree_str:  # case: secondary chord
-        degree = degree_str
-        n = int(degree.split('/')[0]) if '+' not in degree.split('/')[0] else 6  # take care of augmented 6th chords
-        d = int(degree.split('/')[1])  # denominator
-        key2 = SCALES[key][abs(d) - 1]  # secondary key
-        if d < 0:
-            key2 = _flat_alteration(key2)
-        key2 = _find_enharmonic_equivalent(key2)
-
-        root = SCALES[key2][n - 1]
-        if '+' in degree.split('/')[0]:  # augmented 6th chords
-            if _is_major(key2):  # case: major key
-                root = _flat_alteration(root)
+    if '/' in degree_str:  # case: secondary chord
+        n_str = degree_str.split('/')[0]  # numerator
+        d_str = degree_str.split('/')[1]  # denominator
     else:
-        raise ValueError(f"Can't understand the following chord degree: {degree_str}")
+        n_str = degree_str
+        d_str = '1'
 
-    root = _find_enharmonic_equivalent(root)
+    n_enc = _encode_degree_no_slash(n_str) - 1
+    n = n_enc % 7
+    n_alt = n_enc // 7
 
-    F2S[','.join([key, degree_str, quality])] = root
+    d_enc = _encode_degree_no_slash(d_str) - 1
+    d = d_enc % 7
+    d_alt = d_enc // 7
+
+    key2 = SCALES[key][d]  # secondary key
+    if (key.isupper() and d in [1, 2, 5, 6]) or (key.islower() and d in [0, 1, 3, 6]):
+        key2 = key2.lower()
+    if d_alt == 1:
+        key2 = _sharp_alteration(key2).lower()  # when the root is raised, we go to minor scale
+    elif d_alt == 2:
+        key2 = _flat_alteration(key2).upper()  # when the root is lowered, we go to major scale
+
+    root = SCALES[key2][n]
+    if n_alt == 1:
+        root = _sharp_alteration(root)
+    elif n_alt == 2:
+        root = _flat_alteration(root)
+
+    if not pitch_spelling:
+        root = find_enharmonic_equivalent(root)
+
+    F2S[','.join([key, degree_str])] = root
     return root
 
 
 def _flat_alteration(note):
     """ Ex: _flat_alteration(G) = G-,  _flat_alteration(G+) = G """
-    return note[:-1] if '+' in note else note + '-'
+    return note[:-1] if '#' in note else note + '-'
 
 
 def _sharp_alteration(note):
     """ Ex: _sharp_alteration(G) = G+,  _sharp_alteration(G-) = G """
-    return note[:-1] if '-' in note else note + '+'
+    return note[:-1] if '-' in note else note + '#'
 
 
 def _is_major(key):
@@ -304,3 +326,62 @@ def find_root_full_output(y_pred_full):
         # in C, that corresponds to the dominant on the fourth degree: C -> F -> C again
         root_pred.append((key[i] % 12 + n_num + n_den) % 12)
     return root_pred
+
+
+def _decode_key(i):
+    lower = i // 12
+    key = NOTES[i % 12]
+    return key.lower() if lower else key
+
+
+def _decode_degree(p, s):
+    num_alt = s // 7
+    num = _int_to_roman((s % 7) + 1)
+    if num_alt == 1:
+        num += '+'
+    elif num_alt == 2:
+        num += '-'
+    den_alt = p // 7
+    den = _int_to_roman((p % 7) + 1)
+    if den_alt == 1:
+        den += '+'
+    elif den_alt == 2:
+        den += '-'
+    return num + '/' + den if den != _int_to_roman(1) else num
+
+
+def _decode_quality(q):
+    return QUALITY[q]
+
+
+def _int_to_roman(input):
+    """ Convert an integer to a Roman numeral. """
+
+    if not 0 < input < 8:
+        raise ValueError("Argument must be between 1 and 7")
+    ints = (5, 4, 1)
+    nums = ('V', 'IV', 'I')
+    result = []
+    for i in range(len(ints)):
+        count = int(input / ints[i])
+        result.append(nums[i] * count)
+        input -= ints[i] * count
+    return ''.join(result)
+
+
+def _decode_inversion(i):
+    return str(i)
+
+
+def decode_results(y):
+    """
+    Transform a list of the class outputs into something readable by humans.
+
+    :param y: it should have shape [features, timesteps], and every element should be an integer indicating the class
+    :return:
+    """
+    key = [_decode_key(i) for i in y[0]]
+    degree = [_decode_degree(i[0], i[1]) for i in zip(y[1], y[2])]
+    quality = [_decode_quality(i) for i in y[3]]
+    inversion = [_decode_inversion(i) for i in y[4]]
+    return [key, degree, quality, inversion]

@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 from config import FPQ, TRAIN_TFRECORDS, VALID_TFRECORDS
-from preprocessing import load_score
+from preprocessing import load_score_midi_number
 
 
 def count_records(tfrecord):
@@ -25,7 +25,7 @@ def find_pitch_extremes():
     """
     min_note, max_note = 128, 0  # they are inverted on purpose! they are initial conditions that will certainly be updated
     for i in range(1, 33):
-        piano_roll, t0 = load_score(i, FPQ)
+        piano_roll, t0 = load_score_midi_number(i, FPQ)
         min_i = np.where(np.max(piano_roll, axis=-1) == 1)[0][0] - 6  # -6 because we want room for transposing
         max_i = np.where(np.max(piano_roll, axis=-1) == 1)[0][-1] + 5  # +5 because we want room for transposing
         min_note = min(min_note, min_i)

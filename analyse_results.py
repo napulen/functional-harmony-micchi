@@ -9,7 +9,7 @@ from tensorflow.python.keras.models import load_model
 from config import BATCH_SIZE, FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, NOTES, \
     VALID_TFRECORDS, VALID_STEPS, VALID_INDICES
 from load_data import create_tfrecords_dataset
-from utils import find_root_full_output
+from utils import find_root_full_output, decode_results, Q2I
 
 
 def check_predictions(y_true, y_pred, index):
@@ -22,6 +22,39 @@ def check_predictions(y_true, y_pred, index):
     :return: a boolean vector of dimension [features, samples]
     """
     return np.argmax(y_true[index], axis=-1) == np.argmax(y_pred[index], axis=-1)
+
+
+def visualize_chord_changes(y_true, y_pred, inversions=True):
+    if inversions:
+        yt = [np.argmax(y[0], axis=-1) for y in y_true[:-1]]
+        yp = [np.argmax(y[0], axis=-1) for y in y_pred[:-1]]
+    else:
+        yt = [np.argmax(y[0], axis=-1) for y in y_true[:-2]]
+        yp = [np.argmax(y[0], axis=-1) for y in y_pred[:-2]]
+    n = len(yt[0])
+    change_true, change_pred = np.zeros(n), np.zeros(n)
+    for m in range(n - 1):
+        if np.any([y[m + 1] != y[m] for y in yt]):
+            change_true[m] = 1
+        if np.any([y[m + 1] != y[m] for y in yp]):
+            change_pred[m] = 1
+
+    # Plotting the results
+    cmap = sns.color_palette(['#d73027', '#f7f7f7', '#3027d7'])
+    ax = sns.heatmap([change_true - change_pred], cmap=cmap)
+    colorbar = ax.collections[0].colorbar
+    colorbar.set_ticks([-0.67, 0., 0.67])
+    colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
+    ax.set(ylabel=['change_true', 'change_pred'], xlabel='time',
+           title=f"Sonata {VALID_INDICES[i]} - chord consistency " +
+                 ('with inversions' if inversions else 'without inversions'))
+    plt.show()
+    zt = decode_results(yt)
+    zp = decode_results(yp)
+    wt = [' '.join([zt[0][i], zt[1][i], zt[2][i], zt[3][i]]) for i in range(n)]
+    wp = [' '.join([zp[0][i], zp[1][i], zp[2][i], zp[3][i]]) for i in range(n)]
+    print("hi")
+    return
 
 
 def visualize_results(mode='probabilities'):
@@ -54,6 +87,7 @@ def visualize_results(mode='probabilities'):
         # figManager = plt.get_current_fig_manager()
         # figManager.window.showMaximized()
         plt.show()
+        return
 
 
 def visualize_piano_roll(pr, i):
@@ -79,7 +113,7 @@ def plot_coherence(y_symb, y_func, n_classes, sonata):
     return
 
 
-test_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, shuffle_buffer=1)
+test_data = create_tfrecords_dataset(VALID_TFRECORDS, BATCH_SIZE, shuffle_buffer=1, n=24)
 test_data_iter = test_data.make_one_shot_iterator()
 x, y = test_data_iter.get_next()
 
@@ -119,19 +153,20 @@ for i in range(VALID_STEPS):
 # Calculate accuracy etc.
 func_tp, name_tp, root_tp, n_predictions = 0, 0, 0, 0
 root_coherence = 0
-degree_tp, secondary_tp, secondary_total = 0, 0, 0
+degree_tp, secondary_tp, secondary_total, d7_tp, d7_total = 0, 0, 0, 0, 0
 cp = [[] for _ in range(6)]  # dimensions will be: features, sonatas, frames
 tp = np.zeros(6)  # true positives for each separate feature
 for i in range(VALID_STEPS):
-    y_true, y_pred = test_truth[i], test_predict[i]
+    y_true, y_pred = test_truth[i], test_predict[i]  # shape: [features], [batch, timestep, classes]
     n_predictions += y_true[0].shape[1]
+    visualize_chord_changes(y_true, y_pred, True)
+    visualize_chord_changes(y_true, y_pred, False)
     for j in range(6):
         for a in check_predictions(y_true, y_pred, j):
             cp[j].append(a)  # cp has shape (features, batch_size*(i+1), l) where l varies
     # can't vectorialize the next three lines because the length of each sonata l is different
     tp += np.sum(np.array([a[-1] for a in cp]), axis=-1)
     func_tp += np.sum(np.prod(np.array([a[-1] for a in cp[:4]]), axis=0), axis=-1)
-    name_tp += np.sum(np.prod(np.array([a[-1] for a in cp[5:]]), axis=0), axis=-1)
     degree_tp += np.sum(np.prod(np.array([a[-1] for a in cp[1:3]]), axis=0), axis=-1)
     secondary_msk = (np.argmax(y_true[1][0], axis=-1) != 0)
     secondary_total += sum(secondary_msk)
@@ -140,11 +175,14 @@ for i in range(VALID_STEPS):
     # plot_coherence(np.argmax(y_pred[5], axis=-1)[0], root_pred, n_classes=12, sonata=VALID_INDICES[i])
     root_coherence += np.sum(root_pred == np.argmax(y_pred[5], axis=-1))
     root_tp += np.sum(root_pred == np.argmax(y_true[5], axis=-1))
+    d7_msk = (np.argmax(y_true[3][0], axis=-1) == Q2I['d7'])
+    d7_total += sum(d7_msk)
+    d7_tp += np.sum(np.prod(np.array([a[-1] for a in cp[:4]]), axis=0)[secondary_msk], axis=-1)
+
 acc = tp / n_predictions
 degree_acc = degree_tp / n_predictions
 secondary_acc = secondary_tp / secondary_total
 func_acc = func_tp / n_predictions
-name_acc = name_tp / n_predictions
 print(f"accuracy for the different items:")
 for f, a in zip(FEATURES, acc):
     print(f"{f:10} : {a:.4f}")
@@ -152,5 +190,4 @@ print(f'degree     : {degree_tp / n_predictions:.4f}')
 print(f'secondary  : {secondary_tp / secondary_total:.4f}')
 print(f'func root  : {root_tp / n_predictions:.4f}')
 print(f"global functional : {func_acc:.4f}")
-print(f"global symbolic   : {name_acc:.4f}")
 print(f'root_coherence: {root_coherence / n_predictions:.4f}')
