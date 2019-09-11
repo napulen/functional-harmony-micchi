@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from utils import find_chord_root
+from preprocessing import find_chord_root
 
 
 class TestFind_chord_root(TestCase):

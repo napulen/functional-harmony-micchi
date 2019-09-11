@@ -8,7 +8,7 @@ from config import TRAIN_INDICES, VALID_INDICES, VALID_TFRECORDS, TRAIN_TFRECORD
     DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, MODE
 from preprocessing import load_score_midi_number, load_chord_labels, shift_chord_labels, segment_chord_labels, \
     encode_chords, load_score_pitch_class, load_score_beat_strength, load_score_pitch_spelling, \
-    calculate_number_transpositions
+    calculate_number_transpositions_key
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ if __name__ == '__main__':
                     nl, nr = 6, 6
                 elif MODE == 'pitch_spelling':
                     piano_roll, t0, nl_pitches, nr_pitches = load_score_pitch_spelling(i, FPQ)
-                    nl_keys, nr_keys = calculate_number_transpositions(chord_labels)
+                    nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
                     nl = min(nl_keys, nl_pitches)
                     nr = min(nr_keys, nr_pitches)
                     logger.info(f'Acceptable transpositions (pitches, keys): '

@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from utils import find_enharmonic_equivalent
+from preprocessing import find_enharmonic_equivalent
 
 
 class TestFind_enharmonic_equivalent(TestCase):

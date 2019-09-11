@@ -25,9 +25,12 @@ from music21 import converter, note
 from music21.chord import Chord
 from music21.repeat import ExpanderException
 
-from config import BPS_FH_FOLDER, PITCH_LOW, NOTES, PITCH_LINE
-from utils import find_chord_root, _encode_key, _encode_degree, _encode_quality, _encode_root, P2I, N2I, \
-    find_enharmonic_equivalent
+from config import BPS_FH_FOLDER, PITCH_LOW, NOTES, PITCH_LINE, QUALITY, ROOTS, SCALES
+
+F2S = dict()
+N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
+Q2I = dict([(e[1], e[0]) for e in enumerate(QUALITY)])
+P2I = dict([(e[1], e[0]) for e in enumerate(PITCH_LINE)])
 
 
 class HarmonicAnalysisError(Exception):
@@ -216,6 +219,7 @@ def shift_chord_labels(chord_labels, s, mode='semitone'):
 
 def segment_chord_labels(i, chord_labels, n_frames, t0, hsize=4, fpq=8, pitch_spelling=False):
     """
+    Despite the name, this also finds the root for each chord
 
     :param i: sonata number
     :param chord_labels:
@@ -236,7 +240,6 @@ def segment_chord_labels(i, chord_labels, n_frames, t0, hsize=4, fpq=8, pitch_sp
         except IndexError:
             raise HarmonicAnalysisError(f"Cannot read label for Sonata N.{i} at frame {n}, time {seg_time}")
 
-        # TODO: clearly not optimal, since I'm calculating every chord separately
         labels.append((label['key'], label['degree'], label['quality'], label['inversion'],
                        find_chord_root(label, pitch_spelling)))
     return labels
@@ -276,7 +279,7 @@ def find_bass_notes(piano_roll):
     return bass + PITCH_LOW - 60  # C4 is the midi pitch 60
 
 
-def calculate_number_transpositions(chords):
+def calculate_number_transpositions_key(chords):
     keys = set([c['key'] for c in chords])
     nl, nr = 35, 35  # number of transpositions to the left or to the right
     for k in keys:
@@ -289,3 +292,147 @@ def calculate_number_transpositions(chords):
             r = 35 - i - 5  # we don't use the 5 right-most minor keys AND it is the endpoint of a range
         nl, nr = min(nl, l), min(nr, r)
     return nl, nr
+
+
+def _encode_key(key, mode):
+    """
+    if mode == 'semitone', Major keys: 0-11, Minor keys: 12-23
+    if mode == 'fifth',
+    """
+    # minor keys are always encoded after major keys
+    if mode == 'semitone':
+        # 12 because there are 12 pitch classes
+        res = N2I[key.upper()] + (12 if key.islower() else 0)
+    elif mode == 'fifth':
+        # -1 because we don't use F-- as a key (it has triple flats) and that is the first element in the PITCH_LINE
+        # + 35 because there are 35 total major keys and this is the theoretical distance between a major key
+        # and its minor equivalent if all keys were used
+        # -9 because we don't use the last 5 major keys (triple sharps) and the first 4 minor keys (triple flats)
+        res = P2I[key.upper()] - 1 + (35 - 9 if key.islower() else 0)
+    else:
+        raise ValueError("_encode_key: Mode not recognized")
+    return res
+
+
+def _encode_root(root, mode):
+    if mode == 'semitone':
+        res = N2I[root]
+    elif mode == 'fifth':
+        res = P2I[root]
+    else:
+        raise ValueError("_encode_root: Mode not recognized")
+    return res
+
+
+def _encode_degree(degree):
+    """
+    7 diatonics *  3 chromatics  = 21; (0-6 diatonic, 7-13 sharp, 14-20 flat)
+    :return: primary_degree, secondary_degree
+    """
+
+    if '/' in degree:
+        num, den = degree.split('/')
+        primary = _encode_degree_no_slash(den)  # 1-indexed as usual in musicology
+        secondary = _encode_degree_no_slash(num)
+    else:
+        primary = 1  # 1-indexed as usual in musicology
+        secondary = _encode_degree_no_slash(degree)
+    return primary - 1, secondary - 1  # set 0-indexed
+
+
+def _encode_degree_no_slash(degree_str):  # diatonic 1-7, raised 8-14, lowered 15-21
+    if degree_str[0] == '-':
+        offset = 14
+    elif degree_str[0] == '+':
+        offset = 7
+    elif len(degree_str) == 2 and degree_str[1] == '+':  # the case of augmented chords (only 1+ ?)
+        degree_str = degree_str[0]
+        offset = 0
+    else:
+        offset = 0
+    return abs(int(degree_str)) + offset  # 1-indexed as usual in musicology
+
+
+def _encode_quality(quality):
+    return Q2I[quality]
+
+
+def find_enharmonic_equivalent(note):
+    """ Transform everything into a note with at most one sharp and no flats """
+    note_up = note.upper()
+
+    if note_up in NOTES:
+        return note_up
+
+    if '##' in note_up:
+        if 'B' in note_up or 'E' in note_up:
+            note_up = ROOTS[(ROOTS.index(note_up[0]) + 1) % 7] + '#'
+        else:
+            note_up = ROOTS[ROOTS.index(note_up[0]) + 1]  # no problem when index == 6 because that's the case B++
+    elif '--' in note_up:  # if root = x--
+        if 'C' in note_up or 'F' in note_up:
+            note_up = ROOTS[ROOTS.index(note_up[0]) - 1] + '-'
+        else:
+            note_up = ROOTS[ROOTS.index(note_up[0]) - 1]
+
+    if note_up == 'F-' or note_up == 'C-':
+        note_up = ROOTS[ROOTS.index(note_up[0]) - 1]
+    elif note_up == 'E#' or note_up == 'B#':
+        note_up = ROOTS[(ROOTS.index(note_up[0]) + 1) % 7]
+
+    if note_up not in NOTES:  # there is a single flat left, and it's on a black key
+        note_up = ROOTS[ROOTS.index(note_up[0]) - 1] + '#'
+
+    return note_up if note.isupper() else note_up.lower()
+
+
+def find_chord_root(chord, pitch_spelling):
+    """
+    Get the chord root from the roman numeral representation.
+    :param chord:
+    :param pitch_spelling: if True, use the correct pitch spelling (e.g., F++ != G)
+    :return: chords_full
+    """
+
+    # Translate chords
+    key = chord['key']
+    degree_str = chord['degree']
+
+    try:  # check if we have already seen the same chord (F2S = features to symbol)
+        return F2S[','.join([key, degree_str])]
+    except KeyError:
+        pass
+
+    d_enc, n_enc = _encode_degree(degree_str)
+
+    d, d_alt = d_enc % 7, d_enc // 7
+    key2 = SCALES[key][d]  # secondary key
+    if (key.isupper() and d in [1, 2, 5, 6]) or (key.islower() and d in [0, 1, 3, 6]):
+        key2 = key2.lower()
+    if d_alt == 1:
+        key2 = _sharp_alteration(key2).lower()  # when the root is raised, we go to minor scale
+    elif d_alt == 2:
+        key2 = _flat_alteration(key2).upper()  # when the root is lowered, we go to major scale
+
+    n, n_alt = n_enc % 7, n_enc // 7
+    root = SCALES[key2][n]
+    if n_alt == 1:
+        root = _sharp_alteration(root)
+    elif n_alt == 2:
+        root = _flat_alteration(root)
+
+    if not pitch_spelling:
+        root = find_enharmonic_equivalent(root)
+
+    F2S[','.join([key, degree_str])] = root
+    return root
+
+
+def _flat_alteration(note):
+    """ Ex: _flat_alteration(G) = G-,  _flat_alteration(G#) = G """
+    return note[:-1] if '#' in note else note + '-'
+
+
+def _sharp_alteration(note):
+    """ Ex: _sharp_alteration(G) = G#,  _sharp_alteration(G-) = G """
+    return note[:-1] if '-' in note else note + '#'

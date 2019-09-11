@@ -9,7 +9,8 @@ from tensorflow.python.keras.models import load_model
 from config import BATCH_SIZE, FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, NOTES, \
     VALID_TFRECORDS, VALID_STEPS, VALID_INDICES
 from load_data import create_tfrecords_dataset
-from utils import find_root_full_output, decode_results, Q2I
+from utils import find_root_full_output, decode_results
+from preprocessing import Q2I
 
 
 def check_predictions(y_true, y_pred, index):
