@@ -11,12 +11,10 @@ from config import NOTES, QUALITY, FEATURES, TICK_LABELS
 
 
 def visualize_data(data):
-    # data = tf.data.TFRecordDataset(input_path)
-    temp = data.make_one_shot_iterator()
-    x, y = temp.get_next()
-    for pr in x:
-        sns.heatmap(pr)
-        plt.show()
+    for x, _ in data:
+        for pr in x:
+            sns.heatmap(pr)
+            plt.show()
     return
 
 
@@ -198,6 +196,53 @@ def _int_to_roman(input):
         result.append(nums[i] * count)
         input -= ints[i] * count
     return ''.join(result)
+
+
+def _roman_to_int(roman):
+    r2i = {
+        'I': 1,
+        'II': 2,
+        'III': 3,
+        'IV': 4,
+        'V': 5,
+        'VI': 6,
+        'VII': 7,
+    }
+    return r2i[roman.upper()]
+
+
+def find_scale_and_alteration(degree_str, minor_key):
+    nr = ''.join(filter(lambda x: x.upper() in ['V', 'I'], degree_str))
+    ni = _roman_to_int(nr)
+
+    a = ''.join(filter(lambda x: x.upper() not in ['V', 'I'], degree_str))
+    a = a.replace('#', '+')
+    a = a.replace('b', '-')
+    if minor_key and ni == 7:
+        if '+' in a:
+            a = a[:-1]
+        else:
+            a = a + '-'
+    return a, str(ni)
+
+
+def degrees_dcml_to_bps(degree_num, degree_den='', key_minor=True):
+    if not degree_den:
+        a, n = find_scale_and_alteration(degree_num, key_minor)
+        return a + n
+
+    da, dn = find_scale_and_alteration(degree_den, key_minor)
+    k2 = int(dn) - 1  # converts
+    if '+' in da:  # all keys on augmented degrees are minor
+        k2_minor = True
+    elif '-' in da:  # all keys on flattened degrees are major
+        k2_minor = False
+    elif (not key_minor and k2 in [1, 2, 5, 6]) or (key_minor and k2 in [0, 1, 3, 6]):  # minor secondary key
+        k2_minor = True
+    else:  # major secondary keys
+        k2_minor = False
+    na, nn = find_scale_and_alteration(degree_num, k2_minor)
+    return '/'.join([na + nn, da + dn])
 
 
 def _decode_inversion(i):

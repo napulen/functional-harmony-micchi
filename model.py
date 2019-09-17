@@ -2,7 +2,11 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.backend import name_scope
-from tensorflow.python.keras.layers import Conv1D, Concatenate, MaxPooling1D, TimeDistributed, Dense, Lambda
+from tensorflow.python.keras.layers import Conv1D, Concatenate, MaxPooling1D, TimeDistributed, Dense, Lambda, \
+    BatchNormalization, Masking
+
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from config import CLASSES_KEY, CLASSES_DEGREE, CLASSES_QUALITY, CLASSES_INVERSION, CLASSES_ROOT
 
@@ -14,13 +18,16 @@ def DenseNetLayer(x, l, k, n=1):
     :param l: number of elementary blocks in the layer
     :param k: features generated at every block
     :param n: unique identifier of the DenseNetLayer
+    :param training: passed to the batch normalization layers
     :return:
     """
     with name_scope(f"denseNet_{n}"):
         for _ in range(l):
             y = Conv1D(filters=4 * k, kernel_size=1, padding='same', data_format='channels_last', activation='relu')(x)
-            z = Conv1D(filters=k, kernel_size=32, padding='same', data_format='channels_last', activation='relu')(y)
-            x = Concatenate()([x, z])
+            y = BatchNormalization()(y)
+            y = Conv1D(filters=k, kernel_size=32, padding='same', data_format='channels_last', activation='relu')(y)
+            y = BatchNormalization()(y)
+            x = Concatenate()([x, y])
     return x
 
 
@@ -39,22 +46,25 @@ def DilatedConvLayer(x, l, k):
     return x
 
 
-def MultiTaskLayer(x):
+def MultiTaskLayer(x, derive_root):
     o1 = TimeDistributed(Dense(CLASSES_KEY, activation='softmax'), name='key')(x)
     o2 = TimeDistributed(Dense(CLASSES_DEGREE, activation='softmax'), name='degree_1')(x)
     o3 = TimeDistributed(Dense(CLASSES_DEGREE, activation='softmax'), name='degree_2')(x)
     o4 = TimeDistributed(Dense(CLASSES_QUALITY, activation='softmax'), name='quality')(x)
     o5 = TimeDistributed(Dense(CLASSES_INVERSION, activation='softmax'), name='inversion')(x)
-    # o6 = TimeDistributed(Dense(CLASSES_ROOT, activation='softmax'), name='root')(x)
-    # return [o1, o2, o3, o4, o5, o6]
-    return [o1, o2, o3, o4, o5]
+    if derive_root:
+        o6 = Lambda(find_root_no_spelling, name='root')([o1, o2, o3])
+    else:
+        o6 = TimeDistributed(Dense(CLASSES_ROOT, activation='softmax'), name='root')(x)
+    return [o1, o2, o3, o4, o5, o6]
 
 
-def create_model(name, n):
+def create_model(name, n, derive_root=False):
     """
 
     :param name:
     :param n: number of input features
+    :param derive_root:
     :return:
     """
     notes = Input(shape=(None, n), name="piano_roll_input")
@@ -62,20 +72,16 @@ def create_model(name, n):
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
     x = DenseNetLayer(x, 4, 5, n=2)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
-    # x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
     x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measure before and after
+    x = Masking()(x)
+    # x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
     x = TimeDistributed(Dense(64, activation='tanh'))(x)
-    y = MultiTaskLayer(x)
-    y.append(Lambda(find_root, name='root')(y))  # Derive the root from all other information
+    y = MultiTaskLayer(x, derive_root)
     model = Model(inputs=notes, outputs=y, name=name)
     return model
 
 
-# def find_root(x):
-#     return tf.map_fn(_find_root, x)
-
-
-def find_root(x):
+def find_root_no_spelling(x):
     key, degree_den, degree_num = tf.argmax(x[0], axis=-1), tf.argmax(x[1], axis=-1), tf.argmax(
         x[2], axis=-1)
 

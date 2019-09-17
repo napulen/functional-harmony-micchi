@@ -4,11 +4,10 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from config import TRAIN_INDICES, VALID_INDICES, VALID_TFRECORDS, TRAIN_TFRECORDS, \
-    DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, MODE
+from config import VALID_TFRECORDS, TRAIN_TFRECORDS, DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, MODE
 from preprocessing import load_score_midi_number, load_chord_labels, shift_chord_labels, segment_chord_labels, \
     encode_chords, load_score_pitch_class, load_score_beat_strength, load_score_pitch_spelling, \
-    calculate_number_transpositions_key
+    calculate_number_transpositions_key, attach_chord_root
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -52,10 +51,12 @@ def check_existence_tfrecords(tfrecords):
 
             for src, dst in zip(tfrecords, tfrecords_backup):
                 os.rename(src, dst)
-            logger.warning(f"existing data backed up with backup index {i}, new data will be in {tfrecords[0]} and similar")
+            logger.warning(
+                f"existing data backed up with backup index {i}, new data will be in {tfrecords[0]} and similar")
 
         elif answer.lower().strip() == 'replace':
-            logger.warning(f"you chose to replace the old data with new one; the old data will be erased in the process")
+            logger.warning(
+                f"you chose to replace the old data with new one; the old data will be erased in the process")
 
     return tfrecords
 
@@ -65,38 +66,43 @@ if __name__ == '__main__':
           f"You are currently working in the {MODE} mode.\n"
           f"Thank you for choosing algomus productions and have a nice day!")
 
-    indices = [TRAIN_INDICES, VALID_INDICES]
+    folders = [os.path.join(DATA_FOLDER, 'train'), os.path.join(DATA_FOLDER, 'valid')]
     tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS]
     tfrecords = check_existence_tfrecords(tfrecords)
 
     k = 0
-    for indices, output_file in zip(indices, tfrecords):
+    for folder, output_file in zip(folders, tfrecords):
         k += 1
         with tf.io.TFRecordWriter(output_file) as writer:
             logger.info(f'Working on {os.path.basename(output_file)}.')
+            chords_folder = os.path.join(folder, 'chords')
+            scores_folder = os.path.join(folder, 'scores')
+            file_names = [fn[:-4] for fn in os.listdir(chords_folder)]
+            for fn in file_names:
+                sf = os.path.join(scores_folder, f"{fn}.mxl")
+                cf = os.path.join(chords_folder, f"{fn}.csv")
 
-            for i in indices:
-                logger.info(f"Sonata N.{i}")
-                chord_labels = load_chord_labels(i)
+                logger.info(f"Analysing {fn}")
+                chord_labels = load_chord_labels(cf)
                 if MODE == 'pitch_class':
-                    piano_roll, t0 = load_score_pitch_class(i, FPQ)
+                    piano_roll = load_score_pitch_class(sf, FPQ)
                     nl, nr = 6, 6
                 elif MODE == 'pitch_class_beat_strength':
-                    piano_roll, t0 = load_score_pitch_class(i, FPQ)
-                    beat_strength = load_score_beat_strength(i, FPQ)
+                    piano_roll = load_score_pitch_class(sf, FPQ)
+                    beat_strength = load_score_beat_strength(sf, FPQ)
                     piano_roll = np.append(piano_roll, beat_strength, axis=0)
                     nl, nr = 6, 6
                 elif MODE == 'midi_number':
-                    piano_roll, t0 = load_score_midi_number(i, FPQ, PITCH_LOW, PITCH_HIGH)
+                    piano_roll = load_score_midi_number(sf, FPQ, PITCH_LOW, PITCH_HIGH)
                     nl, nr = 6, 6
                 elif MODE == 'pitch_spelling':
-                    piano_roll, t0, nl_pitches, nr_pitches = load_score_pitch_spelling(i, FPQ)
+                    piano_roll, nl_pitches, nr_pitches = load_score_pitch_spelling(sf, FPQ)
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
                     nl = min(nl_keys, nl_pitches)
                     nr = min(nr_keys, nr_pitches)
                     logger.info(f'Acceptable transpositions (pitches, keys): '
                                 f'left {nl_pitches, nl_keys}; '
-                                f'right {nr_pitches-1, nr_keys-1}.')
+                                f'right {nr_pitches - 1, nr_keys - 1}.')
                 else:
                     raise ReferenceError("I shouldn't be here. "
                                          "It looks like the name of some mode has been hard-coded in the wrong way.")
@@ -109,6 +115,9 @@ if __name__ == '__main__':
                 piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant',
                                     constant_values=0)  # shape(PITCH_HIGH - PITCH_LOW, frames)
                 n_frames_analysis = piano_roll.shape[1] // HSIZE
+
+                # Verify that the two lengths match
+                assert n_frames_analysis == chord_labels[-1]['end'] * FPQ / HSIZE
 
                 logger.info(f"Transposing {nl} times to the left and {nr - 1} to the right")
                 for s in range(-nl, nr):
@@ -133,9 +142,9 @@ if __name__ == '__main__':
                     pp = 'fifth' if MODE == 'pitch_spelling' else 'semitone'  # definition of proximity for pitches
                     ps = True if MODE == 'pitch_spelling' else False
                     cl_shifted = shift_chord_labels(chord_labels, s, pp)
-                    cl_segments = segment_chord_labels(i, cl_shifted, n_frames_analysis, t0, hsize=HSIZE, fpq=FPQ,
-                                                       pitch_spelling=ps)
-                    cl_encoded = encode_chords(cl_segments, pp)
+                    cl_full = attach_chord_root(cl_shifted, ps)
+                    cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
+                    cl_encoded = encode_chords(cl_full, pp)
                     feature = {
                         'piano_roll': tf.train.Feature(float_list=tf.train.FloatList(value=pr_shifted.reshape(-1))),
                         'label_key': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[0] for c in cl_encoded])),
@@ -148,7 +157,5 @@ if __name__ == '__main__':
                         'label_inversion': tf.train.Feature(
                             int64_list=tf.train.Int64List(value=[c[4] for c in cl_encoded])),
                         'label_root': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[5] for c in cl_encoded])),
-                        'sonata': tf.train.Feature(int64_list=tf.train.Int64List(value=[i])),
-                        'transposed': tf.train.Feature(int64_list=tf.train.Int64List(value=[s])),
                     }
                     writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())

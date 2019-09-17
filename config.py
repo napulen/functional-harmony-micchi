@@ -1,4 +1,5 @@
 import os
+from math import ceil
 
 MODES = [
     'pitch_spelling',
@@ -7,12 +8,11 @@ MODES = [
     'midi_number'
 ]
 
-MODE = MODES[0]
+MODE = MODES[2]
 
 TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3, 1, 14, 23, 15, 10, 25, 7]
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
-BPS_FH_FOLDER = os.path.join(DATA_FOLDER, 'BPS_FH_Dataset')
 TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, f'train_{MODE}.tfrecords')
 VALID_TFRECORDS = os.path.join(DATA_FOLDER, f'valid_{MODE}.tfrecords')
 
@@ -32,9 +32,11 @@ PITCH_LINE = ['F--', 'C--', 'G--', 'D--', 'A--', 'E--', 'B--',
               'F#', 'C#', 'G#', 'D#', 'A#', 'E#', 'B#',
               'F##', 'C##', 'G##', 'D##', 'A##', 'E##', 'B##']
 SCALES = {
-    'C--': ['C--', 'D--', 'E--', 'F--', 'G--', 'A--', 'B--'],  #'c--': ['C--', 'D--', 'E---', 'F--', 'G--', 'A---', 'B--'],
-    'G--': ['G--', 'A--', 'B--', 'C--', 'D--', 'E--', 'F-'],  #'g--': ['G--', 'A--', 'B---', 'C--', 'D--', 'E---', 'F-'],
-    'D--': ['D--', 'E--', 'F-', 'G--', 'A--', 'B--', 'C-'],  #'d--': ['D--', 'E--', 'F--', 'G--', 'A--', 'B---', 'C-'],
+    'C--': ['C--', 'D--', 'E--', 'F--', 'G--', 'A--', 'B--'],
+    # 'c--': ['C--', 'D--', 'E---', 'F--', 'G--', 'A---', 'B--'],
+    'G--': ['G--', 'A--', 'B--', 'C--', 'D--', 'E--', 'F-'],
+    # 'g--': ['G--', 'A--', 'B---', 'C--', 'D--', 'E---', 'F-'],
+    'D--': ['D--', 'E--', 'F-', 'G--', 'A--', 'B--', 'C-'],  # 'd--': ['D--', 'E--', 'F--', 'G--', 'A--', 'B---', 'C-'],
     'A--': ['A--', 'B--', 'C-', 'D--', 'E--', 'F-', 'G-'], 'a--': ['A--', 'B--', 'C--', 'D--', 'E--', 'F--', 'G-'],
     'E--': ['E--', 'F-', 'G-', 'A--', 'B--', 'C-', 'D-'], 'e--': ['E--', 'F-', 'G--', 'A--', 'B--', 'C--', 'D-'],
     'B--': ['B--', 'C-', 'D-', 'E--', 'F-', 'G-', 'A-'], 'b--': ['B--', 'C-', 'D--', 'E--', 'F-', 'G--', 'A-'],
@@ -87,10 +89,17 @@ TICK_LABELS = [
     NOTES,
 ]
 
-BATCH_SIZE = 1
-SHUFFLE_BUFFER = 100_000
+BATCH_SIZE = 16  # 1
+SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
 N_TRAIN = 300  # number of records in the training dataset as coming from the utils.count_tfrecords function
 N_VALID = 7  # number of records in the validation dataset as coming from the utils.count_tfrecords function
-STEPS_PER_EPOCH = N_TRAIN // BATCH_SIZE
-VALID_STEPS = N_VALID // BATCH_SIZE
+STEPS_PER_EPOCH = ceil(N_TRAIN / BATCH_SIZE)
+VALID_STEPS = ceil(N_VALID / BATCH_SIZE)
+MODE2INPUT_SHAPE = {
+    'pitch_class': 24,
+    'pitch_class_weighted_loss': 24,
+    'pitch_class_beat_strength': 27,
+    'pitch_spelling': 35,
+    'midi_number': N_PITCHES,
+}

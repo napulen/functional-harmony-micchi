@@ -35,8 +35,8 @@ def find_pitch_extremes():
 
 
 if __name__ == '__main__':
-    pm, pM = find_pitch_extremes()
-    print(f'The pitch classes needed, including transpositions, are from {pm} to {pM}')
+    # pm, pM = find_pitch_extremes()
+    # print(f'The pitch classes needed, including transpositions, are from {pm} to {pM}')
     c = count_records(TRAIN_TFRECORDS)
     print(f'There is a total of {c} records in the train file')
     c = count_records(VALID_TFRECORDS)

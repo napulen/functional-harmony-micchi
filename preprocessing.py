@@ -14,23 +14,27 @@ transposed, the number of semitones of transposition (negative for down-transpos
 ATTENTION: despite the name, the secondary_degree is actually "more important" than the primary degree,
 since the latter is almost always equal to 1.
 """
-
-import os
+import csv
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import xlrd
 from music21 import converter, note
 from music21.chord import Chord
 from music21.repeat import ExpanderException
+from numpy.lib.recfunctions import append_fields
 
-from config import BPS_FH_FOLDER, PITCH_LOW, NOTES, PITCH_LINE, QUALITY, ROOTS, SCALES
+from config import PITCH_LOW, NOTES, PITCH_LINE, QUALITY, ROOTS, SCALES
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
 Q2I = dict([(e[1], e[0]) for e in enumerate(QUALITY)])
 P2I = dict([(e[1], e[0]) for e in enumerate(PITCH_LINE)])
+
+DT_READ = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
+           ('inversion', 'int')]  # datatype for reading data from BPS-FH
+DT_FINAL = [('t', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'), ('inversion', 'int'),
+            ('root', '<U10')]  # final datatype for the chords annotation we use before encoding
 
 
 class HarmonicAnalysisError(Exception):
@@ -38,28 +42,28 @@ class HarmonicAnalysisError(Exception):
     pass
 
 
-def _load_score(i, fpq):
-    score_file = os.path.join(BPS_FH_FOLDER, str(i).zfill(2), "score.mxl")
-    try:
-        score = converter.parse(score_file).expandRepeats()
-    except ExpanderException:
+def _load_score(score_file, fpq):
+    if 'bps' in score_file:
+        try:
+            score = converter.parse(score_file).expandRepeats()
+        except ExpanderException:
+            score = converter.parse(score_file)
+            print(
+                "Tried to expand repeats but didn't manage to. Maybe there are no repeats in the piece? Please check.")
+    else:
         score = converter.parse(score_file)
-        print("Could not expand repeats. Maybe there are no repeats in the piece? Please check.")
     n_frames = int(score.duration.quarterLength * fpq)
-    measure_offset = list(score.measureOffsetMap().keys())
-    measure_length = np.diff(measure_offset)
-    t0 = - measure_offset[1] if measure_length[0] != measure_length[1] else 0  # Pickup time
-    return score, t0, n_frames
+    return score, n_frames
 
 
-def load_score_beat_strength(i, fpq):
+def load_score_beat_strength(score_file, fpq):
     """
 
-    :param i:
+    :param score_file:
     :param fpq:
     :return:
     """
-    score, _, n_frames = _load_score(i, fpq)
+    score, n_frames = _load_score(score_file, fpq)
     # Throw away all notes in the score, we shouldn't use this score for anything except finding beat strength structure
     score = score.template()
     # Insert fake notes and use them to derive the beat strength through music21
@@ -85,8 +89,8 @@ def load_score_beat_strength(i, fpq):
     return beat_strength
 
 
-def load_score_pitch_spelling(i, fpq):
-    score, t0, n_frames = _load_score(i, fpq)
+def load_score_pitch_spelling(score_file, fpq):
+    score, n_frames = _load_score(score_file, fpq)
     score = score.chordify()
     piano_roll = np.zeros(shape=(35 * 2, n_frames), dtype=np.int32)
     flattest, sharpest = 35, 0
@@ -109,11 +113,11 @@ def load_score_pitch_spelling(i, fpq):
     # Show the result
     # sns.heatmap(piano_roll)
     # plt.show()
-    return piano_roll, t0, numFlatwards, numSharpwards
+    return piano_roll, numFlatwards, numSharpwards
 
 
-def load_score_pitch_class(i, fpq):
-    score, t0, n_frames = _load_score(i, fpq)
+def load_score_pitch_class(score_file, fpq):
+    score, n_frames = _load_score(score_file, fpq)
     score = score.chordify()
     piano_roll = np.zeros(shape=(24, n_frames), dtype=np.int32)
     for n in score.flat.notes:
@@ -129,19 +133,19 @@ def load_score_pitch_class(i, fpq):
     # Show the result
     # sns.heatmap(piano_roll)
     # plt.show()
-    return piano_roll, t0
+    return piano_roll
 
 
-def load_score_midi_number(i, fpq, pitch_low=0, pitch_high=128):
+def load_score_midi_number(score_file, fpq, pitch_low=0, pitch_high=128):
     """
     Load notes in each piece, which is then represented as piano roll.
     :param pitch_low:
     :param pitch_high:
-    :param i: which sonata to take (sonatas indexed from 1 to 32)
+    :param score_file: the path to the file to analyse
     :param fpq: frames per quarter note, default =  8 (that is, 32th note as 1 unit in piano roll)
-    :return: pieces, tdeviation
+    :return: piano_roll
     """
-    score, t0, n_frames = _load_score(i, fpq)
+    score, n_frames = _load_score(score_file, fpq)
     piano_roll = np.zeros(shape=(128, n_frames), dtype=np.int32)
     for n in score.flat.notes:
         pitches = np.array([x.midi for x in n.pitches] if isinstance(n, Chord) else [n.pitch.midi])
@@ -155,7 +159,7 @@ def load_score_midi_number(i, fpq, pitch_low=0, pitch_high=128):
     # Show the result
     # sns.heatmap(piano_roll)
     # plt.show()
-    return piano_roll[pitch_low:pitch_high], t0
+    return piano_roll[pitch_low:pitch_high]
 
 
 def visualize_piano_roll(pr, sonata, fpq, start=None, end=None):
@@ -165,30 +169,19 @@ def visualize_piano_roll(pr, sonata, fpq, start=None, end=None):
     return
 
 
-def load_chord_labels(i):
+def load_chord_labels(chords_file):
     """
     Load chords of each piece and add chord symbols into the labels.
-    :param i: which sonata to take (sonatas indexed from 0 to 31)
+    :param chords_file: the path to the file with the harmonic analysis
     :return: chord_labels
     """
 
-    dt = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
-          ('inversion', 'int'), ('chord_function', '<U10')]  # datatype
-    chords_file = os.path.join(BPS_FH_FOLDER, str(i).zfill(2), "chords.xlsx")
-
-    workbook = xlrd.open_workbook(chords_file)
-    sheet = workbook.sheet_by_index(0)
     chords = []
-    for rowx in range(sheet.nrows):
-        cols = sheet.row_values(rowx)
-        # xlrd.open_workbook automatically casts strings to float if they are compatible. Revert this.
-        cols[2] = cols[2].replace('+', '#')  # BPS-FH people use + for sharps, while music21 uses #. We stick to #.
-        if isinstance(cols[3], float):  # if type(degree) == float
-            cols[3] = str(int(cols[3]))
-        if cols[4] == 'a6':  # in the case of aug 6 chords, verify if they're italian, german, or french
-            cols[4] = cols[6].split('/')[0]
-        chords.append(tuple(cols))
-    return np.array(chords, dtype=dt)  # convert to structured array
+    with open(chords_file, mode='r') as f:
+        data = csv.reader(f)
+        for row in data:
+            chords.append(tuple(row))
+    return np.array(chords, dtype=DT_READ)
 
 
 def shift_chord_labels(chord_labels, s, mode='semitone'):
@@ -217,31 +210,43 @@ def shift_chord_labels(chord_labels, s, mode='semitone'):
     return new_labels
 
 
-def segment_chord_labels(i, chord_labels, n_frames, t0, hsize=4, fpq=8, pitch_spelling=False):
+def segment_chord_labels(chord_labels, n_frames, hsize=4, fpq=8):
     """
     Despite the name, this also finds the root for each chord
 
-    :param i: sonata number
     :param chord_labels:
     :param n_frames: total frames of the analysis
-    :param t0:
     :param hsize: hop size between different frames
     :param fpq: frames per quarter note
-    :param pitch_spelling: if True, use the correct pitch spelling (e.g., F++ != G)
     :return:
     """
     # Get corresponding chord label (only chord symbol) for each segment
-    labels = []
+    labels, label = [], []
+    k = 1
     for n in range(n_frames):
-        seg_time = (n * hsize / fpq) + t0  # central time of the segment in quarter notes
-        label = chord_labels[np.logical_and(chord_labels['onset'] <= max(seg_time, 0), chord_labels['end'] >= seg_time)]
-        try:
-            label = label[0]
-        except IndexError:
-            raise HarmonicAnalysisError(f"Cannot read label for Sonata N.{i} at frame {n}, time {seg_time}")
+        seg_time = (n * hsize / fpq)  # onset of the segment in quarter notes
+        labels_found = chord_labels[np.logical_and(chord_labels['onset'] <= seg_time, seg_time < chord_labels['end'])]
+        if len(labels_found) == 0:
+            # raise HarmonicAnalysisError(f"Cannot read labels at frame {n}, time {seg_time}")
+            print(f"Cannot read labels at frame {n}, time {seg_time}")
+            if len(labels) > 0:
+                labels_found = [label]
+                print(f'Assuming that the previous chord is still valid: {labels_found}')
+            else:
+                k += 1
+                print(f"I still haven't found any valid chord. I will read the next one and duplicate it.")
+                continue
 
-        labels.append((label['key'], label['degree'], label['quality'], label['inversion'],
-                       find_chord_root(label, pitch_spelling)))
+        if len(labels_found) > 1:
+            # HarmonicAnalysisError(f"More than one chord at frame {n}, time {seg_time, seg_time + hsize / fpq}:\n"
+            #                             f"{[l for l in labels_found]}")
+            print(f"More than one chord at frame {n}, time {seg_time, seg_time + hsize / fpq}:\n{[l for l in labels_found]}")
+        label = labels_found[0]
+        label_array = np.array((seg_time, label['key'], label['degree'], label['quality'],
+                                label['inversion'], label['root']), dtype=DT_FINAL)
+        for _ in range(k):
+            labels.append(label_array)
+        k = 1
     return labels
 
 
@@ -249,19 +254,21 @@ def encode_chords(chords, mode='semitone'):
     """
     Associate every chord element with an integer that represents its category.
 
-    :param chords:
+    :param chords: in the namedtuple format
     :param mode:
     :return:
     """
     chords_enc = []
+    n = 0
     for chord in chords:
-        key_enc = _encode_key(str(chord[0]), mode)
-        degree_p_enc, degree_s_enc = _encode_degree(str(chord[1]))
-        quality_enc = _encode_quality(str(chord[2]))
-        inversion_enc = int(chord[3])
-        root_enc = _encode_root(str(chord[4]), mode)
+        key_enc = _encode_key(str(chord['key']), mode)
+        degree_p_enc, degree_s_enc = _encode_degree(str(chord['degree']))
+        quality_enc = _encode_quality(str(chord['quality']))
+        inversion_enc = int(chord['inversion'])
+        root_enc = _encode_root(str(chord['root']), mode, chord)
 
         chords_enc.append((key_enc, degree_p_enc, degree_s_enc, quality_enc, inversion_enc, root_enc))
+        n += 1
 
     return chords_enc
 
@@ -314,11 +321,15 @@ def _encode_key(key, mode):
     return res
 
 
-def _encode_root(root, mode):
+def _encode_root(root, mode, chord):
     if mode == 'semitone':
         res = N2I[root]
     elif mode == 'fifth':
-        res = P2I[root]
+        try:
+            res = P2I[root]
+        except KeyError:
+            raise KeyError(f'{root} for chord {chord}')
+
     else:
         raise ValueError("_encode_root: Mode not recognized")
     return res
@@ -350,6 +361,9 @@ def _encode_degree_no_slash(degree_str):  # diatonic 1-7, raised 8-14, lowered 1
         offset = 0
     else:
         offset = 0
+    if len(degree_str) > 2:
+        print(f'weird degree_str: {degree_str}, chucking off the first char to {degree_str[1:]}')
+        degree_str = degree_str[1:]
     return abs(int(degree_str)) + offset  # 1-indexed as usual in musicology
 
 
@@ -426,6 +440,14 @@ def find_chord_root(chord, pitch_spelling):
 
     F2S[','.join([key, degree_str])] = root
     return root
+
+
+def attach_chord_root(chord_labels, pitch_spelling=True):
+    new_labels = []
+    for i, c in enumerate(chord_labels):
+        nl = append_fields(c, 'root', np.array([find_chord_root(c, pitch_spelling)]), '<U10')
+        new_labels.append(nl)
+    return np.array(new_labels)
 
 
 def _flat_alteration(note):
