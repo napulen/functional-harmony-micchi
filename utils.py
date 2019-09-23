@@ -7,11 +7,12 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from config import NOTES, QUALITY, FEATURES, TICK_LABELS
+from config import NOTES, QUALITY, FEATURES, TICK_LABELS, SCALES, KEYS_SPELLING
+from preprocessing import _sharp_alteration, _flat_alteration, find_enharmonic_equivalent, P2I, K2I
 
 
 def visualize_data(data):
-    for x, _ in data:
+    for x, y in data:
         for pr in x:
             sns.heatmap(pr)
             plt.show()
@@ -122,39 +123,49 @@ def _fill_level(l, i_p=None):
     return y, i_o
 
 
-def find_root_full_output(y_pred_full):
+def find_root_full_output(y_pred, pitch_spelling=True):
     """
     Calculate the root of the chord given the output prediction of the neural network.
     It uses key, primary degree and secondary degree.
 
-    :param y_pred_full: the prediction as a list over different timesteps
+    :param y_pred: the prediction, shape [output], (timestep, output_features)
     :return:
     """
-    key, degree_den, degree_num = np.argmax(y_pred_full[0][0], axis=-1), np.argmax(y_pred_full[1][0],
-                                                                                   axis=-1), np.argmax(
-        y_pred_full[2][0], axis=-1)
-    deg2sem_maj = [0, 2, 4, 5, 7, 9, 11]
-    deg2sem_min = [0, 2, 3, 5, 7, 8, 10]
+    keys_encoded = np.argmax(y_pred[0], axis=-1)
+    degree_den = np.argmax(y_pred[1], axis=-1)
+    degree_num = np.argmax(y_pred[2], axis=-1)
 
     root_pred = []
-    for i in range(len(key)):
-        deg2sem = deg2sem_maj if key[i] // 12 == 0 else deg2sem_min  # keys 0-11 are major, 12-23 minor
-        n_den = deg2sem[degree_den[i] % 7]  # (0-6 diatonic, 7-13 sharp, 14-20 flat)
-        if degree_den[i] // 7 == 1:  # raised root
-            n_den += 1
-        elif degree_den[i] // 7 == 2:  # lowered root
-            n_den -= 1
-        n_num = deg2sem[degree_num[i] % 7]
-        if degree_num[i] // 7 == 1:
-            n_num += 1
-        elif degree_num[i] // 7 == 2:
-            n_num -= 1
-        # key[i] % 12 finds the root regardless of major and minor, then both degrees are added, then sent back to 0-11
-        # both degrees are added, yes: example: V/IV on C major.
-        # primary degree = IV, secondary degree = V
-        # in C, that corresponds to the dominant on the fourth degree: C -> F -> C again
-        root_pred.append((key[i] % 12 + n_num + n_den) % 12)
-    return root_pred
+    for key_enc, dd, dn in zip(keys_encoded, degree_den, degree_num):
+        den, den_alt = dd % 7, dd // 7
+        num, num_alt = dn % 7, dn // 7
+
+        key = KEYS_SPELLING[key_enc]
+        key2 = SCALES[key][den]  # secondary key
+        if (key.isupper() and den in [1, 2, 5, 6]) or (key.islower() and den in [0, 1, 3, 6]):
+            key2 = key2.lower()
+        if den_alt == 1:
+            key2 = _sharp_alteration(key2).lower()  # when the root is raised, we go to minor scale
+        elif den_alt == 2:
+            key2 = _flat_alteration(key2).upper()  # when the root is lowered, we go to major scale
+
+        try:
+            root = SCALES[key2][num]
+        except KeyError:
+            print(f'secondary key {key2} for chord {dd, dn} in key of {key}')
+            root_pred.append(None)
+            continue
+
+        if num_alt == 1:
+            root = _sharp_alteration(root)
+        elif num_alt == 2:
+            root = _flat_alteration(root)
+
+        if not pitch_spelling:
+            root = find_enharmonic_equivalent(P2I[root])
+        root_pred.append(P2I[root])
+
+    return np.array(root_pred)
 
 
 def _decode_key(i):

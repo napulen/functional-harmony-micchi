@@ -79,6 +79,8 @@ if __name__ == '__main__':
             scores_folder = os.path.join(folder, 'scores')
             file_names = [fn[:-4] for fn in os.listdir(chords_folder)]
             for fn in file_names:
+                # if fn not in ['bsq_op18_no6_mov4']:
+                #     continue
                 sf = os.path.join(scores_folder, f"{fn}.mxl")
                 cf = os.path.join(chords_folder, f"{fn}.csv")
 
@@ -100,9 +102,9 @@ if __name__ == '__main__':
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
                     nl = min(nl_keys, nl_pitches)
                     nr = min(nr_keys, nr_pitches)
-                    logger.info(f'Acceptable transpositions (pitches, keys): '
-                                f'left {nl_pitches, nl_keys}; '
-                                f'right {nr_pitches - 1, nr_keys - 1}.')
+                    # logger.info(f'Acceptable transpositions (pitches, keys): '
+                    #             f'left {nl_pitches, nl_keys}; '
+                    #             f'right {nr_pitches - 1, nr_keys - 1}.')
                 else:
                     raise ReferenceError("I shouldn't be here. "
                                          "It looks like the name of some mode has been hard-coded in the wrong way.")
@@ -112,12 +114,8 @@ if __name__ == '__main__':
 
                 # Adjust the length of the piano roll to be an exact multiple of the HSIZE
                 npad = (- piano_roll.shape[1]) % HSIZE
-                piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant',
-                                    constant_values=0)  # shape(PITCH_HIGH - PITCH_LOW, frames)
+                piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant', constant_values=0)
                 n_frames_analysis = piano_roll.shape[1] // HSIZE
-
-                # Verify that the two lengths match
-                assert n_frames_analysis == chord_labels[-1]['end'] * FPQ / HSIZE
 
                 logger.info(f"Transposing {nl} times to the left and {nr - 1} to the right")
                 for s in range(-nl, nr):
@@ -144,7 +142,10 @@ if __name__ == '__main__':
                     cl_shifted = shift_chord_labels(chord_labels, s, pp)
                     cl_full = attach_chord_root(cl_shifted, ps)
                     cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
-                    cl_encoded = encode_chords(cl_full, pp)
+                    cl_encoded = encode_chords(cl_segmented, pp)
+                    if any([x is None for c in cl_encoded for x in c]):
+                        logger.warning(f"skipping transposition {s}")
+                        continue
                     feature = {
                         'piano_roll': tf.train.Feature(float_list=tf.train.FloatList(value=pr_shifted.reshape(-1))),
                         'label_key': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[0] for c in cl_encoded])),

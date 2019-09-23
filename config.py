@@ -8,7 +8,7 @@ MODES = [
     'midi_number'
 ]
 
-MODE = MODES[2]
+MODE = MODES[0]
 
 TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3, 1, 14, 23, 15, 10, 25, 7]
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
@@ -74,25 +74,25 @@ CLASSES_QUALITY = 12  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6
 CLASSES_INVERSION = 4  # root position, 1st, 2nd, and 3rd inversion (the last only for seventh chords)
 CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT
 
+KEYS_SPELLING = PITCH_LINE[1:30] + [p.lower() for p in PITCH_LINE[4:]]
+NOTES_FLAT = NOTES = ['C', 'C#', 'D', 'E-', 'E', 'F', 'F#', 'G', 'A-', 'A', 'B-', 'B']
 CIRCLE_OF_FIFTH = [8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1]
 CIRCLE_OF_FIFTH += [x + 12 for x in CIRCLE_OF_FIFTH]
-notes_flat = NOTES.copy()
-notes_flat[3] = 'E-'
-notes_flat[8] = 'A-'
-notes_flat[10] = 'B-'
+PITCH_CLASSES_FIFTH = [(NOTES_FLAT + [n.lower() for n in NOTES_FLAT])[i] for i in CIRCLE_OF_FIFTH]
 TICK_LABELS = [
-    [(notes_flat + [n.lower() for n in notes_flat])[i] for i in CIRCLE_OF_FIFTH],
+    PITCH_CLASSES_FIFTH if MODE != 'pitch_spelling' else KEYS_SPELLING,
     [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
     [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
     QUALITY,
     [str(x) for x in range(4)],
-    NOTES,
+    NOTES if MODE != 'pitch_spelling' else PITCH_LINE,
 ]
 
-BATCH_SIZE = 16  # 1
+BATCH_SIZE = 8  # 1
 SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
-N_TRAIN = 300  # number of records in the training dataset as coming from the utils.count_tfrecords function
+# number of records in the training dataset as coming from the utils.count_tfrecords function
+N_TRAIN = 3212 if MODE == 'pitch_spelling' else 300
 N_VALID = 7  # number of records in the validation dataset as coming from the utils.count_tfrecords function
 STEPS_PER_EPOCH = ceil(N_TRAIN / BATCH_SIZE)
 VALID_STEPS = ceil(N_VALID / BATCH_SIZE)
@@ -100,6 +100,6 @@ MODE2INPUT_SHAPE = {
     'pitch_class': 24,
     'pitch_class_weighted_loss': 24,
     'pitch_class_beat_strength': 27,
-    'pitch_spelling': 35,
+    'pitch_spelling': 70,
     'midi_number': N_PITCHES,
 }

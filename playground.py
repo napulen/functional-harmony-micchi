@@ -7,7 +7,7 @@ import xlrd
 
 from config import DATA_FOLDER, TRAIN_INDICES, VALID_INDICES
 from preprocessing import load_chord_labels, shift_chord_labels, segment_chord_labels, encode_chords, attach_chord_root, \
-    load_score_pitch_spelling, _load_score
+    load_score_pitch_spelling, _load_score, calculate_number_transpositions_key
 from train_validation_split import create_training_validation_set_bps, create_training_validation_set_wtc, \
     create_training_validation_set_songs, create_training_validation_set_bsq
 
@@ -58,9 +58,9 @@ if __name__ == '__main__':
     for folder in folders:
         chords_folder = os.path.join(folder, 'chords')
         scores_folder = os.path.join(folder, 'scores')
-        file_names = [fn[:-4] for fn in os.listdir(chords_folder)]
+        file_names = sorted([fn[:-4] for fn in os.listdir(chords_folder)])
         for fn in file_names:
-            if 'bsq' not in fn:
+            if fn not in ['ncs_Chausson_Ernest_-_7_Melodies_Op.2_No.7_-_Le_Colibri']:
                 continue
             print(fn)
             cf = os.path.join(chords_folder, f"{fn}.csv")
@@ -69,19 +69,36 @@ if __name__ == '__main__':
             # for c in chord_labels:
             #     if c['quality'] == 'D7':
             #         print(c)
-            # piano_roll, nl_pitches, nr_pitches = load_score_pitch_spelling(sf, 8)
+            piano_roll, nl_pitches, nr_pitches = load_score_pitch_spelling(sf, 8)
+            nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
+            nl = min(nl_keys, nl_pitches)
+            nr = min(nr_keys, nr_pitches)
+            logger.info(f'Acceptable transpositions (pitches, keys): '
+                        f'left {nl_pitches, nl_keys}; '
+                        f'right {nr_pitches - 1, nr_keys - 1}.')
+
             score, n_frames = _load_score(sf, 8)
             # measure_offset = list(score.measureOffsetMap().keys())
             # measure_length = np.diff(measure_offset)
 
+            # PROBLEMS IN TOTAL LENGTH IN THE FOLLOWING CASES
+            npad = (- n_frames) % 4
+            print(f'{fn} - padding length {npad}')
+            n_frames_analysis = (n_frames + npad) // 4
             # Verify that the two lengths match
-            if n_frames / 8 != chord_labels[-1]['end']:
-                logger.warning(
-                    f"{fn}, length score = {n_frames / 8}, length labels = {chord_labels[-1]['end']}")
+            if n_frames_analysis != chord_labels[-1]['end'] * 2:
+                print(f"{fn} - score {n_frames_analysis}, chord labels {chord_labels[-1]['end'] * 2}")
+
+            # for c in chord_labels:
+            #     if round(c['end'] % 1., 3) not in [.0, .125, .133, .167, .25, .333, .375, .50, .625, .667, .75, .833,
+            #                                        .875]:
+            #         print(c['onset'], c['end'])
+            # Verify that the two lengths match
 
             n_frames_chords = n_frames // 4
-            # cl_shifted = shift_chord_labels(chord_labels, 0, 'fifth')
-            cl_shifted = chord_labels
-            cl_full = attach_chord_root(cl_shifted, pitch_spelling=True)
-            cl_segmented = segment_chord_labels(cl_full, n_frames_chords, hsize=4, fpq=8)
-            cl_encoded = encode_chords(cl_segmented, 'fifth')
+            for s in range(-nl, nr):
+                cl_shifted = shift_chord_labels(chord_labels, s, 'fifth')
+                # cl_shifted = chord_labels
+                cl_full = attach_chord_root(cl_shifted, pitch_spelling=True)
+                cl_segmented = segment_chord_labels(cl_full, n_frames_chords, hsize=4, fpq=8)
+                cl_encoded = encode_chords(cl_segmented, 'fifth')

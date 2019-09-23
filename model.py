@@ -47,16 +47,16 @@ def DilatedConvLayer(x, l, k):
 
 
 def MultiTaskLayer(x, derive_root):
-    o1 = TimeDistributed(Dense(CLASSES_KEY, activation='softmax'), name='key')(x)
-    o2 = TimeDistributed(Dense(CLASSES_DEGREE, activation='softmax'), name='degree_1')(x)
-    o3 = TimeDistributed(Dense(CLASSES_DEGREE, activation='softmax'), name='degree_2')(x)
-    o4 = TimeDistributed(Dense(CLASSES_QUALITY, activation='softmax'), name='quality')(x)
-    o5 = TimeDistributed(Dense(CLASSES_INVERSION, activation='softmax'), name='inversion')(x)
+    o0 = TimeDistributed(Dense(CLASSES_KEY, activation='softmax'), name='key')(x)
+    o1 = TimeDistributed(Dense(CLASSES_DEGREE, activation='softmax'), name='degree_1')(x)
+    o2 = TimeDistributed(Dense(CLASSES_DEGREE, activation='softmax'), name='degree_2')(x)
+    o3 = TimeDistributed(Dense(CLASSES_QUALITY, activation='softmax'), name='quality')(x)
+    o4 = TimeDistributed(Dense(CLASSES_INVERSION, activation='softmax'), name='inversion')(x)
     if derive_root:
-        o6 = Lambda(find_root_no_spelling, name='root')([o1, o2, o3])
+        o5 = Lambda(find_root_no_spelling, name='root')([o0, o1, o2])
     else:
-        o6 = TimeDistributed(Dense(CLASSES_ROOT, activation='softmax'), name='root')(x)
-    return [o1, o2, o3, o4, o5, o6]
+        o5 = TimeDistributed(Dense(CLASSES_ROOT, activation='softmax'), name='root')(x)
+    return [o0, o1, o2, o3, o4, o5]
 
 
 def create_model(name, n, derive_root=False):

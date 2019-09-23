@@ -24,12 +24,13 @@ from music21.chord import Chord
 from music21.repeat import ExpanderException
 from numpy.lib.recfunctions import append_fields
 
-from config import PITCH_LOW, NOTES, PITCH_LINE, QUALITY, ROOTS, SCALES
+from config import PITCH_LOW, NOTES, PITCH_LINE, QUALITY, ROOTS, SCALES, KEYS_SPELLING
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
 Q2I = dict([(e[1], e[0]) for e in enumerate(QUALITY)])
 P2I = dict([(e[1], e[0]) for e in enumerate(PITCH_LINE)])
+K2I = dict([(e[1], e[0]) for e in enumerate(KEYS_SPELLING)])
 
 DT_READ = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
            ('inversion', 'int')]  # datatype for reading data from BPS-FH
@@ -240,7 +241,8 @@ def segment_chord_labels(chord_labels, n_frames, hsize=4, fpq=8):
         if len(labels_found) > 1:
             # HarmonicAnalysisError(f"More than one chord at frame {n}, time {seg_time, seg_time + hsize / fpq}:\n"
             #                             f"{[l for l in labels_found]}")
-            print(f"More than one chord at frame {n}, time {seg_time, seg_time + hsize / fpq}:\n{[l for l in labels_found]}")
+            print(
+                f"More than one chord at frame {n}, time {seg_time, seg_time + hsize / fpq}:\n{[l for l in labels_found]}")
         label = labels_found[0]
         label_array = np.array((seg_time, label['key'], label['degree'], label['quality'],
                                 label['inversion'], label['root']), dtype=DT_FINAL)
@@ -328,7 +330,9 @@ def _encode_root(root, mode, chord):
         try:
             res = P2I[root]
         except KeyError:
-            raise KeyError(f'{root} for chord {chord}')
+            print(f'invalid root {root} for chord {chord}')
+            res = None
+            # raise KeyError(f'{root} for chord {chord}')
 
     else:
         raise ValueError("_encode_root: Mode not recognized")
@@ -429,7 +433,11 @@ def find_chord_root(chord, pitch_spelling):
         key2 = _flat_alteration(key2).upper()  # when the root is lowered, we go to major scale
 
     n, n_alt = n_enc % 7, n_enc // 7
-    root = SCALES[key2][n]
+    try:
+        root = SCALES[key2][n]
+    except KeyError:
+        print(f'secondary key {key2} for chord {chord}')
+        return None
     if n_alt == 1:
         root = _sharp_alteration(root)
     elif n_alt == 2:
@@ -443,11 +451,8 @@ def find_chord_root(chord, pitch_spelling):
 
 
 def attach_chord_root(chord_labels, pitch_spelling=True):
-    new_labels = []
-    for i, c in enumerate(chord_labels):
-        nl = append_fields(c, 'root', np.array([find_chord_root(c, pitch_spelling)]), '<U10')
-        new_labels.append(nl)
-    return np.array(new_labels)
+    return append_fields(chord_labels, 'root', np.array([find_chord_root(c, pitch_spelling) for c in chord_labels]),
+                         '<U10')
 
 
 def _flat_alteration(note):
