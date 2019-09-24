@@ -13,8 +13,11 @@ from preprocessing import _sharp_alteration, _flat_alteration, find_enharmonic_e
 
 def visualize_data(data):
     for x, y in data:
-        for pr in x:
+        prs, masks = x
+        for pr, mask in zip(prs, masks):
             sns.heatmap(pr)
+            plt.show()
+            plt.plot(mask.numpy())
             plt.show()
     return
 

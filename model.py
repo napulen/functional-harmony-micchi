@@ -68,16 +68,24 @@ def create_model(name, n, derive_root=False):
     :return:
     """
     notes = Input(shape=(None, n), name="piano_roll_input")
+    mask = Input(shape=(None, 1), name="mask_input")
     x = DenseNetLayer(notes, 4, 5, n=1)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
     x = DenseNetLayer(x, 4, 5, n=2)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
     x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measure before and after
-    x = Masking()(x)
+
+    # Super-ugly hack otherwise tensorflow can't save the model, see https://stackoverflow.com/a/55229794/5048010
+    def apply_mask(e):
+        return tf.multiply(e, mask)
+
+    x = Lambda(lambda e: apply_mask(e), name='apply_mask')(x)
+
+    x = Masking()(x)  # is this useless?
     # x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
     x = TimeDistributed(Dense(64, activation='tanh'))(x)
     y = MultiTaskLayer(x, derive_root)
-    model = Model(inputs=notes, outputs=y, name=name)
+    model = Model(inputs=[notes, mask], outputs=y, name=name)
     return model
 
 

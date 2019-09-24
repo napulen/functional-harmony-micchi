@@ -144,7 +144,7 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
-i = 0
+i = 1
 model_name = f'conv_dil_reduced_{MODE}_{i}'
 model_folder = os.path.join('logs', model_name)
 model = load_model(os.path.join(model_folder, model_name + '.h5'))

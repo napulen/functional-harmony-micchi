@@ -33,6 +33,7 @@ if exploratory:
 
 model = create_model(model_name, n, derive_root=False)
 model.summary()
+print(model_name)
 
 callbacks = [
     EarlyStopping(patience=3),
