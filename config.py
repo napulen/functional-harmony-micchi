@@ -75,7 +75,7 @@ CLASSES_INVERSION = 4  # root position, 1st, 2nd, and 3rd inversion (the last on
 CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT
 
 KEYS_SPELLING = PITCH_LINE[1:30] + [p.lower() for p in PITCH_LINE[4:]]
-NOTES_FLAT = NOTES = ['C', 'C#', 'D', 'E-', 'E', 'F', 'F#', 'G', 'A-', 'A', 'B-', 'B']
+NOTES_FLAT = ['C', 'C#', 'D', 'E-', 'E', 'F', 'F#', 'G', 'A-', 'A', 'B-', 'B']
 CIRCLE_OF_FIFTH = [8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1]
 CIRCLE_OF_FIFTH += [x + 12 for x in CIRCLE_OF_FIFTH]
 PITCH_CLASSES_FIFTH = [(NOTES_FLAT + [n.lower() for n in NOTES_FLAT])[i] for i in CIRCLE_OF_FIFTH]

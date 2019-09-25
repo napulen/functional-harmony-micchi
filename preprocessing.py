@@ -229,13 +229,14 @@ def segment_chord_labels(chord_labels, n_frames, hsize=4, fpq=8):
         labels_found = chord_labels[np.logical_and(chord_labels['onset'] <= seg_time, seg_time < chord_labels['end'])]
         if len(labels_found) == 0:
             # raise HarmonicAnalysisError(f"Cannot read labels at frame {n}, time {seg_time}")
-            print(f"Cannot read labels at frame {n}, time {seg_time}")
             if len(labels) > 0:
                 labels_found = [label]
-                print(f'Assuming that the previous chord is still valid: {labels_found}')
+                print(f"Cannot read labels at frame {n}, time {seg_time}."
+                      f" Assuming that the previous chord is still valid: {labels_found}")
             else:
                 k += 1
-                print(f"I still haven't found any valid chord. I will read the next one and duplicate it.")
+                print(f"Cannot read labels at frame {n}, time {seg_time}."
+                      f" I still haven't found any valid chord. I will read the next one and duplicate it.")
                 continue
 
         if len(labels_found) > 1:
@@ -325,7 +326,12 @@ def _encode_key(key, mode):
 
 def _encode_root(root, mode, chord):
     if mode == 'semitone':
-        res = N2I[root]
+        try:
+            res = N2I[root]
+        except KeyError:
+            print(f'invalid root {root} for chord {chord}')
+            res = None
+            # raise KeyError(f'{root} for chord {chord}')
     elif mode == 'fifth':
         try:
             res = P2I[root]
@@ -333,7 +339,6 @@ def _encode_root(root, mode, chord):
             print(f'invalid root {root} for chord {chord}')
             res = None
             # raise KeyError(f'{root} for chord {chord}')
-
     else:
         raise ValueError("_encode_root: Mode not recognized")
     return res
@@ -431,6 +436,9 @@ def find_chord_root(chord, pitch_spelling):
         key2 = _sharp_alteration(key2).lower()  # when the root is raised, we go to minor scale
     elif d_alt == 2:
         key2 = _flat_alteration(key2).upper()  # when the root is lowered, we go to major scale
+
+    if not pitch_spelling:
+        key2 = find_enharmonic_equivalent(key2)
 
     n, n_alt = n_enc % 7, n_enc // 7
     try:

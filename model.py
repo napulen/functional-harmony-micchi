@@ -1,4 +1,3 @@
-import functools
 import time
 
 import numpy as np
@@ -8,9 +7,6 @@ from tensorflow.python.keras.backend import name_scope
 from tensorflow.python.keras.callbacks import Callback
 from tensorflow.python.keras.layers import Conv1D, Concatenate, MaxPooling1D, TimeDistributed, Dense, Lambda, \
     BatchNormalization, Masking
-
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 from config import CLASSES_KEY, CLASSES_DEGREE, CLASSES_QUALITY, CLASSES_INVERSION, CLASSES_ROOT
 

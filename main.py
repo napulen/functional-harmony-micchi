@@ -40,7 +40,7 @@ print(model_name)
 callbacks = [
     EarlyStopping(patience=3),
     TensorBoard(log_dir=model_folder),
-    TimeOut(t0=time.time(), timeout=58),
+    TimeOut(t0=time.time(), timeout=55),
 ]
 # weights = [1., 0.5, 1., 1., 0.5, 2.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
 weights = [1., 1., 1., 1., 1., 1.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
