@@ -30,10 +30,8 @@ def check_existence_tfrecords(tfrecords):
             quit()
 
         elif answer.lower().strip() == 'temp':
-            tfrecords_temp = [f.split(".") for f in tfrecords]
-            for ft in tfrecords_temp:
-                ft[0] += '_temp'
-            tfrecords = ['.'.join(ft) for ft in tfrecords_temp]
+            tfrecords = [f.split("_")[0] for f in tfrecords]
+            tfrecords = [f + "_temp.tfrecords" for f in tfrecords]
             logger.warning(f"I'm going to write the files to {tfrecords[0]} and similar!")
 
         elif answer.lower().strip() == 'backup':

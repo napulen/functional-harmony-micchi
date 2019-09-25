@@ -1,4 +1,5 @@
 import os
+import time
 
 from tensorflow import enable_eager_execution
 from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard
@@ -6,7 +7,7 @@ from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard
 from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, VALID_TFRECORDS, EPOCHS, STEPS_PER_EPOCH, \
     VALID_STEPS, MODE, MODE2INPUT_SHAPE
 from load_data import create_tfrecords_dataset
-from model import create_model
+from model import create_model, TimeOut
 from utils import visualize_data
 
 exploratory = False
@@ -22,6 +23,7 @@ else:
         model_name = f'conv_dil_reduced_{MODE}_{i}'
 
 model_folder = os.path.join('logs', model_name)
+os.makedirs(model_folder)
 
 n = MODE2INPUT_SHAPE[MODE]
 
@@ -37,7 +39,8 @@ print(model_name)
 
 callbacks = [
     EarlyStopping(patience=3),
-    TensorBoard(log_dir=model_folder)
+    TensorBoard(log_dir=model_folder),
+    TimeOut(t0=time.time(), timeout=58),
 ]
 # weights = [1., 0.5, 1., 1., 0.5, 2.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
 weights = [1., 1., 1., 1., 1., 1.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]

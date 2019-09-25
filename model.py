@@ -1,7 +1,11 @@
+import functools
+import time
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.backend import name_scope
+from tensorflow.python.keras.callbacks import Callback
 from tensorflow.python.keras.layers import Conv1D, Concatenate, MaxPooling1D, TimeDistributed, Dense, Lambda, \
     BatchNormalization, Masking
 
@@ -9,6 +13,18 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from config import CLASSES_KEY, CLASSES_DEGREE, CLASSES_QUALITY, CLASSES_INVERSION, CLASSES_ROOT
+
+
+class TimeOut(Callback):
+    def __init__(self, t0, timeout):
+        super().__init__()
+        self.t0 = t0
+        self.timeout = timeout  # time in minutes
+
+    def on_train_batch_end(self, batch, logs=None):
+        if time.time() - self.t0 > self.timeout * 60:  # 58 minutes
+            print(f"\nReached {(time.time() - self.t0) / 60:.3f} minutes of training, stopping")
+            self.model.stop_training = True
 
 
 def DenseNetLayer(x, l, k, n=1):
@@ -73,14 +89,10 @@ def create_model(name, n, derive_root=False):
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
     x = DenseNetLayer(x, 4, 5, n=2)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
-    x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measure before and after
+    x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measures before and after
 
     # Super-ugly hack otherwise tensorflow can't save the model, see https://stackoverflow.com/a/55229794/5048010
-    def apply_mask(e):
-        return tf.multiply(e, mask)
-
-    x = Lambda(lambda e: apply_mask(e), name='apply_mask')(x)
-
+    x = Lambda(lambda t: __import__('tensorflow').multiply(*t), name='apply_mask')((x, mask))
     x = Masking()(x)  # is this useless?
     # x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
     x = TimeDistributed(Dense(64, activation='tanh'))(x)
