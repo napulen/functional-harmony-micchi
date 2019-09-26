@@ -39,6 +39,7 @@ def setup_paths(exploratory):
     return folder, name
 
 
+timeout = None
 if __name__ == '__main__':
     model_folder, model_name = setup_paths(exploratory=False)
     n = MODE2INPUT_SHAPE[MODE]
@@ -53,8 +54,10 @@ if __name__ == '__main__':
     callbacks = [
         EarlyStopping(patience=3),
         TensorBoard(log_dir=model_folder),
-        TimeOut(t0=time.time(), timeout=55),
     ]
+    if timeout is not None:
+        callbacks.append(TimeOut(t0=time.time(), timeout=timeout))
+
     # weights = [1., 0.5, 1., 1., 0.5, 2.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
     weights = [1., 1., 1., 1., 1., 1.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
     model.compile(loss='categorical_crossentropy', loss_weights=weights, optimizer='adam', metrics=['accuracy'])
