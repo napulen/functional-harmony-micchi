@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from preprocessing import find_enharmonic_equivalent
+from utils_music import find_enharmonic_equivalent
 
 
 class TestFind_enharmonic_equivalent(TestCase):
@@ -14,7 +14,7 @@ class TestFind_enharmonic_equivalent(TestCase):
         self.assertEqual(find_enharmonic_equivalent('D-'), 'C#')
 
     def test_4(self):
-        self.assertEqual(find_enharmonic_equivalent('C--'), 'B-')
+        self.assertEqual(find_enharmonic_equivalent('C--'), 'A#')
 
     def test_5(self):
         self.assertEqual(find_enharmonic_equivalent('B--'), 'A')

@@ -6,7 +6,7 @@ import numpy as np
 import xlrd
 
 from config import DATA_FOLDER, TRAIN_INDICES, VALID_INDICES
-from preprocessing import load_chord_labels, shift_chord_labels, segment_chord_labels, encode_chords, attach_chord_root, \
+from utils_music import load_chord_labels, shift_chord_labels, segment_chord_labels, encode_chords, attach_chord_root, \
     load_score_pitch_spelling, _load_score, calculate_number_transpositions_key
 from train_validation_split import create_training_validation_set_bps, create_training_validation_set_wtc, \
     create_training_validation_set_songs, create_training_validation_set_bsq

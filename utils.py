@@ -2,24 +2,10 @@ import json
 import os
 from datetime import datetime
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 
-from config import NOTES, QUALITY, FEATURES, TICK_LABELS, SCALES, KEYS_SPELLING
-from preprocessing import _sharp_alteration, _flat_alteration, find_enharmonic_equivalent, P2I, K2I
-
-
-def visualize_data(data):
-    for x, y in data:
-        prs, masks = x
-        for pr, mask in zip(prs, masks):
-            sns.heatmap(pr)
-            plt.show()
-            plt.plot(mask.numpy())
-            plt.show()
-    return
+from config import NOTES, QUALITY, FEATURES, TICK_LABELS
 
 
 def create_dezrann_annotations(true, pred, n, batch_size, model_folder):
@@ -124,51 +110,6 @@ def _fill_level(l, i_p=None):
         else:
             y.append("Hold")
     return y, i_o
-
-
-def find_root_full_output(y_pred, pitch_spelling=True):
-    """
-    Calculate the root of the chord given the output prediction of the neural network.
-    It uses key, primary degree and secondary degree.
-
-    :param y_pred: the prediction, shape [output], (timestep, output_features)
-    :return:
-    """
-    keys_encoded = np.argmax(y_pred[0], axis=-1)
-    degree_den = np.argmax(y_pred[1], axis=-1)
-    degree_num = np.argmax(y_pred[2], axis=-1)
-
-    root_pred = []
-    for key_enc, dd, dn in zip(keys_encoded, degree_den, degree_num):
-        den, den_alt = dd % 7, dd // 7
-        num, num_alt = dn % 7, dn // 7
-
-        key = KEYS_SPELLING[key_enc]
-        key2 = SCALES[key][den]  # secondary key
-        if (key.isupper() and den in [1, 2, 5, 6]) or (key.islower() and den in [0, 1, 3, 6]):
-            key2 = key2.lower()
-        if den_alt == 1:
-            key2 = _sharp_alteration(key2).lower()  # when the root is raised, we go to minor scale
-        elif den_alt == 2:
-            key2 = _flat_alteration(key2).upper()  # when the root is lowered, we go to major scale
-
-        try:
-            root = SCALES[key2][num]
-        except KeyError:
-            print(f'secondary key {key2} for chord {dd, dn} in key of {key}')
-            root_pred.append(None)
-            continue
-
-        if num_alt == 1:
-            root = _sharp_alteration(root)
-        elif num_alt == 2:
-            root = _flat_alteration(root)
-
-        if not pitch_spelling:
-            root = find_enharmonic_equivalent(P2I[root])
-        root_pred.append(P2I[root])
-
-    return np.array(root_pred)
 
 
 def _decode_key(i):

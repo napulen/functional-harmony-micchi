@@ -17,8 +17,8 @@ from tensorflow.python.keras.models import load_model
 from config import FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, NOTES, \
     VALID_TFRECORDS, VALID_STEPS, VALID_INDICES, MODE2INPUT_SHAPE, MODE, N_VALID, CLASSES_ROOT, PITCH_LINE
 from load_data import create_tfrecords_dataset
-from preprocessing import Q2I
-from utils import find_root_full_output, decode_results
+from utils_music import Q2I, find_root_full_output
+from utils import decode_results
 
 
 def check_predictions(y_true, y_pred, index):

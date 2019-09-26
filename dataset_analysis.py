@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 from config import FPQ, TRAIN_TFRECORDS, VALID_TFRECORDS
-from preprocessing import load_score_midi_number
+from utils_music import load_score_midi_number
 
 
 def count_records(tfrecord):

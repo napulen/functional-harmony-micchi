@@ -1,11 +1,11 @@
 import tensorflow as tf
 
-from config import N_PITCHES, CLASSES_ROOT, CLASSES_INVERSION, CLASSES_QUALITY, CLASSES_DEGREE, \
+from config import CLASSES_ROOT, CLASSES_INVERSION, CLASSES_QUALITY, CLASSES_DEGREE, \
     CLASSES_KEY
 
 
 def _parse_function(proto, n):
-    # Parse the input tf.Example proto using the dictionary above.
+    # Parse the input tf.Example proto using the dictionary defined in preprocessing_main.
     feature = {
         'piano_roll': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
         'label_key': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
@@ -58,6 +58,4 @@ def create_tfrecords_dataset(input_path, batch_size, shuffle_buffer, n):
 
     dataset = tf.data.TFRecordDataset(input_path).map(_parse, num_parallel_calls=16).shuffle(
         shuffle_buffer).repeat().padded_batch(batch_size, padded_shapes).prefetch(2)
-    # dataset = tf.data.TFRecordDataset(input_path).map(_parse, num_parallel_calls=16).shuffle(
-    #     shuffle_buffer).repeat().batch(1, drop_remainder=False).prefetch(2)
     return dataset
