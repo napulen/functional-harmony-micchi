@@ -29,10 +29,10 @@ def setup_paths(exploratory, type):
         name = 'temp'
     else:
         i = 0
-        name = '_'.join([type, MODE, i])
+        name = '_'.join([type, MODE, str(i)])
         while name in os.listdir('logs'):
             i += 1
-            name = '_'.join([type, MODE, i])
+            name = '_'.join([type, MODE, str(i)])
 
     folder = os.path.join('logs', name)
     os.makedirs(folder)
