@@ -23,9 +23,7 @@ PITCH_HIGH = 107  # lowest midi pitch not used, i.e., piano_roll = piano_roll[PI
 N_PITCHES = PITCH_HIGH - PITCH_LOW  # number of pitches kept out of total 128 midi pitches
 
 FEATURES = ['key', 'degree 1', 'degree 2', 'quality', 'inversion', 'root']
-ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-PITCH_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 PITCH_LINE = ['F--', 'C--', 'G--', 'D--', 'A--', 'E--', 'B--',
               'F-', 'C-', 'G-', 'D-', 'A-', 'E-', 'B-',
               'F', 'C', 'G', 'D', 'A', 'E', 'B',
@@ -65,7 +63,7 @@ SCALES = {
     'C##': ['C##', 'D##', 'E##', 'F##', 'G##', 'A##', 'B##'], 'c##': ['C##', 'D##', 'E#', 'F##', 'G##', 'A#', 'B##'],
 }
 QUALITY = ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6', 'It+6', 'Fr+6']
-SYMBOL = ['M', 'm', 'M7', 'm7', '7', 'aug', 'dim', 'dim7', 'm7(b5)']  # quality as encoded in chord symbols
+
 CLASSES_BASS = 12  # the twelve notes without enharmonic duplicates
 CLASSES_KEY = 55 if MODE == 'pitch_spelling' else 24  # Major keys: 0-11, Minor keys: 12-23
 CLASSES_DEGREE = 21  # 7 degrees * 3: regular, diminished, augmented
@@ -75,9 +73,9 @@ CLASSES_INVERSION = 4  # root position, 1st, 2nd, and 3rd inversion (the last on
 CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT
 
 KEYS_SPELLING = PITCH_LINE[1:30] + [p.lower() for p in PITCH_LINE[4:]]
-NOTES_FLAT = ['C', 'C#', 'D', 'E-', 'E', 'F', 'F#', 'G', 'A-', 'A', 'B-', 'B']
 CIRCLE_OF_FIFTH = [8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1]
 CIRCLE_OF_FIFTH += [x + 12 for x in CIRCLE_OF_FIFTH]
+NOTES_FLAT = ['C', 'C#', 'D', 'E-', 'E', 'F', 'F#', 'G', 'A-', 'A', 'B-', 'B']
 PITCH_CLASSES_FIFTH = [(NOTES_FLAT + [n.lower() for n in NOTES_FLAT])[i] for i in CIRCLE_OF_FIFTH]
 TICK_LABELS = [
     PITCH_CLASSES_FIFTH if MODE != 'pitch_spelling' else KEYS_SPELLING,

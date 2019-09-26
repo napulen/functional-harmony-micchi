@@ -24,7 +24,7 @@ from music21.chord import Chord
 from music21.repeat import ExpanderException
 from numpy.lib.recfunctions import append_fields
 
-from config import PITCH_LOW, NOTES, PITCH_LINE, QUALITY, ROOTS, SCALES, KEYS_SPELLING
+from config import PITCH_LOW, NOTES, PITCH_LINE, QUALITY, SCALES, KEYS_SPELLING
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
@@ -381,32 +381,24 @@ def _encode_quality(quality):
 
 
 def find_enharmonic_equivalent(note):
-    """ Transform everything into a note with at most one sharp and no flats """
+    """
+    Transform everything into a note with at most one sharp and no flats.
+    Keeps the upper- or lower-case intact.
+
+    :param note:
+    :return:
+    """
     note_up = note.upper()
 
     if note_up in NOTES:
-        return note_up
+        return note
 
-    if '##' in note_up:
-        if 'B' in note_up or 'E' in note_up:
-            note_up = ROOTS[(ROOTS.index(note_up[0]) + 1) % 7] + '#'
-        else:
-            note_up = ROOTS[ROOTS.index(note_up[0]) + 1]  # no problem when index == 6 because that's the case B++
-    elif '--' in note_up:  # if root = x--
-        if 'C' in note_up or 'F' in note_up:
-            note_up = ROOTS[ROOTS.index(note_up[0]) - 1] + '-'
-        else:
-            note_up = ROOTS[ROOTS.index(note_up[0]) - 1]
-
-    if note_up == 'F-' or note_up == 'C-':
-        note_up = ROOTS[ROOTS.index(note_up[0]) - 1]
-    elif note_up == 'E#' or note_up == 'B#':
-        note_up = ROOTS[(ROOTS.index(note_up[0]) + 1) % 7]
-
-    if note_up not in NOTES:  # there is a single flat left, and it's on a black key
-        note_up = ROOTS[ROOTS.index(note_up[0]) - 1] + '#'
-
-    return note_up if note.isupper() else note_up.lower()
+    n, alt = N2I[note_up[0]], list(note_up[1:])
+    while alt:
+        x = alt.pop(-1)
+        n = n + 1 if x == '#' else n - 1
+    n = n % 12  # the notes are circular!
+    return NOTES[n] if note.isupper() else NOTES[n].lower()
 
 
 def find_chord_root(chord, pitch_spelling):

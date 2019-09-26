@@ -21,3 +21,9 @@ class TestFind_enharmonic_equivalent(TestCase):
 
     def test_6(self):
         self.assertEqual(find_enharmonic_equivalent('b--'), 'a')
+
+    def test_7(self):
+        self.assertEqual(find_enharmonic_equivalent('c'), 'c')
+
+    def test_8(self):
+        self.assertEqual(find_enharmonic_equivalent('B#'), 'C')
