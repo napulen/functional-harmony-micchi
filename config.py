@@ -72,7 +72,7 @@ CLASSES_QUALITY = 12  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6
 CLASSES_INVERSION = 4  # root position, 1st, 2nd, and 3rd inversion (the last only for seventh chords)
 CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT
 
-KEYS_SPELLING = PITCH_LINE[1:30] + [p.lower() for p in PITCH_LINE[4:]]
+KEYS_SPELLING = PITCH_LINE[1:30] + [p.lower() for p in PITCH_LINE[4:-5]]
 CIRCLE_OF_FIFTH = [8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1]
 CIRCLE_OF_FIFTH += [x + 12 for x in CIRCLE_OF_FIFTH]
 NOTES_FLAT = ['C', 'C#', 'D', 'E-', 'E', 'F', 'F#', 'G', 'A-', 'A', 'B-', 'B']

@@ -18,7 +18,7 @@ from config import FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, NOTES, \
     VALID_TFRECORDS, VALID_STEPS, VALID_INDICES, MODE2INPUT_SHAPE, MODE, N_VALID, CLASSES_ROOT, PITCH_LINE
 from load_data import create_tfrecords_dataset
 from utils_music import Q2I, find_root_full_output
-from utils import decode_results
+from utils import decode_results, create_dezrann_annotations
 
 
 def check_predictions(y_true, y_pred, index):
@@ -66,11 +66,10 @@ def visualize_chord_changes(y_true, y_pred, ts, inversions=True):
            title=f"Sonata {VALID_INDICES[step]} - chord consistency " +
                  ('with inversions' if inversions else 'without inversions'))
     plt.show()
-    zt = decode_results(yt)
-    zp = decode_results(yp)
-    wt = [' '.join([zt[0][i], zt[1][i], zt[2][i], zt[3][i]]) for i in range(ts)]
-    wp = [' '.join([zp[0][i], zp[1][i], zp[2][i], zp[3][i]]) for i in range(ts)]
-    print("hi")
+    # zt = decode_results(yt)
+    # zp = decode_results(yp)
+    # wt = [' '.join([zt[0][i], zt[1][i], zt[2][i], zt[3][i]]) for i in range(ts)]
+    # wp = [' '.join([zp[0][i], zp[1][i], zp[2][i], zp[3][i]]) for i in range(ts)]
     return
 
 
@@ -144,8 +143,9 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
-i = 27
-model_name = f'conv_dil_reduced_{MODE}_{i}'
+i = 2
+model_type = 'conv_dil_reduced'
+model_name = '_'.join([model_type, MODE, str(i)])
 model_folder = os.path.join('logs', model_name)
 model = load_model(os.path.join(model_folder, model_name + '.h5'))
 model.summary()
@@ -154,51 +154,49 @@ print(model_name)
 bs = 7
 n = N_VALID // bs
 test_data = create_tfrecords_dataset(VALID_TFRECORDS, bs, shuffle_buffer=1, n=MODE2INPUT_SHAPE[MODE])
-
-# Retrieve the true labels
-piano_rolls, test_truth, timesteps = [], [], []
+""" Retrieve the true labels """
+piano_rolls, test_true, timesteps, file_names = [], [], [], []
 test_data_iter = test_data.make_one_shot_iterator()
-x, y = test_data_iter.get_next()
+(x, m, fn, s), y = test_data_iter.get_next()
 with tf.Session() as sess:
     for i in range(n):
-        data = sess.run([x, y])
-        # all elements in the batch have different length
-        [timesteps.append(np.sum(d, dtype=int)) for d in data[1][0]]  # there is a single 1 per timestep
-        [piano_rolls.append(d[:4*ts]) for d, ts in zip(data[0], timesteps)]  # data[0] has shape (bs, timestep, pitches)
-        for e in range(bs):  # data[1] has shape [output](bs, timestep, output features)
-            test_truth.append([d[e, :timesteps[e]] for d in data[1]])
+        file_name, piano_roll, labels = sess.run([fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
+        # all elements in the batch have different length, so we have to find the correct number of ts for each
+        [timesteps.append(np.sum(d, dtype=int)) for d in labels[0]]  # every label has a single 1 per timestep
+        [piano_rolls.append(d[:4 * ts]) for d, ts in zip(piano_roll, timesteps)]
+        [file_names.append(fn[0].decode('utf-8')) for fn in file_name]
+        for e in range(bs):
+            test_true.append([d[e, :timesteps[e]] for d in labels])
 
-# Predict new labels
-test_predict = []  # It will have shape: [pieces][features](length of sonata, feature size)
+""" Predict new labels """
+test_pred = []  # It will have shape: [pieces][features](length of sonata, feature size)
 for step in range(n):
     print(f"step {step + 1} out of {n}")
     temp = model.predict(test_data.skip(step * bs), steps=1, verbose=False)
     for e in range(bs):
-        test_predict.append([d[e, :timesteps[e]] for d in temp])
+        test_pred.append([d[e, :timesteps[e]] for d in temp])
 
-# Visualize some data
-# for i in range(bs*n):
-#     pr, y_true, y_pred, ts = piano_rolls[i], test_truth[i], test_predict[i], timesteps[i]
-#     name = f'Sonata {VALID_INDICES[i]}'
-#     visualize_piano_roll(pr, name)
-#     visualize_results(y_true, y_pred, name, mode='predictions')
-#     visualize_results(y_true, y_pred, name, mode='probabilities')
-#     visualize_chord_changes(y_true, y_pred, ts, True)
-#     visualize_chord_changes(y_true, y_pred, ts, False)
-#     plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=CLASSES_ROOT, name=name)
+for pr, y_true, y_pred, ts, fn in zip(piano_rolls, test_true, test_pred, timesteps, file_names):
+    """ Visualize some data """
+    # visualize_piano_roll(pr, name)
+    # visualize_results(y_true, y_pred, name, mode='predictions')
+    # visualize_results(y_true, y_pred, name, mode='probabilities')
+    # visualize_chord_changes(y_true, y_pred, ts, True)
+    # visualize_chord_changes(y_true, y_pred, ts, False)
+    # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=CLASSES_ROOT, name=name)
+    """ Create Dezrann annotations """
+    create_dezrann_annotations(y_true, y_pred, fn, model_folder=model_folder)
+    pass
 
-# for i in range(bs*n):
-#     create_dezrann_annotations(test_truth[i], test_predict[i], n=VALID_INDICES[i], batch_size=BATCH_SIZE,
-#                                model_folder=model_folder)
 
-# Calculate accuracy etc.
+"""" Calculate accuracy etc. """
 roman_tp, root_tp = 0, 0
 root_coherence = 0
 degree_tp, secondary_tp, secondary_total, d7_tp, d7_total = 0, 0, 0, 0, 0
 total_predictions = np.sum(timesteps)
 true_positives = np.zeros(6)  # true positives for each separate feature
 for step in range(bs * n):
-    y_true, y_pred = test_truth[step], test_predict[step]  # shape: [outputs], (timestep, output features)
+    y_true, y_pred = test_true[step], test_pred[step]  # shape: [outputs], (timestep, output features)
     correct = np.array([check_predictions(y_true, y_pred, j) for j in range(6)])  # shape: (output, timestep)
     true_positives += np.sum(correct, axis=-1)  # true positives per every output
     roman_tp += np.sum(np.prod(correct[:4], axis=0), axis=-1)
@@ -224,6 +222,6 @@ print(f'')
 print(f'degree        : {degree_tp / total_predictions:.4f}')
 print(f'secondary     : {secondary_tp / secondary_total:.4f}')
 print(f'derived root  : {root_tp / total_predictions:.4f}')
-print(f"global roman  : {roman_acc:.4f}")
+print(f"roman no inv  : {roman_acc:.4f}")
 print(f'root_coherence: {root_coherence / total_predictions:.4f}')
-print(f'd7 chords     : {d7_tp / d7_total:.4f}')
+print(f'd7 no inv     : {d7_tp / d7_total:.4f}')

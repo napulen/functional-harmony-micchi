@@ -5,71 +5,64 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from config import NOTES, QUALITY, FEATURES, TICK_LABELS
+from config import NOTES, QUALITY, KEYS_SPELLING
 
 
-def create_dezrann_annotations(true, pred, n, batch_size, model_folder):
+def create_dezrann_annotations(y_true, y_pred, name, model_folder):
     """
     Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net
     This allows for a nice visualization of the analysis on top of the partition.
-    :param true: The output of the machine learning model.
+    :param y_true: The annotated labels coming from our data
+    :param y_pred: The output of the machine learning model.
     :param n: the number of beethoven sonata
-    :param batch_size: Just a check. It needs to be one
+    :param model_folder:
     :return:
     """
 
-    if batch_size != 1:
-        raise NotImplementedError("This script only works for a batch size of one!")
-
-    for j in range(7):
-        data_true = true[j]
-        data_pred = pred[j]
-        feature = FEATURES[j]
-        x = {
+    data_true = decode_results(y_true)
+    data_pred = decode_results(y_pred)
+    features = ['key', 'rn', 'inversion']
+    for label_true, label_pred, feature in zip(data_true, data_pred, features):
+        annotation = {
             "meta": {
-                'title': f"Beethoven sonata no.{n}",
-                'name': f"{n} - {feature}",
+                'title': name,
+                'name': f"{name} - {feature}",
                 'date': str(datetime.now()),
                 'producer': 'Algomus team'
             }
         }
-        data_true = np.argmax(data_true[0], axis=-1)
-        data_pred = np.argmax(data_pred[0], axis=-1)
-        assert len(data_pred) == len(data_true)
-        length = len(data_true)
+        assert len(label_pred) == len(label_true)
+        timesteps = len(label_true)
 
         labels = []
         start_true, start_pred = 0, 0
-        for t in range(length):
+        for t in range(timesteps):
             if t > 0:
-                if data_true[t] != data_true[t - 1] or t == length - 1:
+                if label_true[t] != label_true[t - 1] or t == timesteps - 1:
                     duration_true = t / 2 - start_true
                     labels.append({
                         "type": feature,
                         "start": start_true,
                         "duration": duration_true,
-                        'layers': ['true'],
-                        "tag": TICK_LABELS[j][data_true[t - 1]]
+                        "line": "bot.1",
+                        "tag": label_true[t - 1]
                     })
                     start_true = t / 2
-                if data_pred[t] != data_pred[t - 1] or t == length - 1:
+                if label_pred[t] != label_pred[t - 1] or t == timesteps - 1:
                     duration_pred = t / 2 - start_pred
                     labels.append({
                         "type": feature,
                         "start": start_pred,
                         "duration": duration_pred,
-                        "layers": ['pred'],
-                        "tag": TICK_LABELS[j][data_true[t - 1]]
+                        "line": "bot.2",
+                        "tag": label_pred[t - 1]
                     })
                     start_pred = t / 2
-        x['labels'] = labels
-        try:
-            os.makedirs(os.path.join(model_folder, 'analyses'))
-        except OSError:
-            pass
+        annotation['labels'] = labels
+        os.makedirs(os.path.join(model_folder, 'analyses'), exist_ok=True)
 
-        with open(os.path.join(model_folder, 'analyses', f'analysis_sonata{n}_{feature}.dez'), 'w') as fp:
-            json.dump(x, fp)
+        with open(os.path.join(model_folder, 'analyses', f'{name}_{feature}.dez'), 'w') as fp:
+            json.dump(annotation, fp)
     return
 
 
@@ -112,30 +105,44 @@ def _fill_level(l, i_p=None):
     return y, i_o
 
 
-def _decode_key(i):
-    lower = i // 12
-    key = NOTES[i % 12]
-    return key.lower() if lower else key
+def _decode_key(yk):
+    n = len(yk)
+    k = np.argmax(yk)
+    if n == 24:
+        lower = k // 12
+        key = NOTES[k % 12]
+        return key.lower() if lower else key
+    elif n == 55:
+        return KEYS_SPELLING[k]
 
 
-def _decode_degree(p, s):
+def _decode_roman(yp, ys, yq):
+    s = np.argmax(ys)
+    p = np.argmax(yp)
+    q = np.argmax(yq)
+
     num_alt = s // 7
     num = _int_to_roman((s % 7) + 1)
     if num_alt == 1:
         num += '+'
     elif num_alt == 2:
         num += '-'
+
     den_alt = p // 7
     den = _int_to_roman((p % 7) + 1)
     if den_alt == 1:
         den += '+'
     elif den_alt == 2:
         den += '-'
-    return num + '/' + den if den != _int_to_roman(1) else num
 
-
-def _decode_quality(q):
-    return QUALITY[q]
+    quality = QUALITY[q]
+    if quality == 'M':
+        num = num.upper()
+        quality = ''
+    elif quality == 'm':
+        num = num.lower()
+        quality = ''
+    return num + quality + ('/' + den if den != 'I' else '')
 
 
 def _int_to_roman(input):
@@ -200,19 +207,19 @@ def degrees_dcml_to_bps(degree_num, degree_den='', key_minor=True):
     return '/'.join([na + nn, da + dn])
 
 
-def _decode_inversion(i):
+def _decode_inversion(yi):
+    i = np.argmax(yi)
     return str(i)
 
 
 def decode_results(y):
     """
-    Transform a list of the class outputs into something readable by humans.
+    Transform the outputs of the model into something readable by humans, example [G+, Vd7/V, '2']
 
     :param y: it should have shape [features, timesteps], and every element should be an integer indicating the class
-    :return:
+    :return: keys, chords, inversions
     """
     key = [_decode_key(i) for i in y[0]]
-    degree = [_decode_degree(i[0], i[1]) for i in zip(y[1], y[2])]
-    quality = [_decode_quality(i) for i in y[3]]
+    chord = [_decode_roman(i[0], i[1], i[2]) for i in zip(y[1], y[2], y[3])]
     inversion = [_decode_inversion(i) for i in y[4]]
-    return [key, degree, quality, inversion]
+    return key, chord, inversion

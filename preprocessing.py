@@ -148,15 +148,14 @@ if __name__ == '__main__':
                         logger.warning(f"skipping transposition {s}")
                         continue
                     feature = {
+                        'name': tf.train.Feature(bytes_list=tf.train.BytesList(value=[fn.encode('utf-8')])),
+                        'transposition': tf.train.Feature(int64_list=tf.train.Int64List(value=[s])),
                         'piano_roll': tf.train.Feature(float_list=tf.train.FloatList(value=pr_shifted.reshape(-1))),
                         'label_key': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[0] for c in chords])),
-                        'label_degree_primary': tf.train.Feature(
-                            int64_list=tf.train.Int64List(value=[c[1] for c in chords])),
-                        'label_degree_secondary': tf.train.Feature(
-                            int64_list=tf.train.Int64List(value=[c[2] for c in chords])),
+                        'label_degree_primary': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[1] for c in chords])),
+                        'label_degree_secondary': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[2] for c in chords])),
                         'label_quality': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[3] for c in chords])),
-                        'label_inversion': tf.train.Feature(
-                            int64_list=tf.train.Int64List(value=[c[4] for c in chords])),
+                        'label_inversion': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[4] for c in chords])),
                         'label_root': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[5] for c in chords])),
                     }
                     writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())

@@ -23,16 +23,16 @@ def visualize_data(data):
     return
 
 
-def setup_paths(exploratory, type):
+def setup_paths(exploratory, model_type):
     if exploratory:
         enable_eager_execution()
         name = 'temp'
     else:
         i = 0
-        name = '_'.join([type, MODE, str(i)])
+        name = '_'.join([model_type, MODE, str(i)])
         while name in os.listdir('logs'):
             i += 1
-            name = '_'.join([type, MODE, str(i)])
+            name = '_'.join([model_type, MODE, str(i)])
 
     folder = os.path.join('logs', name)
     os.makedirs(folder)
@@ -43,7 +43,7 @@ def setup_paths(exploratory, type):
 timeout = None
 exploratory = False
 if __name__ == '__main__':
-    model_folder, model_name = setup_paths(exploratory, type='conv_dil_reduced')
+    model_folder, model_name = setup_paths(exploratory, model_type='conv_dil_reduced')
     model_path = os.path.join(model_folder, model_name + '.h5')
     n = MODE2INPUT_SHAPE[MODE]
     train_data = create_tfrecords_dataset(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER, n)
