@@ -14,11 +14,11 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow.python.keras.models import load_model
 
-from config import FEATURES, TICK_LABELS, CIRCLE_OF_FIFTH, NOTES, \
-    VALID_TFRECORDS, VALID_STEPS, VALID_INDICES, MODE2INPUT_SHAPE, MODE, N_VALID, CLASSES_ROOT, PITCH_LINE
+from config import FEATURES, TICK_LABELS, NOTES, VALID_TFRECORDS, VALID_INDICES, MODE2INPUT_SHAPE, MODE, N_VALID, \
+    PITCH_LINE
 from load_data import create_tfrecords_dataset
+from utils import create_dezrann_annotations
 from utils_music import Q2I, find_root_full_output
-from utils import decode_results, create_dezrann_annotations
 
 
 def check_predictions(y_true, y_pred, index):
@@ -88,21 +88,35 @@ def visualize_results(y_true, y_pred, name, mode='probabilities', pitch_spelling
     cmap = sns.color_palette(['#d73027', '#f7f7f7', '#3027d7', '#000000']) if mode == 'predictions' else 'RdGy'
 
     for j in range(6):
-        a = y_pred[j] if (j > 0 or pitch_spelling) else y_pred[step][j][:, CIRCLE_OF_FIFTH]
-        b = y_true[j] if (j > 0 or pitch_spelling) else y_true[step][j][:, CIRCLE_OF_FIFTH]
+        if j == 0:
+            if pitch_spelling:
+                ordering = [i + j for i in range(26) for j in [0, 29]]
+                [ordering.append(i) for i in [26, 27, 28]]
+            else:
+                ordering = [8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1]
+                ordering += [x + 12 for x in ordering]
+
+            a = y_pred[j][:, ordering]
+            b = y_true[j][:, ordering]
+            yticklabels = [TICK_LABELS[j][o] for o in ordering]
+        else:
+            a = y_pred[j]
+            b = y_true[j]
+            yticklabels = TICK_LABELS[j]
+
         if mode == 'predictions':
             a = (a == np.max(a, axis=-1, keepdims=True))
             x = b - a
             x[b == 1] += 1
             x = x.transpose()
-            ax = sns.heatmap(x, cmap=cmap, vmin=-1, vmax=2, yticklabels=TICK_LABELS[j])
+            ax = sns.heatmap(x, cmap=cmap, vmin=-1, vmax=2, yticklabels=yticklabels)
             colorbar = ax.collections[0].colorbar
             colorbar.set_ticks([-5 / 8, 1 / 8, 7 / 8, 13 / 8])
             colorbar.set_ticklabels(['False Pos', 'True Neg', 'True Pos', 'False Neg'])
         else:
             x = b - a
             x = x.transpose()
-            ax = sns.heatmap(x, cmap=cmap, center=0, vmin=-1, vmax=1, yticklabels=TICK_LABELS[j])
+            ax = sns.heatmap(x, cmap=cmap, center=0, vmin=-1, vmax=1, yticklabels=yticklabels)
             colorbar = ax.collections[0].colorbar
             colorbar.set_ticks([-1, 0, +1])
             colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
@@ -160,7 +174,8 @@ test_data_iter = test_data.make_one_shot_iterator()
 (x, m, fn, s), y = test_data_iter.get_next()
 with tf.Session() as sess:
     for i in range(n):
-        file_name, piano_roll, labels = sess.run([fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
+        file_name, piano_roll, labels = sess.run(
+            [fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
         # all elements in the batch have different length, so we have to find the correct number of ts for each
         [timesteps.append(np.sum(d, dtype=int)) for d in labels[0]]  # every label has a single 1 per timestep
         [piano_rolls.append(d[:4 * ts]) for d, ts in zip(piano_roll, timesteps)]
@@ -176,18 +191,18 @@ for step in range(n):
     for e in range(bs):
         test_pred.append([d[e, :timesteps[e]] for d in temp])
 
+""" Visualize data and create Dezrann annotations """
 for pr, y_true, y_pred, ts, fn in zip(piano_rolls, test_true, test_pred, timesteps, file_names):
-    """ Visualize some data """
-    # visualize_piano_roll(pr, name)
-    # visualize_results(y_true, y_pred, name, mode='predictions')
+    """ Visualize data """
+    # visualize_piano_roll(pr, fn)
+    visualize_results(y_true, y_pred, fn, mode='predictions')
     # visualize_results(y_true, y_pred, name, mode='probabilities')
     # visualize_chord_changes(y_true, y_pred, ts, True)
     # visualize_chord_changes(y_true, y_pred, ts, False)
-    # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=CLASSES_ROOT, name=name)
+    # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=CLASSES_ROOT, name=fn)
     """ Create Dezrann annotations """
     create_dezrann_annotations(y_true, y_pred, fn, model_folder=model_folder)
     pass
-
 
 """" Calculate accuracy etc. """
 roman_tp, root_tp = 0, 0

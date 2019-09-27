@@ -73,12 +73,10 @@ CLASSES_INVERSION = 4  # root position, 1st, 2nd, and 3rd inversion (the last on
 CLASSES_TOTAL = CLASSES_KEY + CLASSES_DEGREE * 2 + CLASSES_QUALITY + CLASSES_INVERSION + CLASSES_ROOT
 
 KEYS_SPELLING = PITCH_LINE[1:30] + [p.lower() for p in PITCH_LINE[4:-5]]
-CIRCLE_OF_FIFTH = [8, 3, 10, 5, 0, 7, 2, 9, 4, 11, 6, 1]
-CIRCLE_OF_FIFTH += [x + 12 for x in CIRCLE_OF_FIFTH]
 NOTES_FLAT = ['C', 'C#', 'D', 'E-', 'E', 'F', 'F#', 'G', 'A-', 'A', 'B-', 'B']
-PITCH_CLASSES_FIFTH = [(NOTES_FLAT + [n.lower() for n in NOTES_FLAT])[i] for i in CIRCLE_OF_FIFTH]
+KEYS_PITCH_CLASS = (NOTES_FLAT + [n.lower() for n in NOTES_FLAT])
 TICK_LABELS = [
-    PITCH_CLASSES_FIFTH if MODE != 'pitch_spelling' else KEYS_SPELLING,
+    KEYS_PITCH_CLASS if MODE != 'pitch_spelling' else KEYS_SPELLING,
     [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
     [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
     QUALITY,
