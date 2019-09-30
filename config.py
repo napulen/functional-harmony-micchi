@@ -84,7 +84,7 @@ TICK_LABELS = [
     NOTES if MODE != 'pitch_spelling' else PITCH_LINE,
 ]
 
-BATCH_SIZE = 8  # 1
+BATCH_SIZE = 16  # 1
 SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
 # number of records in the training dataset as coming from the utils.count_tfrecords function

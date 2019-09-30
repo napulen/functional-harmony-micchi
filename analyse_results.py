@@ -195,7 +195,7 @@ for step in range(n):
 for pr, y_true, y_pred, ts, fn in zip(piano_rolls, test_true, test_pred, timesteps, file_names):
     """ Visualize data """
     # visualize_piano_roll(pr, fn)
-    visualize_results(y_true, y_pred, fn, mode='predictions')
+    # visualize_results(y_true, y_pred, fn, mode='predictions')
     # visualize_results(y_true, y_pred, name, mode='probabilities')
     # visualize_chord_changes(y_true, y_pred, ts, True)
     # visualize_chord_changes(y_true, y_pred, ts, False)

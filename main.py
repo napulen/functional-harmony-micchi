@@ -42,15 +42,16 @@ def setup_paths(exploratory, model_type):
 
 timeout = None
 exploratory = False
+model_type = 'conv_gru_reduced'
 if __name__ == '__main__':
-    model_folder, model_name = setup_paths(exploratory, model_type='conv_dil_reduced')
+    model_folder, model_name = setup_paths(exploratory, model_type)
     model_path = os.path.join(model_folder, model_name + '.h5')
     n = MODE2INPUT_SHAPE[MODE]
     train_data = create_tfrecords_dataset(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER, n)
     valid_data = create_tfrecords_dataset(VALID_TFRECORDS, 7, 1, n)
     # visualize_data(train_data)
 
-    model = create_model(model_name, n, derive_root=False)
+    model = create_model(model_name, n, model_type=model_type, derive_root=False)
     model.summary()
     print(model_name)
 

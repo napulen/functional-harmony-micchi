@@ -6,7 +6,7 @@ from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.backend import name_scope
 from tensorflow.python.keras.callbacks import Callback
 from tensorflow.python.keras.layers import Conv1D, Concatenate, MaxPooling1D, TimeDistributed, Dense, Lambda, \
-    BatchNormalization, Masking
+    BatchNormalization, Masking, GRU, Bidirectional
 
 from config import CLASSES_KEY, CLASSES_DEGREE, CLASSES_QUALITY, CLASSES_INVERSION, CLASSES_ROOT
 
@@ -71,7 +71,7 @@ def MultiTaskLayer(x, derive_root):
     return [o0, o1, o2, o3, o4, o5]
 
 
-def create_model(name, n, derive_root=False):
+def create_model(name, n, model_type, derive_root=False):
     """
 
     :param name:
@@ -79,18 +79,26 @@ def create_model(name, n, derive_root=False):
     :param derive_root:
     :return:
     """
+    if model_type not in ['conv_dil_reduced', 'conv_gru_reduced']:
+        raise ValueError("model_type not supported, check its value")
+
     notes = Input(shape=(None, n), name="piano_roll_input")
     mask = Input(shape=(None, 1), name="mask_input")
     x = DenseNetLayer(notes, 4, 5, n=1)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
     x = DenseNetLayer(x, 4, 5, n=2)
     x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
-    x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, i.e., typically 5 measures before and after
+
+    if model_type == 'conv_dil_reduced':
+        x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, typically 5 measures before and after
 
     # Super-ugly hack otherwise tensorflow can't save the model, see https://stackoverflow.com/a/55229794/5048010
     x = Lambda(lambda t: __import__('tensorflow').multiply(*t), name='apply_mask')((x, mask))
     x = Masking()(x)  # is this useless?
-    # x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
+
+    if model_type == 'conv_gru_reduced':
+        x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
+
     x = TimeDistributed(Dense(64, activation='tanh'))(x)
     y = MultiTaskLayer(x, derive_root)
     model = Model(inputs=[notes, mask], outputs=y, name=name)
