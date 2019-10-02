@@ -6,7 +6,7 @@ from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.backend import name_scope
 from tensorflow.python.keras.callbacks import Callback
 from tensorflow.python.keras.layers import Conv1D, Concatenate, MaxPooling1D, TimeDistributed, Dense, Lambda, \
-    BatchNormalization, Masking, GRU, Bidirectional
+    BatchNormalization, Masking, GRU, Bidirectional, Activation
 
 from config import CLASSES_KEY, CLASSES_DEGREE, CLASSES_QUALITY, CLASSES_INVERSION, CLASSES_ROOT
 
@@ -35,12 +35,32 @@ def DenseNetLayer(x, l, k, n=1):
     """
     with name_scope(f"denseNet_{n}"):
         for _ in range(l):
-            y = Conv1D(filters=4 * k, kernel_size=1, padding='same', data_format='channels_last', activation='relu')(x)
+            y = BatchNormalization()(x)
+            y = Activation('relu')(y)
+            y = Conv1D(filters=4 * k, kernel_size=1, padding='same', data_format='channels_last')(y)
             y = BatchNormalization()(y)
-            y = Conv1D(filters=k, kernel_size=32, padding='same', data_format='channels_last', activation='relu')(y)
-            y = BatchNormalization()(y)
+            y = Activation('relu')(y)
+            y = Conv1D(filters=k, kernel_size=32, padding='same', data_format='channels_last')(y)
             x = Concatenate()([x, y])
     return x
+
+
+def PoolingLayer(x, k, n=1):
+    """
+    Implementation of a DenseNetLayer
+    :param x: input
+    :param l: number of elementary blocks in the layer
+    :param k: features generated at every block
+    :param n: unique identifier of the DenseNetLayer
+    :param training: passed to the batch normalization layers
+    :return:
+    """
+    with name_scope(f"poolingLayer_{n}"):
+        y = BatchNormalization()(x)
+        y = Activation('relu')(y)
+        y = Conv1D(filters=k, kernel_size=1, padding='same', data_format='channels_last')(y)
+        y = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(y)
+    return y
 
 
 def DilatedConvLayer(x, l, k):
@@ -85,9 +105,9 @@ def create_model(name, n, model_type, derive_root=False):
     notes = Input(shape=(None, n), name="piano_roll_input")
     mask = Input(shape=(None, 1), name="mask_input")
     x = DenseNetLayer(notes, 4, 5, n=1)
-    x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
+    x = PoolingLayer(x, 32, n=1)
     x = DenseNetLayer(x, 4, 5, n=2)
-    x = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(x)
+    x = PoolingLayer(x, 48, n=1)
 
     if model_type == 'conv_dil_reduced':
         x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, typically 5 measures before and after
