@@ -83,7 +83,7 @@ if __name__ == '__main__':
             scores_folder = os.path.join(folder, 'scores')
             file_names = ['.'.join(fn.split('.')[:-1]) for fn in os.listdir(chords_folder)]
             for fn in file_names:
-                # if fn not in ['bsq_op18_no6_mov4']:
+                # if fn not in ['bsq_op127_no12_mov2']:
                 #     continue
                 sf = os.path.join(scores_folder, fn + ".mxl")
                 cf = os.path.join(chords_folder, fn + ".csv")
