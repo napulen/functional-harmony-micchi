@@ -14,7 +14,7 @@ from model import create_model, TimeOut
 
 def visualize_data(data):
     for x, y in data:
-        prs, masks = x
+        prs, masks, _, _ = x
         for pr, mask in zip(prs, masks):
             sns.heatmap(pr)
             plt.show()
@@ -35,13 +35,14 @@ def setup_paths(exploratory, model_type):
             name = '_'.join([model_type, MODE, str(i)])
 
     folder = os.path.join('logs', name)
-    os.makedirs(folder)
+    os.makedirs(folder, exist_ok=True if exploratory else False)
 
     return folder, name
 
 
 timeout = None
 exploratory = False
+# exploratory = True
 model_type = 'conv_dil_reduced'
 if __name__ == '__main__':
     model_folder, model_name = setup_paths(exploratory, model_type)

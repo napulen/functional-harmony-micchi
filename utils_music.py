@@ -92,7 +92,7 @@ def load_score_beat_strength(score_file, fpq):
 
 def load_score_pitch_spelling(score_file, fpq):
     score, n_frames = _load_score(score_file, fpq)
-    score = score.chordify()
+    score = score.chordify()  # this is very comfy but super slow (several seconds on long pieces)
     piano_roll = np.zeros(shape=(35 * 2, n_frames), dtype=np.int32)
     flattest, sharpest = 35, 0
     numFlatwards, numSharpwards = 0, 0
@@ -106,7 +106,7 @@ def load_score_pitch_spelling(score_file, fpq):
             flattest = min(flattest, idx)
             sharpest = max(sharpest, idx)
             piano_roll[idx, time] = 1
-            if i == 0:
+            if i == 0:  # chords always start from the bass
                 piano_roll[idx + 35, time] = 1
 
         numFlatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE

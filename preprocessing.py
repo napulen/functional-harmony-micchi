@@ -67,6 +67,30 @@ def preprocess_chords(chord_labels, s, ps, pp):
     return cl_encoded
 
 
+def create_feature_dictionary(piano_roll, chords, name, s=None, start=None, end=None):
+    feature = {
+        'name': tf.train.Feature(bytes_list=tf.train.BytesList(value=[name.encode('utf-8')])),
+        'transposition': tf.train.Feature(int64_list=tf.train.Int64List(value=[s])),
+        'piano_roll': tf.train.Feature(float_list=tf.train.FloatList(value=piano_roll.reshape(-1))),
+        'label_key': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[0] for c in chords])),
+        'label_degree_primary': tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[c[1] for c in chords])),
+        'label_degree_secondary': tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[c[2] for c in chords])),
+        'label_quality': tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[c[3] for c in chords])),
+        'label_inversion': tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[c[4] for c in chords])),
+        'label_root': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[5] for c in chords])),
+    }
+    if start is not None:
+        feature['start'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[start]))
+    if end is not None:
+        feature['end'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[end]))
+
+    return feature
+
+
 if __name__ == '__main__':
     print(f"Welcome to the preprocessing routine, whose goal is to create tfrecords for your model.\n"
           f"You are currently working in the {MODE} mode.\n"
@@ -101,7 +125,7 @@ if __name__ == '__main__':
                 elif MODE == 'midi_number':
                     piano_roll = load_score_midi_number(sf, FPQ, PITCH_LOW, PITCH_HIGH)
                     nl, nr = 6, 6
-                elif MODE == 'pitch_spelling':
+                elif MODE == 'pitch_spelling' or MODE == 'pitch_spelling_cut':
                     piano_roll, nl_pitches, nr_pitches = load_score_pitch_spelling(sf, FPQ)
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
                     nl = min(nl_keys, nl_pitches)
@@ -132,7 +156,7 @@ if __name__ == '__main__':
                             pr_shifted[i + 12, :] = piano_roll[((i - s) % 12) + 12, :]
                         for i in range(24, len(pr_shifted)):
                             pr_shifted[i, :] = piano_roll[i, :]
-                    elif MODE == 'pitch_spelling':
+                    elif MODE.startswith('pitch_spelling'):
                         # nL and nR are calculated s.t. transpositions never have three flats or sharps.
                         # this means that they will never get out of the allotted 35 slots, and
                         # general pitches and bass will never mix
@@ -141,21 +165,23 @@ if __name__ == '__main__':
                     elif MODE == 'midi_number':
                         pr_shifted = np.roll(piano_roll, shift=s, axis=0)
 
-                    ps = (MODE == 'pitch_spelling')
+                    ps = (MODE.startswith('pitch_spelling'))
                     pp = 'fifth' if ps else 'semitone'  # definition of proximity for pitches
                     chords = preprocess_chords(chord_labels, s, ps, pp)
                     if any([x is None for c in chords for x in c]):
                         logger.warning(f"skipping transposition {s}")
                         continue
-                    feature = {
-                        'name': tf.train.Feature(bytes_list=tf.train.BytesList(value=[fn.encode('utf-8')])),
-                        'transposition': tf.train.Feature(int64_list=tf.train.Int64List(value=[s])),
-                        'piano_roll': tf.train.Feature(float_list=tf.train.FloatList(value=pr_shifted.reshape(-1))),
-                        'label_key': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[0] for c in chords])),
-                        'label_degree_primary': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[1] for c in chords])),
-                        'label_degree_secondary': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[2] for c in chords])),
-                        'label_quality': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[3] for c in chords])),
-                        'label_inversion': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[4] for c in chords])),
-                        'label_root': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[5] for c in chords])),
-                    }
-                    writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
+                    if MODE.endswith('cut'):
+                        L = 160
+                        start, end = 0, L
+                        while start < len(chords):
+                            chord_partial = chords[start:end]
+                            pr_partial = pr_shifted[:, 4 * start:4 * end]
+                            feature = create_feature_dictionary(pr_partial, chord_partial, fn, s, start, end)
+                            writer.write(
+                                tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
+                            start += L
+                            end += L
+                    else:
+                        feature = create_feature_dictionary(pr_shifted, chords, fn, s)
+                        writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())

@@ -1,3 +1,4 @@
+import tensorflow as tf
 import os
 from math import ceil
 
@@ -5,10 +6,11 @@ MODES = [
     'pitch_spelling',
     'pitch_class',
     'pitch_class_beat_strength',
-    'midi_number'
+    'midi_number',
+    'pitch_spelling_cut'
 ]
 
-MODE = MODES[0]
+MODE = MODES[4]
 
 TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3, 1, 14, 23, 15, 10, 25, 7]
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
@@ -84,12 +86,21 @@ TICK_LABELS = [
     NOTES if MODE != 'pitch_spelling' else PITCH_LINE,
 ]
 
+
+def count_records(tfrecord):
+    """ Count the number of lines in a tfrecord file. This is useful to establish 'steps_per_epoch' when training """
+    c = 0
+    for _ in tf.io.tf_record_iterator(tfrecord):
+        c += 1
+    return c
+
+
 BATCH_SIZE = 16  # 1
 SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
 # number of records in the training dataset as coming from the utils.count_tfrecords function
-N_TRAIN = 3212 if MODE == 'pitch_spelling' else 300
-N_VALID = 7  # number of records in the validation dataset as coming from the utils.count_tfrecords function
+N_TRAIN = count_records(TRAIN_TFRECORDS)  # if MODE == 'pitch_spelling' else 300
+N_VALID = count_records(VALID_TFRECORDS)  # number of records in the validation dataset as coming from the utils.count_tfrecords function
 STEPS_PER_EPOCH = ceil(N_TRAIN / BATCH_SIZE)
 VALID_STEPS = ceil(N_VALID / BATCH_SIZE)
 MODE2INPUT_SHAPE = {
@@ -97,5 +108,6 @@ MODE2INPUT_SHAPE = {
     'pitch_class_weighted_loss': 24,
     'pitch_class_beat_strength': 27,
     'pitch_spelling': 70,
+    'pitch_spelling_cut': 70,
     'midi_number': N_PITCHES,
 }
