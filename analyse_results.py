@@ -15,7 +15,7 @@ import tensorflow as tf
 from tensorflow.python.keras.models import load_model
 
 from config import FEATURES, TICK_LABELS, NOTES, VALID_TFRECORDS, VALID_INDICES, MODE2INPUT_SHAPE, MODE, N_VALID, \
-    PITCH_LINE
+    PITCH_LINE, VALID_BATCH_SIZE, VALID_STEPS
 from load_data import create_tfrecords_dataset
 from utils import create_dezrann_annotations
 from utils_music import Q2I, find_root_full_output
@@ -157,45 +157,43 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
-i = 2
-model_type = 'conv_dil_reduced'
+i = 0
+model_type = 'conv_gru_reduced'
 model_name = '_'.join([model_type, MODE, str(i)])
 model_folder = os.path.join('logs', model_name)
 model = load_model(os.path.join(model_folder, model_name + '.h5'))
 model.summary()
 print(model_name)
 
-bs = 7
-n = N_VALID // bs
-test_data = create_tfrecords_dataset(VALID_TFRECORDS, bs, shuffle_buffer=1, n=MODE2INPUT_SHAPE[MODE])
+test_data = create_tfrecords_dataset(VALID_TFRECORDS, VALID_BATCH_SIZE, shuffle_buffer=1, n=MODE2INPUT_SHAPE[MODE])
 """ Retrieve the true labels """
 piano_rolls, test_true, timesteps, file_names = [], [], [], []
 test_data_iter = test_data.make_one_shot_iterator()
 (x, m, fn, s), y = test_data_iter.get_next()
 with tf.Session() as sess:
-    for i in range(n):
+    for i in range(VALID_STEPS):
         file_name, piano_roll, labels = sess.run(
             [fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
         # all elements in the batch have different length, so we have to find the correct number of ts for each
         [timesteps.append(np.sum(d, dtype=int)) for d in labels[0]]  # every label has a single 1 per timestep
         [piano_rolls.append(d[:4 * ts]) for d, ts in zip(piano_roll, timesteps)]
         [file_names.append(fn[0].decode('utf-8')) for fn in file_name]
-        for e in range(bs):
+        for e in range(VALID_BATCH_SIZE):
             test_true.append([d[e, :timesteps[e]] for d in labels])
 
 """ Predict new labels """
 test_pred = []  # It will have shape: [pieces][features](length of sonata, feature size)
-for step in range(n):
-    print(f"step {step + 1} out of {n}")
-    temp = model.predict(test_data.skip(step * bs), steps=1, verbose=False)
-    for e in range(bs):
+for step in range(VALID_STEPS):
+    print(f"step {step + 1} out of {VALID_STEPS}")
+    temp = model.predict(test_data.skip(step * VALID_BATCH_SIZE), steps=1, verbose=False)
+    for e in range(VALID_BATCH_SIZE):
         test_pred.append([d[e, :timesteps[e]] for d in temp])
 
 """ Visualize data and create Dezrann annotations """
 for pr, y_true, y_pred, ts, fn in zip(piano_rolls, test_true, test_pred, timesteps, file_names):
     """ Visualize data """
-    # visualize_piano_roll(pr, fn)
-    # visualize_results(y_true, y_pred, fn, mode='predictions')
+    visualize_piano_roll(pr, fn)
+    visualize_results(y_true, y_pred, fn, mode='predictions')
     # visualize_results(y_true, y_pred, name, mode='probabilities')
     # visualize_chord_changes(y_true, y_pred, ts, True)
     # visualize_chord_changes(y_true, y_pred, ts, False)
@@ -210,7 +208,7 @@ root_coherence = 0
 degree_tp, secondary_tp, secondary_total, d7_tp, d7_total = 0, 0, 0, 0, 0
 total_predictions = np.sum(timesteps)
 true_positives = np.zeros(6)  # true positives for each separate feature
-for step in range(bs * n):
+for step in range(N_VALID):
     y_true, y_pred = test_true[step], test_pred[step]  # shape: [outputs], (timestep, output features)
     correct = np.array([check_predictions(y_true, y_pred, j) for j in range(6)])  # shape: (output, timestep)
     true_positives += np.sum(correct, axis=-1)  # true positives per every output
