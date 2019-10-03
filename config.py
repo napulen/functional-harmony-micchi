@@ -95,14 +95,32 @@ def count_records(tfrecord):
     return c
 
 
-BATCH_SIZE = 16  # 1
-SHUFFLE_BUFFER = 123  # 100_000
-EPOCHS = 100
 # number of records in the training dataset as coming from the utils.count_tfrecords function
 N_TRAIN = count_records(TRAIN_TFRECORDS)  # if MODE == 'pitch_spelling' else 300
-N_VALID = count_records(VALID_TFRECORDS)  # number of records in the validation dataset as coming from the utils.count_tfrecords function
+N_VALID = count_records(
+    VALID_TFRECORDS)  # number of records in the validation dataset as coming from the utils.count_tfrecords function
+
+BATCH_SIZE = 16  # 1
+
+
+def find_validation_batch_size(n, bs):
+    if not isinstance(n, int) or n < 1:
+        raise ValueError("n should be a positive integer")
+
+    found = False
+    while not found and bs > 1:
+        if n % bs == 0:
+            found = True
+        else:
+            bs -= 1
+    return bs
+
+
+VALID_BATCH_SIZE = find_validation_batch_size(N_VALID, BATCH_SIZE)
+SHUFFLE_BUFFER = 123  # 100_000
+EPOCHS = 100
 STEPS_PER_EPOCH = ceil(N_TRAIN / BATCH_SIZE)
-VALID_STEPS = ceil(N_VALID / BATCH_SIZE)
+VALID_STEPS = ceil(N_VALID / VALID_BATCH_SIZE)
 MODE2INPUT_SHAPE = {
     'pitch_class': 24,
     'pitch_class_weighted_loss': 24,
