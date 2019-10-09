@@ -61,7 +61,7 @@ def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, mode
                             "duration": duration_true,
                             "line": "bot.1",
                             "tag": label_true[t - 1],
-                            "comment": "true"
+                            "comment": "target"
                         })
                         start_true = (t + t0) / 2
                     if label_pred[t] != label_pred[t - 1] or t == ts - 1:
@@ -71,10 +71,12 @@ def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, mode
                             "start": start_pred,
                             "duration": duration_pred,
                             "line": "bot.2",
-                            "tag": label_pred[t - 1]
+                            "tag": label_pred[t - 1],
+                            "comment": "prediction"
                         })
                         start_pred = (t + t0) / 2
 
+        annotation['labels'] = labels
         with open(os.path.join(model_folder, 'analyses', f'{current_file}_{feature}.dez'), 'w+') as fp:
             json.dump(annotation, fp)
     return
