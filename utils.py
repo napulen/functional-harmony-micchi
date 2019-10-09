@@ -5,10 +5,10 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from config import NOTES, QUALITY, KEYS_SPELLING
+from config import NOTES, QUALITY, KEYS_SPELLING, N_VALID
 
 
-def create_dezrann_annotations(y_true, y_pred, name, model_folder):
+def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, model_folder):
     """
     Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net
     This allows for a nice visualization of the analysis on top of the partition.
@@ -18,50 +18,64 @@ def create_dezrann_annotations(y_true, y_pred, name, model_folder):
     :param model_folder:
     :return:
     """
+    os.makedirs(os.path.join(model_folder, 'analyses'), exist_ok=True)
 
-    data_true = decode_results(y_true)
-    data_pred = decode_results(y_pred)
-    features = ['key', 'rn', 'inversion']
-    for label_true, label_pred, feature in zip(data_true, data_pred, features):
-        annotation = {
-            "meta": {
-                'title': name,
-                'name': f"{name} - {feature}",
-                'date': str(datetime.now()),
-                'producer': 'Algomus team'
-            }
-        }
-        assert len(label_pred) == len(label_true)
-        timesteps = len(label_true)
+    offsets = np.zeros(N_VALID)
+    for i in range(1, N_VALID):
+        if file_names[i] == file_names[i - 1]:
+            offsets[i] = offsets[i - 1] + timesteps[i - 1]
+    annotation, labels, current_file = dict(), [], None
+    features = ['Tonality', 'Harmony', 'Inversion']
 
-        labels = []
-        start_true, start_pred = 0, 0
-        for t in range(timesteps):
-            if t > 0:
-                if label_true[t] != label_true[t - 1] or t == timesteps - 1:
-                    duration_true = t / 2 - start_true
-                    labels.append({
-                        "type": feature,
-                        "start": start_true,
-                        "duration": duration_true,
-                        "line": "bot.1",
-                        "tag": label_true[t - 1]
-                    })
-                    start_true = t / 2
-                if label_pred[t] != label_pred[t - 1] or t == timesteps - 1:
-                    duration_pred = t / 2 - start_pred
-                    labels.append({
-                        "type": feature,
-                        "start": start_pred,
-                        "duration": duration_pred,
-                        "line": "bot.2",
-                        "tag": label_pred[t - 1]
-                    })
-                    start_pred = t / 2
-        annotation['labels'] = labels
-        os.makedirs(os.path.join(model_folder, 'analyses'), exist_ok=True)
+    for i in range(3):
+        feature = features[i]
+        for y_true, y_pred, ts, name, t0 in zip(test_true, test_pred, timesteps, file_names, offsets):
+            if name != current_file:  # a new sonata started
+                if current_file is not None:  # save previous file, if it exists
+                    annotation['labels'] = labels
+                    with open(os.path.join(model_folder, 'analyses', f'{current_file}_{feature}.dez'), 'w+') as fp:
+                        json.dump(annotation, fp)
+                annotation = {
+                    "meta": {
+                        'title': name,
+                        'name': f"{name} - {feature}",
+                        'date': str(datetime.now()),
+                        'producer': 'Algomus team'
+                    }
+                }
+                current_file = name
+                labels = []
 
-        with open(os.path.join(model_folder, 'analyses', f'{name}_{feature}.dez'), 'w') as fp:
+            label_true = decode_results(y_true)[i]
+            label_pred = decode_results(y_pred)[i]
+
+            assert len(label_pred) == len(label_true)
+            start_true, start_pred = t0 / 2, t0 / 2  # divided by two because we have one label every 8th note
+            for t in range(ts):
+                if t > 0:
+                    if label_true[t] != label_true[t - 1] or t == ts - 1:
+                        duration_true = (t + t0) / 2 - start_true
+                        labels.append({
+                            "type": feature,
+                            "start": start_true,
+                            "duration": duration_true,
+                            "line": "bot.1",
+                            "tag": label_true[t - 1],
+                            "comment": "true"
+                        })
+                        start_true = (t + t0) / 2
+                    if label_pred[t] != label_pred[t - 1] or t == ts - 1:
+                        duration_pred = (t + t0) / 2 - start_pred
+                        labels.append({
+                            "type": feature,
+                            "start": start_pred,
+                            "duration": duration_pred,
+                            "line": "bot.2",
+                            "tag": label_pred[t - 1]
+                        })
+                        start_pred = (t + t0) / 2
+
+        with open(os.path.join(model_folder, 'analyses', f'{current_file}_{feature}.dez'), 'w+') as fp:
             json.dump(annotation, fp)
     return
 
@@ -114,6 +128,8 @@ def _decode_key(yk):
         return key.lower() if lower else key
     elif n == 55:
         return KEYS_SPELLING[k]
+    else:
+        raise ValueError('weird number of classes in the key')
 
 
 def _decode_roman(yp, ys, yq):

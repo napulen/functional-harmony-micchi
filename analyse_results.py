@@ -7,6 +7,7 @@ y -> [data points] [outputs] (timesteps, output_features)
 """
 
 import os
+import shutil
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,7 +59,7 @@ def visualize_chord_changes(y_true, y_pred, ts, inversions=True):
 
     # Plotting the results
     cmap = sns.color_palette(['#d73027', '#f7f7f7', '#3027d7'])
-    ax = sns.heatmap([change_true - change_pred], cmap=cmap)
+    ax = sns.heatmap([change_true - change_pred], cmap=cmap, linewidths=.5)
     colorbar = ax.collections[0].colorbar
     colorbar.set_ticks([-0.67, 0., 0.67])
     colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
@@ -83,6 +84,7 @@ def visualize_results(y_true, y_pred, name, mode='probabilities', pitch_spelling
     :param pitch_spelling: this controls the shape and labels of the x axis in with keys
     :return:
     """
+    plt.style.use("ggplot")
     if mode not in ['probabilities', 'predictions']:
         raise ValueError('mode should be either probabilities or predictions')
     cmap = sns.color_palette(['#d73027', '#f7f7f7', '#3027d7', '#000000']) if mode == 'predictions' else 'RdGy'
@@ -109,14 +111,14 @@ def visualize_results(y_true, y_pred, name, mode='probabilities', pitch_spelling
             x = b - a
             x[b == 1] += 1
             x = x.transpose()
-            ax = sns.heatmap(x, cmap=cmap, vmin=-1, vmax=2, yticklabels=yticklabels)
+            ax = sns.heatmap(x, cmap=cmap, vmin=-1, vmax=2, yticklabels=yticklabels, linewidths=.5)
             colorbar = ax.collections[0].colorbar
             colorbar.set_ticks([-5 / 8, 1 / 8, 7 / 8, 13 / 8])
             colorbar.set_ticklabels(['False Pos', 'True Neg', 'True Pos', 'False Neg'])
         else:
             x = b - a
             x = x.transpose()
-            ax = sns.heatmap(x, cmap=cmap, center=0, vmin=-1, vmax=1, yticklabels=yticklabels)
+            ax = sns.heatmap(x, cmap=cmap, center=0, vmin=-1, vmax=1, yticklabels=yticklabels, linewidths=.5)
             colorbar = ax.collections[0].colorbar
             colorbar.set_ticks([-1, 0, +1])
             colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
@@ -149,7 +151,7 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     for i, j in zip(root_pred[msk], root_der[msk]):
         c[i, j] += 1
     labels = PITCH_LINE if n_classes == 35 else NOTES
-    sns.heatmap(c, xticklabels=labels, yticklabels=labels)
+    sns.heatmap(c, xticklabels=labels, yticklabels=labels, linewidths=.5)
     plt.title(f"{name} - root prediction")
     plt.xlabel("PREDICTED")
     plt.ylabel("DERIVED")
@@ -157,7 +159,7 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
-i = 0
+i = 4
 model_type = 'conv_gru_reduced'
 model_name = '_'.join([model_type, MODE, str(i)])
 model_folder = os.path.join('logs', model_name)
@@ -167,46 +169,43 @@ print(model_name)
 
 test_data = create_tfrecords_dataset(VALID_TFRECORDS, VALID_BATCH_SIZE, shuffle_buffer=1, n=MODE2INPUT_SHAPE[MODE])
 """ Retrieve the true labels """
-piano_rolls, test_true, timesteps, file_names = [], [], [], []
+piano_rolls, test_true, timesteps, file_names = [], [], [], []  # test_true structure = [N_VALID][LABELS](ts, classes)
 test_data_iter = test_data.make_one_shot_iterator()
 (x, m, fn, s), y = test_data_iter.get_next()
 with tf.Session() as sess:
     for i in range(VALID_STEPS):
-        file_name, piano_roll, labels = sess.run(
-            [fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
+        file_name, piano_roll, labels = sess.run([fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
         # all elements in the batch have different length, so we have to find the correct number of ts for each
         [timesteps.append(np.sum(d, dtype=int)) for d in labels[0]]  # every label has a single 1 per timestep
         [piano_rolls.append(d[:4 * ts]) for d, ts in zip(piano_roll, timesteps)]
         [file_names.append(fn[0].decode('utf-8')) for fn in file_name]
-        for e in range(VALID_BATCH_SIZE):
-            test_true.append([d[e, :timesteps[e]] for d in labels])
+        for e in range(VALID_BATCH_SIZE):  # e is the element in the batch
+            test_true.append([d[e, :timesteps[e + i*VALID_BATCH_SIZE], :] for d in labels])  # appends something of shape (timesteps[e], output_features)
+# test_true structure = [N_VALID][LABELS](ts, classes)
 
 """ Predict new labels """
-test_pred = []  # It will have shape: [pieces][features](length of sonata, feature size)
-for step in range(VALID_STEPS):
-    print(f"step {step + 1} out of {VALID_STEPS}")
-    temp = model.predict(test_data.skip(step * VALID_BATCH_SIZE), steps=1, verbose=False)
-    for e in range(VALID_BATCH_SIZE):
-        test_pred.append([d[e, :timesteps[e]] for d in temp])
+# test_pred = []  # It will have shape: [pieces][features](length of sonata, feature size)
+temp = model.predict(test_data, steps=VALID_STEPS, verbose=True)
+test_pred = [[d[e, :timesteps[e]] for d in temp] for e in range(N_VALID)]
 
-""" Visualize data and create Dezrann annotations """
+""" Visualize data """
 for pr, y_true, y_pred, ts, fn in zip(piano_rolls, test_true, test_pred, timesteps, file_names):
-    """ Visualize data """
-    visualize_piano_roll(pr, fn)
-    visualize_results(y_true, y_pred, fn, mode='predictions')
+    # visualize_piano_roll(pr, fn)
+    # visualize_results(y_true, y_pred, fn, mode='predictions')
     # visualize_results(y_true, y_pred, name, mode='probabilities')
     # visualize_chord_changes(y_true, y_pred, ts, True)
     # visualize_chord_changes(y_true, y_pred, ts, False)
     # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=CLASSES_ROOT, name=fn)
-    """ Create Dezrann annotations """
-    create_dezrann_annotations(y_true, y_pred, fn, model_folder=model_folder)
     pass
+
+""" Create Dezrann annotations """
+create_dezrann_annotations(test_true, test_pred, timesteps, file_names, model_folder=model_folder)
 
 """" Calculate accuracy etc. """
 roman_tp, root_tp = 0, 0
 root_coherence = 0
 degree_tp, secondary_tp, secondary_total, d7_tp, d7_total = 0, 0, 0, 0, 0
-total_predictions = np.sum(timesteps)
+total_predictions = np.sum(timesteps)  # one prediction per timestep
 true_positives = np.zeros(6)  # true positives for each separate feature
 for step in range(N_VALID):
     y_true, y_pred = test_true[step], test_pred[step]  # shape: [outputs], (timestep, output features)
