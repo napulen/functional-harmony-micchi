@@ -25,30 +25,30 @@ def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, mode
         if file_names[i] == file_names[i - 1]:
             offsets[i] = offsets[i - 1] + timesteps[i - 1]
     annotation, labels, current_file = dict(), [], None
-    features = ['Tonality', 'Harmony', 'Inversion']
+    features = ['Tonality', 'Harmony']  # add a third element "Inversion" if needed
+    lines = [('top.2', 'bot.2'), ('top.1', 'bot.1'), ('top.3', 'bot.3')]
 
-    for i in range(3):
-        feature = features[i]
-        for y_true, y_pred, ts, name, t0 in zip(test_true, test_pred, timesteps, file_names, offsets):
-            if name != current_file:  # a new sonata started
-                if current_file is not None:  # save previous file, if it exists
-                    annotation['labels'] = labels
-                    with open(os.path.join(model_folder, 'analyses', f'{current_file}_{feature}.dez'), 'w+') as fp:
-                        json.dump(annotation, fp)
-                annotation = {
-                    "meta": {
-                        'title': name,
-                        'name': f"{name} - {feature}",
-                        'date': str(datetime.now()),
-                        'producer': 'Algomus team'
-                    }
+    for y_true, y_pred, ts, name, t0 in zip(test_true, test_pred, timesteps, file_names, offsets):
+        if name != current_file:  # a new sonata started
+            if current_file is not None:  # save previous file, if it exists
+                annotation['labels'] = labels
+                with open(os.path.join(model_folder, 'analyses', f'{current_file}.dez'), 'w+') as fp:
+                    json.dump(annotation, fp)
+            annotation = {
+                "meta": {
+                    'title': name,
+                    'name': name,
+                    'date': str(datetime.now()),
+                    'producer': 'Algomus team'
                 }
-                current_file = name
-                labels = []
+            }
+            current_file = name
+            labels = []
 
-            label_true = decode_results(y_true)[i]
-            label_pred = decode_results(y_pred)[i]
+        label_true_list = decode_results(y_true)
+        label_pred_list = decode_results(y_pred)
 
+        for feature, line, label_true, label_pred in zip(features, lines, label_true_list, label_pred_list):
             assert len(label_pred) == len(label_true)
             start_true, start_pred = t0 / 2, t0 / 2  # divided by two because we have one label every 8th note
             for t in range(ts):
@@ -59,7 +59,7 @@ def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, mode
                             "type": feature,
                             "start": start_true,
                             "duration": duration_true,
-                            "line": "bot.1",
+                            "line": line[0],
                             "tag": label_true[t - 1],
                             "comment": "target"
                         })
@@ -70,15 +70,15 @@ def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, mode
                             "type": feature,
                             "start": start_pred,
                             "duration": duration_pred,
-                            "line": "bot.2",
+                            "line": line[1],
                             "tag": label_pred[t - 1],
                             "comment": "prediction"
                         })
                         start_pred = (t + t0) / 2
 
-        annotation['labels'] = labels
-        with open(os.path.join(model_folder, 'analyses', f'{current_file}_{feature}.dez'), 'w+') as fp:
-            json.dump(annotation, fp)
+    annotation['labels'] = labels
+    with open(os.path.join(model_folder, 'analyses', f'{current_file}.dez'), 'w+') as fp:
+        json.dump(annotation, fp)
     return
 
 
