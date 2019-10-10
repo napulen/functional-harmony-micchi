@@ -4,7 +4,8 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from config import VALID_TFRECORDS, TRAIN_TFRECORDS, DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, MODE
+from config import VALID_TFRECORDS, TRAIN_TFRECORDS, DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, MODE, \
+    TEST_BPS_TFRECORDS, CHUNK_SIZE
 from utils_music import load_score_midi_number, load_chord_labels, shift_chord_labels, segment_chord_labels, \
     encode_chords, load_score_pitch_class, load_score_beat_strength, load_score_pitch_spelling, \
     calculate_number_transpositions_key, attach_chord_root
@@ -15,9 +16,10 @@ logger.setLevel(logging.INFO)
 
 
 def check_existence_tfrecords(tfrecords):
-    if os.path.isfile(TRAIN_TFRECORDS):
+    existent = [f for f in tfrecords if os.path.isfile(f)]
+    if len(existent) > 0:
         answer = input(
-            f"{os.path.basename(TRAIN_TFRECORDS)} exists already. "
+            f"{[os.path.basename(f) for f in existent]} exists already. "
             "Do you want to replace the tfrecords, backup them, write into a temporary file, or abort the calculation? "
             "[replace/backup/temp/abort]\n"
         )
@@ -96,11 +98,17 @@ if __name__ == '__main__':
           f"You are currently working in the {MODE} mode.\n"
           f"Thank you for choosing algomus productions and have a nice day!\n")
 
-    folders = [os.path.join(DATA_FOLDER, 'train'), os.path.join(DATA_FOLDER, 'valid')]
-    tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS]
+    folders = [
+        os.path.join(DATA_FOLDER, 'train'),
+        os.path.join(DATA_FOLDER, 'valid'),
+        os.path.join(DATA_FOLDER, 'test-bps')
+    ]
+    tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_BPS_TFRECORDS]
     tfrecords = check_existence_tfrecords(tfrecords)
 
     for folder, output_file in zip(folders, tfrecords):
+        if folder != folders[2]:
+            continue
         with tf.io.TFRecordWriter(output_file) as writer:
             logger.info(f'Working on {os.path.basename(output_file)}.')
             chords_folder = os.path.join(folder, 'chords')
@@ -114,18 +122,18 @@ if __name__ == '__main__':
 
                 logger.info(f"Analysing {fn}")
                 chord_labels = load_chord_labels(cf)
-                if MODE == 'pitch_class':
-                    piano_roll = load_score_pitch_class(sf, FPQ)
-                    nl, nr = 6, 6
-                elif MODE == 'pitch_class_beat_strength':
+                if MODE.startswith('pitch_class_beat_strength'):
                     piano_roll = load_score_pitch_class(sf, FPQ)
                     beat_strength = load_score_beat_strength(sf, FPQ)
                     piano_roll = np.append(piano_roll, beat_strength, axis=0)
                     nl, nr = 6, 6
-                elif MODE == 'midi_number':
+                elif MODE.startswith('pitch_class'):  # beware! this must be after pitch_class_beat_strength
+                    piano_roll = load_score_pitch_class(sf, FPQ)
+                    nl, nr = 6, 6
+                elif MODE.startswith('midi_number'):
                     piano_roll = load_score_midi_number(sf, FPQ, PITCH_LOW, PITCH_HIGH)
                     nl, nr = 6, 6
-                elif MODE == 'pitch_spelling' or MODE == 'pitch_spelling_cut':
+                elif MODE.startswith('pitch_spelling'):
                     piano_roll, nl_pitches, nr_pitches = load_score_pitch_spelling(sf, FPQ)
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
                     nl = min(nl_keys, nl_pitches)
@@ -172,16 +180,15 @@ if __name__ == '__main__':
                         logger.warning(f"skipping transposition {s}")
                         continue
                     if MODE.endswith('cut'):
-                        L = 160
-                        start, end = 0, L
+                        start, end = 0, CHUNK_SIZE
                         while start < len(chords):
                             chord_partial = chords[start:end]
                             pr_partial = pr_shifted[:, 4 * start:4 * end]
                             feature = create_feature_dictionary(pr_partial, chord_partial, fn, s, start, end)
                             writer.write(
                                 tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
-                            start += L
-                            end += L
+                            start += CHUNK_SIZE
+                            end += CHUNK_SIZE
                     else:
                         feature = create_feature_dictionary(pr_shifted, chords, fn, s)
                         writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())

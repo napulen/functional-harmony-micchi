@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from tensorflow import enable_eager_execution
 from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard, ModelCheckpoint
 
-from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, VALID_TFRECORDS, EPOCHS, STEPS_PER_EPOCH, \
+from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, VALID_TFRECORDS, EPOCHS, TRAIN_STEPS, \
     MODE, MODE2INPUT_SHAPE, VALID_BATCH_SIZE, VALID_STEPS
 from load_data import create_tfrecords_dataset
 from model import create_model, TimeOut
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     weights = [1., 1., 1., 1., 1., 1.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
     model.compile(loss='categorical_crossentropy', loss_weights=weights, optimizer='adam', metrics=['accuracy'])
 
-    model.fit(train_data, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, validation_data=valid_data,
+    model.fit(train_data, epochs=EPOCHS, steps_per_epoch=TRAIN_STEPS, validation_data=valid_data,
               validation_steps=VALID_STEPS, callbacks=callbacks)
 
     # model.save(model_path)

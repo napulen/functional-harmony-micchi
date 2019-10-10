@@ -7,7 +7,12 @@ MODES = [
     'pitch_class',
     'pitch_class_beat_strength',
     'midi_number',
-    'pitch_spelling_cut'
+    'pitch_spelling_cut',
+    # 'spelling_total_cut',
+    # 'spelling_bass_cut',
+    # 'spelling_class_cut',
+    # 'pitch_class_bass_cut',
+    # 'midi_number_cut',
 ]
 
 MODE = MODES[4]
@@ -17,7 +22,9 @@ VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, f'train_{MODE}.tfrecords')
 VALID_TFRECORDS = os.path.join(DATA_FOLDER, f'valid_{MODE}.tfrecords')
+TEST_BPS_TFRECORDS = os.path.join(DATA_FOLDER, f'test-bps_{MODE}.tfrecords')
 
+CHUNK_SIZE = 160  # dimension of each chunk when cutting the sonatas
 HSIZE = 4  # hopping size between frames in 32nd notes, equivalent to 2 frames per quarter note
 FPQ = 8  # number of frames per quarter note with 32nd note quantization (check: HSIZE * FPQ = 32)
 PITCH_LOW = 18  # lowest midi pitch used, as returned by preprocessing.find_pitch_extremes()
@@ -95,15 +102,15 @@ def count_records(tfrecord):
     return c
 
 
-# number of records in the training dataset as coming from the utils.count_tfrecords function
+# number of records in datasets
 N_TRAIN = count_records(TRAIN_TFRECORDS)  # if MODE == 'pitch_spelling' else 300
-N_VALID = count_records(
-    VALID_TFRECORDS)  # number of records in the validation dataset as coming from the utils.count_tfrecords function
+N_VALID = count_records(VALID_TFRECORDS)
+N_TEST_BPS = count_records(TEST_BPS_TFRECORDS)
 
 BATCH_SIZE = 16  # 1
 
 
-def find_validation_batch_size(n, bs):
+def find_best_batch_size(n, bs):
     if not isinstance(n, int) or n < 1:
         raise ValueError("n should be a positive integer")
 
@@ -116,11 +123,13 @@ def find_validation_batch_size(n, bs):
     return bs
 
 
-VALID_BATCH_SIZE = find_validation_batch_size(N_VALID, BATCH_SIZE)
+VALID_BATCH_SIZE = find_best_batch_size(N_VALID, BATCH_SIZE)
+TEST_BPS_BATCH_SIZE = find_best_batch_size(N_TEST_BPS, BATCH_SIZE)
 SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
-STEPS_PER_EPOCH = ceil(N_TRAIN / BATCH_SIZE)
+TRAIN_STEPS = ceil(N_TRAIN / BATCH_SIZE)
 VALID_STEPS = ceil(N_VALID / VALID_BATCH_SIZE)
+TEST_BPS_STEPS = ceil(N_TEST_BPS / TEST_BPS_BATCH_SIZE)
 MODE2INPUT_SHAPE = {
     'pitch_class': 24,
     'pitch_class_weighted_loss': 24,

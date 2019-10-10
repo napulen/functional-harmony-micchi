@@ -5,28 +5,30 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from config import NOTES, QUALITY, KEYS_SPELLING, N_VALID
+from config import NOTES, QUALITY, KEYS_SPELLING
 
 
 def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, model_folder):
     """
     Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net
     This allows for a nice visualization of the analysis on top of the partition.
-    :param y_true: The annotated labels coming from our data
-    :param y_pred: The output of the machine learning model.
-    :param n: the number of beethoven sonata
+    :param test_true: The annotated labels coming from our data, shape [n_chunks][labels](ts, classes)
+    :param test_pred: The output of the machine learning model, same shape as test_true
+    :param timesteps: number of timesteps per each data point
+    :param file_names: the name of the datafile where the chunk comes from
     :param model_folder:
     :return:
     """
     os.makedirs(os.path.join(model_folder, 'analyses'), exist_ok=True)
 
-    offsets = np.zeros(N_VALID)
-    for i in range(1, N_VALID):
+    n = len(test_true)  # same len as test_pred, timesteps, or filenames
+    offsets = np.zeros(n)
+    for i in range(1, n):
         if file_names[i] == file_names[i - 1]:
             offsets[i] = offsets[i - 1] + timesteps[i - 1]
     annotation, labels, current_file = dict(), [], None
     features = ['Tonality', 'Harmony']  # add a third element "Inversion" if needed
-    lines = [('top.2', 'bot.2'), ('top.1', 'bot.1'), ('top.3', 'bot.3')]
+    lines = [('top.3', 'bot.2'), ('top.2', 'bot.1'), ('top.1', 'bot.3')]
 
     for y_true, y_pred, ts, name, t0 in zip(test_true, test_pred, timesteps, file_names, offsets):
         if name != current_file:  # a new sonata started

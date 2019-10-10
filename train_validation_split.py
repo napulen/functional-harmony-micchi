@@ -34,6 +34,18 @@ def transform_bps_chord_files_to_csv(chords_file, output_file):
     return
 
 
+def create_complete_set_bps():
+    for i in range(1, 33):
+        score_file = os.path.join(os.path.join(DATA_FOLDER, 'BPS_FH_Dataset'), str(i).zfill(2), "score.mxl")
+        output_score_file = os.path.join(DATA_FOLDER, 'test-bps', 'scores', f'bps_{str(i).zfill(2)}_01.mxl')
+        copyfile(score_file, output_score_file)
+
+        chords_file = os.path.join(os.path.join(DATA_FOLDER, 'BPS_FH_Dataset'), str(i).zfill(2), "chords.xlsx")
+        output_chords_file = os.path.join(DATA_FOLDER, 'test-bps', 'chords', f'bps_{str(i).zfill(2)}_01.csv')
+        transform_bps_chord_files_to_csv(chords_file, output_chords_file)
+    return
+
+
 def create_training_validation_set_bps(i_trn, i_vld):
     for i in i_trn:
         score_file = os.path.join(os.path.join(DATA_FOLDER, 'BPS_FH_Dataset'), str(i).zfill(2), "score.mxl")
@@ -136,12 +148,15 @@ def create_training_validation_set_bsq(s=18):
 
 
 if __name__ == '__main__':
+    os.makedirs(os.path.join(DATA_FOLDER, 'test-bps', 'scores'), exist_ok=True)
+    os.makedirs(os.path.join(DATA_FOLDER, 'test-bps', 'chords'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'train', 'scores'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'train', 'chords'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'valid', 'scores'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'valid', 'chords'), exist_ok=True)
 
     create_training_validation_set_bps(TRAIN_INDICES, VALID_INDICES)
+    create_complete_set_bps()
     create_training_validation_set_wtc()
     create_training_validation_set_songs()
     create_training_validation_set_bsq()

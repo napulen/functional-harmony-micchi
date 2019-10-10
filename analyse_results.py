@@ -15,8 +15,9 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow.python.keras.models import load_model
 
-from config import FEATURES, TICK_LABELS, NOTES, VALID_TFRECORDS, VALID_INDICES, MODE2INPUT_SHAPE, MODE, N_VALID, \
-    PITCH_LINE, VALID_BATCH_SIZE, VALID_STEPS
+from config import FEATURES, TICK_LABELS, NOTES, MODE2INPUT_SHAPE, MODE, N_VALID, \
+    PITCH_LINE, VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_TFRECORDS, VALID_TFRECORDS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, \
+    N_TEST_BPS
 from load_data import create_tfrecords_dataset
 from utils import create_dezrann_annotations
 from utils_music import Q2I, find_root_full_output
@@ -34,7 +35,7 @@ def check_predictions(y_true, y_pred, index):
     return np.argmax(y_true[index], axis=-1) == np.argmax(y_pred[index], axis=-1)
 
 
-def visualize_chord_changes(y_true, y_pred, ts, inversions=True):
+def visualize_chord_changes(y_true, y_pred, name, ts, inversions=True):
     """
     
     :param y_true: shape [outputs] (timesteps, output_features) 
@@ -64,7 +65,7 @@ def visualize_chord_changes(y_true, y_pred, ts, inversions=True):
     colorbar.set_ticks([-0.67, 0., 0.67])
     colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
     ax.set(ylabel=['change_true', 'change_pred'], xlabel='time',
-           title=f"Sonata {VALID_INDICES[step]} - chord consistency " +
+           title=f"Sonata {name} - chord consistency " +
                  ('with inversions' if inversions else 'without inversions'))
     plt.show()
     # zt = decode_results(yt)
@@ -167,34 +168,50 @@ model = load_model(os.path.join(model_folder, model_name + '.h5'))
 model.summary()
 print(model_name)
 
-test_data = create_tfrecords_dataset(VALID_TFRECORDS, VALID_BATCH_SIZE, shuffle_buffer=1, n=MODE2INPUT_SHAPE[MODE])
+dataset = 'beethoven'
+if dataset == 'beethoven':
+    data_file = TEST_BPS_TFRECORDS
+    batch_size = TEST_BPS_BATCH_SIZE
+    steps = TEST_BPS_STEPS
+    n_chunks = N_TEST_BPS
+elif dataset == 'validation':
+    data_file = VALID_TFRECORDS
+    batch_size = VALID_BATCH_SIZE
+    steps = VALID_STEPS
+    n_chunks = N_VALID
+else:
+    raise ValueError("dataset should be either validation or beethoven")
+
+test_data = create_tfrecords_dataset(data_file, batch_size, shuffle_buffer=1, n=MODE2INPUT_SHAPE[MODE])
 """ Retrieve the true labels """
-piano_rolls, test_true, timesteps, file_names = [], [], [], []  # test_true structure = [N_VALID][LABELS](ts, classes)
+piano_rolls, test_true, timesteps, file_names = [], [], [], []  # test_true structure = [n_chunks][LABELS](ts, classes)
 test_data_iter = test_data.make_one_shot_iterator()
 (x, m, fn, s), y = test_data_iter.get_next()
 with tf.Session() as sess:
-    for i in range(VALID_STEPS):
-        file_name, piano_roll, labels = sess.run([fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
+    for i in range(steps):
+        file_name, piano_roll, labels = sess.run(
+            [fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
         # all elements in the batch have different length, so we have to find the correct number of ts for each
         [timesteps.append(np.sum(d, dtype=int)) for d in labels[0]]  # every label has a single 1 per timestep
         [piano_rolls.append(d[:4 * ts]) for d, ts in zip(piano_roll, timesteps)]
         [file_names.append(fn[0].decode('utf-8')) for fn in file_name]
-        for e in range(VALID_BATCH_SIZE):  # e is the element in the batch
-            test_true.append([d[e, :timesteps[e + i*VALID_BATCH_SIZE], :] for d in labels])  # appends something of shape (timesteps[e], output_features)
-# test_true structure = [N_VALID][LABELS](ts, classes)
+        for e in range(batch_size):  # e is the element in the batch
+            test_true.append([d[e, :timesteps[e + i * batch_size], :] for d in
+                              labels])  # appends something of shape (timesteps[e], output_features)
+# test_true structure = [n_chunks][LABELS](ts, classes)
 
 """ Predict new labels """
 # test_pred = []  # It will have shape: [pieces][features](length of sonata, feature size)
-temp = model.predict(test_data, steps=VALID_STEPS, verbose=True)
-test_pred = [[d[e, :timesteps[e]] for d in temp] for e in range(N_VALID)]
+temp = model.predict(test_data, steps=steps, verbose=True)
+test_pred = [[d[e, :timesteps[e]] for d in temp] for e in range(n_chunks)]
 
 """ Visualize data """
 for pr, y_true, y_pred, ts, fn in zip(piano_rolls, test_true, test_pred, timesteps, file_names):
     # visualize_piano_roll(pr, fn)
     # visualize_results(y_true, y_pred, fn, mode='predictions')
-    # visualize_results(y_true, y_pred, name, mode='probabilities')
-    # visualize_chord_changes(y_true, y_pred, ts, True)
-    # visualize_chord_changes(y_true, y_pred, ts, False)
+    # visualize_results(y_true, y_pred, fn, mode='probabilities')
+    # visualize_chord_changes(y_true, y_pred, fn, ts, True)
+    # visualize_chord_changes(y_true, y_pred, fn, ts, False)
     # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=CLASSES_ROOT, name=fn)
     pass
 
@@ -207,7 +224,7 @@ root_coherence = 0
 degree_tp, secondary_tp, secondary_total, d7_tp, d7_total = 0, 0, 0, 0, 0
 total_predictions = np.sum(timesteps)  # one prediction per timestep
 true_positives = np.zeros(6)  # true positives for each separate feature
-for step in range(N_VALID):
+for step in range(n_chunks):
     y_true, y_pred = test_true[step], test_pred[step]  # shape: [outputs], (timestep, output features)
     correct = np.array([check_predictions(y_true, y_pred, j) for j in range(6)])  # shape: (output, timestep)
     true_positives += np.sum(correct, axis=-1)  # true positives per every output

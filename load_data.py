@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from config import CLASSES_ROOT, CLASSES_INVERSION, CLASSES_QUALITY, CLASSES_DEGREE, \
-    CLASSES_KEY
+    CLASSES_KEY, CHUNK_SIZE, MODE
 
 
 def _parse_function(proto, n):
@@ -46,20 +46,26 @@ def create_tfrecords_dataset(input_path, batch_size, shuffle_buffer, n):
         return _parse_function(proto, n)
 
     ## They pad separately for each feature!
+    if MODE.endswith('cut'):
+        pad_notes = 4 * CHUNK_SIZE
+        pad_chords = CHUNK_SIZE
+    else:
+        pad_notes = None  # get to the max of each batch, where this value is calculated separately for each feature
+        pad_chords = None
     padded_shapes = (
         (
-            tf.TensorShape([None, n]),  # this None might be different from the next one
-            tf.TensorShape([None, 1]),
+            tf.TensorShape([pad_notes, n]),
+            tf.TensorShape([pad_chords, 1]),
             tf.TensorShape([None, ]),
             tf.TensorShape([None, ]),
         ),
         (
-            tf.TensorShape([None, CLASSES_KEY]),
-            tf.TensorShape([None, CLASSES_DEGREE]),
-            tf.TensorShape([None, CLASSES_DEGREE]),
-            tf.TensorShape([None, CLASSES_QUALITY]),
-            tf.TensorShape([None, CLASSES_INVERSION]),
-            tf.TensorShape([None, CLASSES_ROOT]),
+            tf.TensorShape([pad_chords, CLASSES_KEY]),
+            tf.TensorShape([pad_chords, CLASSES_DEGREE]),
+            tf.TensorShape([pad_chords, CLASSES_DEGREE]),
+            tf.TensorShape([pad_chords, CLASSES_QUALITY]),
+            tf.TensorShape([pad_chords, CLASSES_INVERSION]),
+            tf.TensorShape([pad_chords, CLASSES_ROOT]),
         )
     )
 

@@ -9,7 +9,7 @@ from config import DATA_FOLDER, TRAIN_INDICES, VALID_INDICES
 from utils_music import load_chord_labels, shift_chord_labels, segment_chord_labels, encode_chords, attach_chord_root, \
     load_score_pitch_spelling, _load_score, calculate_number_transpositions_key
 from train_validation_split import create_training_validation_set_bps, create_training_validation_set_wtc, \
-    create_training_validation_set_songs, create_training_validation_set_bsq
+    create_training_validation_set_songs, create_training_validation_set_bsq, create_complete_set_bps
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,12 +45,15 @@ def transform_bps_chord_files_to_csv(chords_file, output_file):
 if __name__ == '__main__':
     folders = [os.path.join(DATA_FOLDER, 'train'), os.path.join(DATA_FOLDER, 'valid')]
 
+    os.makedirs(os.path.join(DATA_FOLDER, 'test-bps', 'scores'), exist_ok=True)
+    os.makedirs(os.path.join(DATA_FOLDER, 'test-bps', 'chords'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'train', 'scores'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'train', 'chords'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'valid', 'scores'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'valid', 'chords'), exist_ok=True)
 
     create_training_validation_set_bps(TRAIN_INDICES, VALID_INDICES)
+    create_complete_set_bps()
     create_training_validation_set_wtc()
     create_training_validation_set_songs()
     create_training_validation_set_bsq()
