@@ -19,6 +19,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from deprecated import deprecated
 from music21 import converter, note
 from music21.chord import Chord
 from music21.repeat import ExpanderException
@@ -90,12 +91,12 @@ def load_score_beat_strength(score_file, fpq):
     return beat_strength
 
 
-def load_score_pitch_spelling(score_file, fpq):
+""" Load the score for the pitch spelling representation """
+def load_score_spelling_bass(score_file, fpq):
     score, n_frames = _load_score(score_file, fpq)
     score = score.chordify()  # this is very comfy but super slow (several seconds on long pieces)
     piano_roll = np.zeros(shape=(35 * 2, n_frames), dtype=np.int32)
     flattest, sharpest = 35, 0
-    numFlatwards, numSharpwards = 0, 0
     for chord in score.flat.notes:
         start = int(round(chord.offset * fpq))
         end = start + max(int(round(chord.duration.quarterLength * fpq)), 1)
@@ -109,35 +110,57 @@ def load_score_pitch_spelling(score_file, fpq):
             if i == 0:  # chords always start from the bass
                 piano_roll[idx + 35, time] = 1
 
-        numFlatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
-        numSharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
+    numFlatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
+    numSharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
     # Show the result
     # sns.heatmap(piano_roll)
     # plt.show()
     return piano_roll, numFlatwards, numSharpwards
 
 
-def load_score_pitch_class(score_file, fpq):
+@deprecated(reason="Really, you shouldn't use this. It doesn't work properly yet.")
+def load_score_spelling_bass_2(score_file, fpq):
+    """
+     NOTE: DO NOT USE THIS!! IT DOESN"T WORK YET
+     An attempt at getting rid of the very slow chordify, still not working because the bass is not properly done
+
+    :param score_file:
+    :param fpq:
+    :return:
+    """
+
     score, n_frames = _load_score(score_file, fpq)
-    score = score.chordify()
-    piano_roll = np.zeros(shape=(24, n_frames), dtype=np.int32)
+    piano_roll = np.zeros(shape=(35 * 2, n_frames), dtype=np.int32)
+    flattest, sharpest = 35, 0
     for n in score.flat.notes:
-        pitches = np.array(n.pitchClasses)
+        pitches = np.array([x for x in n] if n.isChord else [n])
+        i_bass = np.argmin([p.pitch.midi for p in pitches])
         start = int(round(n.offset * fpq))
         end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
         time = np.arange(start, end)
-        # p = sns.heatmap(piano_roll[:, :end])
-        # plt.show(p)
-        for p in pitches:  # add notes to piano_roll
-            piano_roll[p, time] = 1
-        piano_roll[pitches[0] + 12, time] = 1
+        for i, note in enumerate(pitches):
+            nn = note.pitch.name
+            idx = P2I[nn]
+            flattest = min(flattest, idx)
+            sharpest = max(sharpest, idx)
+            piano_roll[idx, time] = 1
+            if i == i_bass:
+                piano_roll[idx + 35, time] = 1
+
+    # v = np.max(piano_roll, axis=0)
+    # p = np.argmax(piano_roll, axis=0)
+    # for t in range(n_frames):
+    #     piano_roll[p[t] + 35, t] = v[t]
+    numFlatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
+    numSharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
     # Show the result
     # sns.heatmap(piano_roll)
     # plt.show()
-    return piano_roll
+    return piano_roll, numFlatwards, numSharpwards
 
 
-def load_score_midi_number(score_file, fpq, pitch_low=0, pitch_high=128):
+""" Load the score for the midi pitch representation """
+def load_score_pitch_complete(score_file, fpq, pitch_low=0, pitch_high=128):
     """
     Load notes in each piece, which is then represented as piano roll.
     :param pitch_low:
@@ -147,20 +170,76 @@ def load_score_midi_number(score_file, fpq, pitch_low=0, pitch_high=128):
     :return: piano_roll
     """
     score, n_frames = _load_score(score_file, fpq)
-    piano_roll = np.zeros(shape=(128, n_frames), dtype=np.int32)
+    piano_roll = np.zeros(shape=(128, n_frames), dtype=np.int32)  # MIDI numbers are between 1 and 128
     for n in score.flat.notes:
-        pitches = np.array([x.midi for x in n.pitches] if isinstance(n, Chord) else [n.pitch.midi])
+        pitches = np.array([x.pitch.midi for x in n] if n.isChord else [n.pitch.midi])
         start = int(round(n.offset * fpq))
         end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
         time = np.arange(start, end)
-        # p = sns.heatmap(piano_roll[:, :end])
-        # plt.show(p)
         for p in pitches:  # add notes to piano_roll
             piano_roll[p, time] = 1
-    # Show the result
-    # sns.heatmap(piano_roll)
-    # plt.show()
     return piano_roll[pitch_low:pitch_high]
+
+
+def load_score_pitch_bass(score_file, fpq):
+    """
+    Load a score and create a piano roll with 12 pitch class + 12 bass
+    :param score_file:
+    :param fpq:
+    :return:
+    """
+    score, n_frames = _load_score(score_file, fpq)
+    score = score.chordify()  # super slow!
+    piano_roll = np.zeros(shape=(24, n_frames), dtype=np.int32)
+    for n in score.flat.notes:
+        pitches = np.array(n.pitchClasses)
+        start = int(round(n.offset * fpq))
+        end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
+        time = np.arange(start, end)
+        for p in pitches:  # add notes to piano_roll
+            piano_roll[p, time] = 1
+        piano_roll[pitches[0] + 12, time] = 1  # add the bass
+    return piano_roll
+
+
+@deprecated(reason="Use the version without chordify, this one is here just for testing")
+def load_score_pitch_class_chordify(score_file, fpq):
+    """
+    Load a score and create a piano roll with 12 pitch class
+    :param score_file:
+    :param fpq:
+    :return:
+    """
+    score, n_frames = _load_score(score_file, fpq)
+    score = score.chordify()
+    piano_roll = np.zeros(shape=(12, n_frames), dtype=np.int32)
+    for n in score.flat.notes:
+        pitches = np.array(n.pitchClasses)
+        start = int(round(n.offset * fpq))
+        end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
+        time = np.arange(start, end)
+        for p in pitches:  # add notes to piano_roll
+            piano_roll[p, time] = 1
+    return piano_roll
+
+
+def load_score_pitch_class(score_file, fpq):
+    """
+    Load a score and create a piano roll with 12 pitch class
+    :param score_file:
+    :param fpq:
+    :return:
+    """
+    score, n_frames = _load_score(score_file, fpq)
+    piano_roll = np.zeros(shape=(12, n_frames), dtype=np.int32)
+    for n in score.flat.notes:
+        pitch_classes = np.array([x.pitch.pitchClass for x in n] if n.isChord else [n.pitch.pitchClass])
+        start = int(round(n.offset * fpq))
+        end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
+        time = np.arange(start, end)
+        for pc in pitch_classes:  # add notes to piano_roll
+            piano_roll[pc, time] = 1
+    return piano_roll
 
 
 def visualize_piano_roll(pr, sonata, fpq, start=None, end=None):
@@ -508,3 +587,12 @@ def find_root_full_output(y_pred, pitch_spelling=True):
         root_pred.append(P2I[root])
 
     return np.array(root_pred)
+
+
+if __name__ == '__main__':
+    # score_file = '/home/gianluca/PycharmProjects/functional-harmony/test_data/score.mxl'
+    score_file = '/home/gianluca/PycharmProjects/functional-harmony/data/test-bps/scores/bps_01_01.mxl'
+    fpq = 8
+    pr1 = load_score_pitch_class(score_file, fpq)
+    pr2 = load_score_pitch_class_2(score_file, fpq)
+    print('hi')

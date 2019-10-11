@@ -9,7 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from config import FPQ, TRAIN_TFRECORDS, VALID_TFRECORDS, DATA_FOLDER, PITCH_LINE
-from utils_music import load_score_midi_number, calculate_number_transpositions_key, load_score_pitch_spelling, \
+from utils_music import load_score_pitch_complete, calculate_number_transpositions_key, load_score_spelling_bass, \
     load_chord_labels
 
 
@@ -33,7 +33,7 @@ def find_pitch_extremes():
     """
     min_note, max_note = 128, 0  # they are inverted on purpose! they are initial conditions that will certainly be updated
     for i in range(1, 33):
-        piano_roll, t0 = load_score_midi_number(i, FPQ)
+        piano_roll, t0 = load_score_pitch_complete(i, FPQ)
         min_i = np.where(np.max(piano_roll, axis=-1) == 1)[0][0] - 6  # -6 because we want room for transposing
         max_i = np.where(np.max(piano_roll, axis=-1) == 1)[0][-1] + 5  # +5 because we want room for transposing
         min_note = min(min_note, min_i)
@@ -61,7 +61,7 @@ def calculate_transpositions():
             cf = os.path.join(chords_folder, f"{fn}.csv")
             sf = os.path.join(scores_folder, f"{fn}.mxl")
             chord_labels = load_chord_labels(cf)
-            piano_roll, nl_pitches, nr_pitches = load_score_pitch_spelling(sf, 8)  # sharpwards in [1, 35]
+            piano_roll, nl_pitches, nr_pitches = load_score_spelling_bass(sf, 8)  # sharpwards in [1, 35]
             nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)  # sharpwards in [1, 35]
             flatwards.append(min(nl_keys, nl_pitches))
             sharpwards.append(min(nr_keys, nr_pitches))

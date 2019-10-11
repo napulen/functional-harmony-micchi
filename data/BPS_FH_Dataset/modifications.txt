@@ -1,1 +1,0 @@
-Sonata 3: The cadenza starting at 1284 (bar 233) is divided in regular bars. Notes from the cadenza.xlsx file have been added to the notes.csv file (with the correct durations in place). The harmonic analysis is stretched to fill the gap.

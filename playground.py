@@ -7,7 +7,7 @@ import xlrd
 
 from config import DATA_FOLDER, TRAIN_INDICES, VALID_INDICES
 from utils_music import load_chord_labels, shift_chord_labels, segment_chord_labels, encode_chords, attach_chord_root, \
-    load_score_pitch_spelling, _load_score, calculate_number_transpositions_key
+    load_score_spelling_bass, _load_score, calculate_number_transpositions_key
 from train_validation_split import create_training_validation_set_bps, create_training_validation_set_wtc, \
     create_training_validation_set_songs, create_training_validation_set_bsq, create_complete_set_bps
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
             # for c in chord_labels:
             #     if c['quality'] == 'D7':
             #         print(c)
-            piano_roll, nl_pitches, nr_pitches = load_score_pitch_spelling(sf, 8)
+            piano_roll, nl_pitches, nr_pitches = load_score_spelling_bass(sf, 8)
             nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
             nl = min(nl_keys, nl_pitches)
             nr = min(nr_keys, nr_pitches)

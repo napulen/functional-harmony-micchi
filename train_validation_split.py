@@ -34,34 +34,22 @@ def transform_bps_chord_files_to_csv(chords_file, output_file):
     return
 
 
-def create_complete_set_bps():
-    for i in range(1, 33):
-        score_file = os.path.join(os.path.join(DATA_FOLDER, 'BPS_FH_Dataset'), str(i).zfill(2), "score.mxl")
-        output_score_file = os.path.join(DATA_FOLDER, 'test-bps', 'scores', f'bps_{str(i).zfill(2)}_01.mxl')
-        copyfile(score_file, output_score_file)
-
-        chords_file = os.path.join(os.path.join(DATA_FOLDER, 'BPS_FH_Dataset'), str(i).zfill(2), "chords.xlsx")
-        output_chords_file = os.path.join(DATA_FOLDER, 'test-bps', 'chords', f'bps_{str(i).zfill(2)}_01.csv')
-        transform_bps_chord_files_to_csv(chords_file, output_chords_file)
-    return
-
-
 def create_training_validation_set_bps(i_trn, i_vld):
     for i in i_trn:
-        score_file = os.path.join(os.path.join(DATA_FOLDER, 'BPS_FH_Dataset'), str(i).zfill(2), "score.mxl")
-        output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'bps_{str(i).zfill(2)}_01.mxl')
+        score_file = os.path.join(DATA_FOLDER, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
+        output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'bps_{i:02d}_01.mxl')
         copyfile(score_file, output_score_file)
 
-        chords_file = os.path.join(os.path.join(DATA_FOLDER, 'BPS_FH_Dataset'), str(i).zfill(2), "chords.xlsx")
-        output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'bps_{str(i).zfill(2)}_01.csv')
+        chords_file = os.path.join(DATA_FOLDER, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
+        output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'bps_{i:02d}_01.csv')
         transform_bps_chord_files_to_csv(chords_file, output_chords_file)
     for i in i_vld:
-        score_file = os.path.join(os.path.join(DATA_FOLDER, 'BPS_FH_Dataset'), str(i).zfill(2), "score.mxl")
-        output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'bps_{str(i).zfill(2)}_01.mxl')
+        score_file = os.path.join(DATA_FOLDER, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
+        output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'bps_{i:02d}_01.mxl')
         copyfile(score_file, output_score_file)
 
-        chords_file = os.path.join(os.path.join(DATA_FOLDER, 'BPS_FH_Dataset'), str(i).zfill(2), "chords.xlsx")
-        output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'bps_{str(i).zfill(2)}_01.csv')
+        chords_file = os.path.join(DATA_FOLDER, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
+        output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'bps_{i:02d}_01.csv')
         transform_bps_chord_files_to_csv(chords_file, output_chords_file)
     return
 
@@ -71,20 +59,20 @@ def create_training_validation_set_wtc(s=18):
     i_trn = set(choice(range(1, 25), size=24, replace=False))
     i_vld = set(range(1, 25)).difference(i_trn)
     for i in i_trn:
-        score_file = os.path.join(DATA_FOLDER, 'Bach_WTC_1_Preludes', 'scores', f"{i}.mxl")
-        output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'wtc_i_prelude_{str(i).zfill(2)}.mxl')
+        score_file = os.path.join(DATA_FOLDER, 'Bach_WTC_1_Preludes', 'scores', f"wtc_i_prelude_{i:02d}.mxl")
+        output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'wtc_i_prelude_{i:02d}.mxl')
         copyfile(score_file, output_score_file)
 
-        chords_file = os.path.join(DATA_FOLDER, 'Bach_WTC_1_Preludes', 'csvs', f"{i}.csv")
-        output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'wtc_i_prelude_{str(i).zfill(2)}.csv')
+        chords_file = os.path.join(DATA_FOLDER, 'Bach_WTC_1_Preludes', 'chords', f"wtc_i_prelude_{i:02d}.csv")
+        output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'wtc_i_prelude_{i:02d}.csv')
         copyfile(chords_file, output_chords_file)
     for i in i_vld:
-        score_file = os.path.join(DATA_FOLDER, 'Bach_WTC_1_Preludes', 'scores', f"{i}.mxl")
-        output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'wtc_i_prelude_{str(i).zfill(2)}.mxl')
+        score_file = os.path.join(DATA_FOLDER, 'Bach_WTC_1_Preludes', 'scores', f"wtc_i_prelude_{i:02d}.mxl")
+        output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'wtc_i_prelude_{i:02d}.mxl')
         copyfile(score_file, output_score_file)
 
-        chords_file = os.path.join(DATA_FOLDER, 'Bach_WTC_1_Preludes', 'csvs', f"{i}.csv")
-        output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'wtc_i_prelude_{str(i).zfill(2)}.csv')
+        chords_file = os.path.join(DATA_FOLDER, 'Bach_WTC_1_Preludes', 'chords', f"wtc_i_prelude_{i:02d}.csv")
+        output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'wtc_i_prelude_{i:02d}.csv')
         copyfile(chords_file, output_chords_file)
     return
 
@@ -100,7 +88,7 @@ def create_training_validation_set_songs(s=18):
         output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'ncs_{fn}.mxl')
         copyfile(score_file, output_score_file)
 
-        chords_file = os.path.join(DATA_FOLDER, '19th_Century_Songs', 'csvs', f"{fn}.csv")
+        chords_file = os.path.join(DATA_FOLDER, '19th_Century_Songs', 'chords', f"{fn}.csv")
         output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'ncs_{fn}.csv')
         copyfile(chords_file, output_chords_file)
     for fn in fn_vld:
@@ -108,7 +96,7 @@ def create_training_validation_set_songs(s=18):
         output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'ncs_{fn}.mxl')
         copyfile(score_file, output_score_file)
 
-        chords_file = os.path.join(DATA_FOLDER, '19th_Century_Songs', 'csvs', f"{fn}.csv")
+        chords_file = os.path.join(DATA_FOLDER, '19th_Century_Songs', 'chords', f"{fn}.csv")
         output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'ncs_{fn}.csv')
         copyfile(chords_file, output_chords_file)
     return
@@ -121,42 +109,31 @@ def create_training_validation_set_bsq(s=18):
     fn_trn = set(choice(file_names, size=n, replace=False))
     fn_vld = set(file_names).difference(fn_trn)
     for fn in fn_trn:
-        op = fn.split('_')[0][2:]
-        no = fn.split('_')[1][2:]
-        sf = f'op. {op} No. {no}'
-        score_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'scores', sf, f"{fn}.mxl")
+        score_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'scores', f"{fn}.mxl")
         output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'bsq_{fn}.mxl')
         copyfile(score_file, output_score_file)
 
-        # chords_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'csvs_from_ABC', f"{fn}.tsv")
-        chords_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'csvs_from_rntxt', f"{fn}.csv")
+        chords_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'chords', f"{fn}.csv")
         output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'bsq_{fn}.csv')
         copyfile(chords_file, output_chords_file)
     for fn in fn_vld:
-        op = fn.split('_')[0][2:]
-        no = fn.split('_')[1][2:]
-        sf = f'op. {op} No. {no}'
-        score_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'scores', sf, f"{fn}.mxl")
+        score_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'scores', f"{fn}.mxl")
         output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'bsq_{fn}.mxl')
         copyfile(score_file, output_score_file)
 
-        # chords_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'csvs_from_ABC', f"{fn}.tsv")
-        chords_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'csvs_from_rntxt', f"{fn}.csv")
+        chords_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'chords', f"{fn}.csv")
         output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'bsq_{fn}.csv')
         copyfile(chords_file, output_chords_file)
     return
 
 
 if __name__ == '__main__':
-    os.makedirs(os.path.join(DATA_FOLDER, 'test-bps', 'scores'), exist_ok=True)
-    os.makedirs(os.path.join(DATA_FOLDER, 'test-bps', 'chords'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'train', 'scores'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'train', 'chords'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'valid', 'scores'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'valid', 'chords'), exist_ok=True)
 
     create_training_validation_set_bps(TRAIN_INDICES, VALID_INDICES)
-    create_complete_set_bps()
     create_training_validation_set_wtc()
     create_training_validation_set_songs()
     create_training_validation_set_bsq()

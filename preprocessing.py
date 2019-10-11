@@ -6,8 +6,8 @@ import tensorflow as tf
 
 from config import VALID_TFRECORDS, TRAIN_TFRECORDS, DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, MODE, \
     TEST_BPS_TFRECORDS, CHUNK_SIZE
-from utils_music import load_score_midi_number, load_chord_labels, shift_chord_labels, segment_chord_labels, \
-    encode_chords, load_score_pitch_class, load_score_beat_strength, load_score_pitch_spelling, \
+from utils_music import load_score_pitch_complete, load_chord_labels, shift_chord_labels, segment_chord_labels, \
+    encode_chords, load_score_pitch_bass, load_score_beat_strength, load_score_spelling_bass, \
     calculate_number_transpositions_key, attach_chord_root
 
 logging.basicConfig(level=logging.INFO)
@@ -101,14 +101,12 @@ if __name__ == '__main__':
     folders = [
         os.path.join(DATA_FOLDER, 'train'),
         os.path.join(DATA_FOLDER, 'valid'),
-        os.path.join(DATA_FOLDER, 'test-bps')
+        os.path.join(DATA_FOLDER, 'BPS')
     ]
     tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_BPS_TFRECORDS]
     tfrecords = check_existence_tfrecords(tfrecords)
 
     for folder, output_file in zip(folders, tfrecords):
-        if folder != folders[2]:
-            continue
         with tf.io.TFRecordWriter(output_file) as writer:
             logger.info(f'Working on {os.path.basename(output_file)}.')
             chords_folder = os.path.join(folder, 'chords')
@@ -122,19 +120,14 @@ if __name__ == '__main__':
 
                 logger.info(f"Analysing {fn}")
                 chord_labels = load_chord_labels(cf)
-                if MODE.startswith('pitch_class_beat_strength'):
-                    piano_roll = load_score_pitch_class(sf, FPQ)
-                    beat_strength = load_score_beat_strength(sf, FPQ)
-                    piano_roll = np.append(piano_roll, beat_strength, axis=0)
+                if MODE.startswith('pitch_complete'):
+                    piano_roll = load_score_pitch_complete(sf, FPQ, PITCH_LOW, PITCH_HIGH)
                     nl, nr = 6, 6
                 elif MODE.startswith('pitch_class'):  # beware! this must be after pitch_class_beat_strength
-                    piano_roll = load_score_pitch_class(sf, FPQ)
-                    nl, nr = 6, 6
-                elif MODE.startswith('midi_number'):
-                    piano_roll = load_score_midi_number(sf, FPQ, PITCH_LOW, PITCH_HIGH)
+                    piano_roll = load_score_pitch_bass(sf, FPQ)
                     nl, nr = 6, 6
                 elif MODE.startswith('pitch_spelling'):
-                    piano_roll, nl_pitches, nr_pitches = load_score_pitch_spelling(sf, FPQ)
+                    piano_roll, nl_pitches, nr_pitches = load_score_spelling_bass(sf, FPQ)
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
                     nl = min(nl_keys, nl_pitches)
                     nr = min(nr_keys, nr_pitches)

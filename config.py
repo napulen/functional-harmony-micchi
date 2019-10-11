@@ -3,16 +3,12 @@ import os
 from math import ceil
 
 MODES = [
-    'pitch_spelling',
-    'pitch_class',
-    'pitch_class_beat_strength',
-    'midi_number',
-    'pitch_spelling_cut',
-    # 'spelling_total_cut',
-    # 'spelling_bass_cut',
-    # 'spelling_class_cut',
-    # 'pitch_class_bass_cut',
-    # 'midi_number_cut',
+    'pitch_total_cut',
+    'pitch_bass_cut',
+    'pitch_class_cut',
+    'spelling_total_cut',
+    'spelling_bass_cut',
+    'spelling_class_cut',
 ]
 
 MODE = MODES[4]
@@ -102,14 +98,6 @@ def count_records(tfrecord):
     return c
 
 
-# number of records in datasets
-N_TRAIN = count_records(TRAIN_TFRECORDS)  # if MODE == 'pitch_spelling' else 300
-N_VALID = count_records(VALID_TFRECORDS)
-N_TEST_BPS = count_records(TEST_BPS_TFRECORDS)
-
-BATCH_SIZE = 16  # 1
-
-
 def find_best_batch_size(n, bs):
     if not isinstance(n, int) or n < 1:
         raise ValueError("n should be a positive integer")
@@ -123,18 +111,27 @@ def find_best_batch_size(n, bs):
     return bs
 
 
-VALID_BATCH_SIZE = find_best_batch_size(N_VALID, BATCH_SIZE)
-TEST_BPS_BATCH_SIZE = find_best_batch_size(N_TEST_BPS, BATCH_SIZE)
+BATCH_SIZE = 16  # 1
 SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
-TRAIN_STEPS = ceil(N_TRAIN / BATCH_SIZE)
-VALID_STEPS = ceil(N_VALID / VALID_BATCH_SIZE)
-TEST_BPS_STEPS = ceil(N_TEST_BPS / TEST_BPS_BATCH_SIZE)
-MODE2INPUT_SHAPE = {
-    'pitch_class': 24,
-    'pitch_class_weighted_loss': 24,
-    'pitch_class_beat_strength': 27,
-    'pitch_spelling': 70,
-    'pitch_spelling_cut': 70,
-    'midi_number': N_PITCHES,
-}
+
+# # number of records in datasets
+# N_TRAIN = count_records(TRAIN_TFRECORDS)  # if MODE == 'pitch_spelling' else 300
+# N_VALID = count_records(VALID_TFRECORDS)
+# N_TEST_BPS = count_records(TEST_BPS_TFRECORDS)
+#
+# VALID_BATCH_SIZE = find_best_batch_size(N_VALID, BATCH_SIZE)
+# TEST_BPS_BATCH_SIZE = find_best_batch_size(N_TEST_BPS, BATCH_SIZE)
+# TRAIN_STEPS = ceil(N_TRAIN / BATCH_SIZE)
+# VALID_STEPS = ceil(N_VALID / VALID_BATCH_SIZE)
+# TEST_BPS_STEPS = ceil(N_TEST_BPS / TEST_BPS_BATCH_SIZE)
+# MODE2INPUT_SHAPE = {
+#     'pitch_total': N_PITCHES,
+#     'pitch_bass': 24,
+#     'pitch_class': 12,
+#     'spelling_total': 35 * 7,
+#     'spelling_bass': 70,
+#     'spelling_class': 35,
+#     'pitch_spelling_cut': 70,
+#     # 'pitch_class_beat_strength': 27,
+# }
