@@ -1,583 +1,187 @@
-import numpy as np
-import math
-import xlrd
-import numpy.lib.recfunctions as rfn
-from scipy import stats
-import itertools
+import logging
 import os
 
+import numpy as np
+import tensorflow as tf
 
-def strided_axis1(a, window, hop):
-    # Zero-padding
-    npad = (a.shape[1] - window) % hop + 1
-    if npad != 0 and hop != 1:
-        b = np.lib.pad(a, ((0, 0), (0, npad)), 'constant', constant_values=0)
-    else:
-        b = np.array(a)
+from config import VALID_TFRECORDS, TRAIN_TFRECORDS, DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, MODE, \
+    TEST_BPS_TFRECORDS, CHUNK_SIZE
+from utils_music import load_score_pitch_complete, load_chord_labels, shift_chord_labels, segment_chord_labels, \
+    encode_chords, load_score_pitch_bass, load_score_beat_strength, load_score_spelling_bass, \
+    calculate_number_transpositions_key, attach_chord_root
 
-    # Length of 3D output array along its axis=1
-    nd1 = int((b.shape[1] - window) / hop) + 1
-
-    # Store shape and strides info
-    m, n = b.shape
-    s0, s1 = b.strides
-
-    # Finally use strides to get the 3D array view
-    return np.lib.stride_tricks.as_strided(b, shape=(nd1, m, window), strides=(s1 * hop, s0, s1))
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
-def load_notes(directory, resolution=8):
-    """
-    Load notes in each piece, which is then represented as pianoroll.
-    :param directory: the path of the dataset
-    :param resolution: time resolution, default =  8 frame for one crotchet beat (that is, 32th note as 1unit in piano roll)
-    :return: pieces, tdeviation
-    """
+def check_existence_tfrecords(tfrecords):
+    existent = [f for f in tfrecords if os.path.isfile(f)]
+    if len(existent) > 0:
+        answer = input(
+            f"{[os.path.basename(f) for f in existent]} exists already. "
+            "Do you want to replace the tfrecords, backup them, write into a temporary file, or abort the calculation? "
+            "[replace/backup/temp/abort]\n"
+        )
+        while answer.lower().strip() not in ['replace', 'backup', 'temp', 'abort']:
+            answer = input(
+                "I didn't understand. Please choose an option (abort is safest). [replace/backup/temp/abort]\n")
 
-    dt = [('onset', 'float'), ('pitch', 'int'), ('mPitch', 'int'), ('duration', 'float'), ('staffNum', 'int'),
-          ('measure', 'int')]  # datatype
-    pieces = [None for _ in range(32)]
-    tdeviation = [None for _ in range(32)]  # time deviation
-    for i in range(32):
-        fileDir = os.path.join(directory, str(i + 1).zfill(2), "notes.csv")
-        notes = np.genfromtxt(fileDir, delimiter=',', dtype=dt)  # read notes from .csv file
-        length = math.ceil((max(notes[-20:]['onset'] + notes[-20:]['duration']) - notes[0][
-            'onset']) * resolution)  # length of the piece
-        tdeviation[i] = abs(notes[0]['onset'])  # deviation of start time
-        pianoRoll = np.zeros(shape=[128, length], dtype=np.int32)
-        for note in notes:
-            pitch = note['pitch']
-            start = int(round((note['onset'] + tdeviation[i]) * resolution))
-            end = int(round((note['onset'] + note['duration'] + tdeviation[i]) * resolution))
-            time = range(start, end)
-            pianoRoll[pitch, time] = 1  # add note to pianoRoll
-        pieces[i] = pianoRoll
-
-    return pieces, tdeviation
-
-
-def load_chord_labels(directory):
-    """
-    Load chords of each piece and add chord symbols into the labels.
-    :param directory: the path of the dataset
-    :return: chord_labels
-    """
-
-    dt = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
-          ('inversion', 'int'), ('rchord', '<U10')]  # datatype
-    chord_labels = [None for _ in range(32)]
-    for i in range(32):
-        fileDir = os.path.join(directory, str(i + 1).zfill(2), "chords.xlsx")
-
-        workbook = xlrd.open_workbook(fileDir)
-        sheet = workbook.sheet_by_index(0)
-        chords = []
-        for rowx in range(sheet.nrows):
-            cols = sheet.row_values(rowx)
-            if isinstance(cols[3], float):  # if type(degree) == float
-                cols[3] = int(cols[3])
-            chords.append(tuple(cols))
-        chords = np.array(chords, dtype=dt)  # convert to structured array
-        chord_labels[i] = r2tconvert(chords)  # translate rchords into chord symbols
-
-    return chord_labels
-
-
-def r2tconvert(chords):
-    """
-    Translate roman numeral representations  into chord symbols, and add chord symbols into chord labels.
-    :param chords:
-    :return: rtchords
-    """
-
-    # Create scales of all keys
-    temp = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
-    keys = {}
-    for i in range(11):
-        majtonic = temp[(i * 4) % 7] + int(i / 7) * '+' + int(i % 7 > 5) * '+'
-        mintonic = temp[(i * 4 - 2) % 7].lower() + int(i / 7) * '+' + int(i % 7 > 2) * '+'
-
-        scale = list(temp)
-        for j in range(i):
-            scale[(j + 1) * 4 % 7 - 1] += '+'
-        majscale = scale[(i * 4) % 7:] + scale[:(i * 4) % 7]
-        minscale = scale[(i * 4 + 5) % 7:] + scale[:(i * 4 + 5) % 7]
-        minscale[6] += '+'
-        keys[majtonic] = majscale
-        keys[mintonic] = minscale
-
-    for i in range(1, 9):
-        majtonic = temp[(i * 3) % 7] + int(i / 7) * '-' + int(i % 7 > 1) * '-'
-        mintonic = temp[(i * 3 - 2) % 7].lower() + int(i / 7) * '-' + int(i % 7 > 4) * '-'
-
-        scale = list(temp)
-        for j in range(i):
-            scale[(j + 2) * 3 % 7] += '-'
-        majscale = scale[(i * 3) % 7:] + scale[:(i * 3) % 7]
-        minscale = scale[(i * 3 + 5) % 7:] + scale[:(i * 3 + 5) % 7]
-        if len(minscale[6]) == 1:
-            minscale[6] += '+'
-        else:
-            minscale[6] = minscale[6][:-1]
-
-        keys[majtonic] = majscale
-        keys[mintonic] = minscale
-
-    # Translate chords
-    outputQ = {'M': 'M', 'm': 'm', 'M7': 'M7', 'm7': 'm7', 'D7': '7', 'a': 'aug', 'd': 'dim', 'd7': 'dim7',
-               'h7': 'm7(b5)', 'a6': '7'}
-    tchords = []
-    for rchord in chords:
-        key = str(rchord['key'])
-        str_degree = str(rchord['degree'])
-
-        if '/' not in str_degree:  # case: not secondary chord
-            if len(str_degree) == 1:  # case: degree = x
-                degree = int(float(str_degree))
-                root = keys[key][degree - 1]
-            elif len(str_degree) == 2 and ('+' in str_degree[0] or '-' in str_degree[0]):  # case: degree = -x or +x
-                if str(rchord['quality']) != 'a6':  # case: chromatic chord, -x
-                    degree = int(float(str_degree[1]))
-                    root = keys[key][abs(degree) - 1]
-                    if '+' not in root:
-                        root += str_degree[0]
-                    else:
-                        root = root[:-1]
-                else:  # case: augmented 6th
-                    degree = 6
-                    root = keys[key][degree - 1]
-                    if str(rchord['key'])[0].isupper():  # case: major key
-                        if '+' not in root:
-                            root += '-'
-                        else:
-                            root = root[:-1]
-            elif len(str_degree) == 2 and ('+' in str_degree[1] or '-' in str_degree[1]):  # case: degree = x+
-                degree = int(float(str_degree[0]))
-                root = keys[key][degree - 1]
-
-        elif '/' in str_degree:  # case: secondary chord
-            degree = str_degree
-            if '+' not in degree.split('/')[0]:
-                n = int(degree.split('/')[0])  # numerator
-            else:
-                n = 6
-            d = int(degree.split('/')[1])  # denominator
-            if d > 0:
-                key2 = keys[key][d - 1]  # secondary key
-            else:
-                key2 = keys[key][abs(d) - 1]  # secondary key
-                if '+' not in key2:
-                    key2 += '-'
-                else:
-                    key2 = key2[:-1]
-
-            if '+' in degree.split('/')[0]:
-                n = 6
-            root = keys[key2][n - 1]
-            if '+' in degree.split('/')[0]:
-                if key2.isupper():  # case: major key
-                    if '+' not in root:
-                        root += '-'
-                    else:
-                        root = root[:-1]
-
-        # Re-translate root for enharmonic equivalence
-        if '++' in root:  # if root = x++
-            root = temp[(temp.index(root[0]) + 1) % 7]
-        elif '--' in root:  # if root = x--
-            root = temp[(temp.index(root[0]) - 1) % 7]
-
-        if '-' in root:  # case: root = x-
-            if ('F' not in root) and ('C' not in root):  # case: root = x-, and x != F and C
-                root = temp[((temp.index(root[0])) - 1) % 7] + '+'
-            else:
-                root = temp[((temp.index(root[0])) - 1) % 7]  # case: root = x-, and x == F or C
-        elif ('+' in root) and ('E' in root or 'B' in root):  # case: root = x+, and x == E or B
-            root = temp[((temp.index(root[0])) + 1) % 7]
-
-        quality = outputQ[str(rchord['quality'])]
-        tchord = root + quality
-        tchords.append(tchord)
-
-    tchords = np.array(tchords, dtype=[('tchord', '<U10')])
-    rtchords = rfn.merge_arrays((chords, tchords), flatten=True,
-                                usemask=False)  # merge rchords and tchords into one structured array
-
-    return rtchords
-
-
-def segment_pianorolls(pianorolls, tdeviation, chord_labels, resolution=8, wsize=32, hsize=4, label_type=None):
-    """
-    Segment each pianoroll.
-    :param pianorolls:
-    :param tdeviation:
-    :param chord_labels:
-    :param resolution: time resolution,default=8 (32th note as 1unit in pianoroll)
-    :param wsize: window size,  default= 32 (4 beats)
-    :param hsize: hop size, default = 4 (half a beat)
-    :param label_type: string, 'chord_symbol' and 'chord_function'  are valid
-    :return:
-    """
-
-    segments_pianoroll = [[None for _ in range(32)] for _ in range(12)]  # segments for 32 pieces, 12 keys
-    segments_label = [[None for _ in range(32)] for _ in range(12)]  # segment labels for 32 pieces, 12 keys
-    for p in range(32):
-        # Split Piano Roll into segments
-        pianoroll = pianorolls[p]
-        # Data augmentation
-        pianoroll_aug = augment_pianoroll(pianoroll)  # modulate to 12 keys
-        for m in range(len(pianoroll_aug)):
-            segments = strided_axis1(pianoroll_aug[m], window=wsize, hop=hsize).astype(
-                np.float32)  # Split pianoroll into segments with shape = [num_segments, 61, wsize]
-            segments_reshape = [segments[i, :, :].reshape(61 * wsize) for i in
-                                range(segments.shape[0])]  # reshape segments, new shape = [num_segments, 61*wsize]
-
-            # Normalize each segment
-            for i, v in enumerate(segments_reshape):
-                if np.std(v) != 0:
-                    segments_reshape[i] = stats.zscore(v)
-            segments_pianoroll[m][p] = segments_reshape
-
-        # Get corresponding chord label (only chord symbol) for each segment
-        labels = []
-        td = tdeviation[p]  # time deviation
-        num_segments = segments.shape[0]  # number of segments
-        for n in range(num_segments):
-            sonset = n * hsize * (1 / resolution) - td  # onset time of the segment
-            send = sonset + wsize * (1 / resolution)  # end time of the segment
-            scenter = max(0, (sonset + send) / 2)
-            # print(fonset, fend, fcenter)
-            label = chord_labels[p][(chord_labels[p]['onset'] <= scenter) & (chord_labels[p]['end'] > scenter)]
-            if len(label) != 0:
-                label = label[0]
-            else:
-                print('Error: Cannot read label!')
-                print('piece %d' % p)
-                print(label)
-                quit()
-            labels.append(label)
-
-        if label_type == 'chord_symbol':
-            labels_onehot = tchord2onehot(labels)  # convert labels to one hot vectors
-            labels_aug = augment_tchords(labels_onehot)
-        elif label_type == 'chord_function':
-            labels_onehot = rchord2onehot(labels)  # convert labels to one hot vectors
-            labels_aug = augment_rchords(labels_onehot)
-        else:
-            print('LabelTypeError: %s,' % label_type, 'label_type should be \'chord_symbol\' or \'chord_function\'.')
+        if answer.lower().strip() == 'abort':
+            print("You decided not to replace them. I guess, better safe than sorry. Goodbye!")
             quit()
-        for m in range(len(labels_aug)):
-            segments_label[m][p] = labels_aug[m]
 
-    return segments_pianoroll, segments_label
+        elif answer.lower().strip() == 'temp':
+            tfrecords = [f.split("_")[0] for f in tfrecords]
+            tfrecords = [f + "_temp.tfrecords" for f in tfrecords]
+            logger.warning(f"I'm going to write the files to {tfrecords[0]} and similar!")
 
+        elif answer.lower().strip() == 'backup':
+            i = 0
+            tfrecords_backup = [f.split(".") for f in tfrecords]
+            for fb in tfrecords_backup:
+                fb[0] += f'_backup_{i}'
+            tfrecords_backup = ['.'.join(fb) for fb in tfrecords_backup]
+            while any([d in os.listdir(DATA_FOLDER) for d in tfrecords_backup]):
+                i += 1
+                tfrecords_backup = [f.split(".") for f in tfrecords]
+                for fb in tfrecords_backup:
+                    fb[0] += f'_backup_{i}'
+                tfrecords_backup = ['.'.join(fb) for fb in tfrecords_backup]
 
-def augment_pianoroll(pianoroll):
-    """
-    Modulate pianoroll into 12 keys.
-    :param pianoroll:
-    :return: pianoroll_aug
-    """
+            for src, dst in zip(tfrecords, tfrecords_backup):
+                os.rename(src, dst)
+            logger.warning(
+                f"existing data backed up with backup index {i}, new data will be in {tfrecords[0]} and similar")
 
-    pianoroll_aug = [None for _ in range(12)]
-    for m in range(12):
-        # Modulate to 12 keys
-        if m < 7:
-            temp = np.roll(pianoroll, shift=m, axis=0)  # modulate upwards
-        else:
-            temp = np.roll(pianoroll, shift=m - 12, axis=0)  # modulate downwards
+        elif answer.lower().strip() == 'replace':
+            logger.warning(
+                f"you chose to replace the old data with new one; the old data will be erased in the process")
 
-        # Cut off pitches higher than 84 (which is then moved a octave down)
-        while (np.any(np.any(temp[85:], axis=1))):
-            cut_off = np.array(temp[85:])
-            temp[85:] -= cut_off
-            temp[73:116] += cut_off
-
-        # Cut off pitches lower than 24 (which is then moved a octave up)
-        while (np.any(np.any(temp[:24], axis=1))):
-            cut_off = np.array(temp[:24])
-            temp[:24] -= cut_off
-            temp[12:36] += cut_off
-
-        pianoroll_aug[m] = temp[24:85]  # only uses the pitch range from C1 (24) to C6 (84)
-
-    return pianoroll_aug
+    return tfrecords
 
 
-def tchord2onehot(labels):
-    """
-    Convert chord symbols into one-hot vectors
-    :param labels:
-    :return: onehots
-    """
-
-    root_template = ['C', 'C+', 'D', 'D+', 'E', 'F', 'F+', 'G', 'G+', 'A', 'A+', 'B']
-    onehots = []
-    for label in labels:
-        # print('label =', label)
-        tchord = label['tchord']
-        # quit()
-        onehot = [0 for i in range(25)]
-        if '+' not in tchord and '-' not in tchord:
-            root = tchord[0]
-            quality = tchord[1:]
-        else:
-            root = tchord[:2]
-            quality = tchord[2:]
-
-        chord_hot = root_template.index(root)
-        if quality in ['M', 'm', 'M7', 'm7', '7']:
-            if quality == 'm' or quality == 'm7':
-                chord_hot += 12
-        else:
-            chord_hot = 24
-
-        onehot[chord_hot] = 1
-        onehots.append(onehot)
-
-    return onehots
+def preprocess_chords(chord_labels, s, ps, pp):
+    cl_shifted = shift_chord_labels(chord_labels, s, pp)
+    cl_full = attach_chord_root(cl_shifted, ps)
+    cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
+    cl_encoded = encode_chords(cl_segmented, pp)
+    return cl_encoded
 
 
-def rchord2onehot(chords):
-    # Translate chords to onehot vectors
-    tonic_template = ['C', 'C+', 'D', 'D+', 'E', 'F', 'F+', 'G', 'G+', 'A', 'A+', 'B']
-    tonic_translation_dict = {'C-': 'B', 'D-': 'C+', 'E-': 'D+', 'E+': 'F', 'F-': 'E', 'G-': 'F+', 'A-': 'G+',
-                              'B-': 'A+', 'B+': 'C'}
-    quality_template = ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'a6']
-    one_hot_vectors = []
-    for chord in chords:
+def create_feature_dictionary(piano_roll, chords, name, s=None, start=None, end=None):
+    feature = {
+        'name': tf.train.Feature(bytes_list=tf.train.BytesList(value=[name.encode('utf-8')])),
+        'transposition': tf.train.Feature(int64_list=tf.train.Int64List(value=[s])),
+        'piano_roll': tf.train.Feature(float_list=tf.train.FloatList(value=piano_roll.reshape(-1))),
+        'label_key': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[0] for c in chords])),
+        'label_degree_primary': tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[c[1] for c in chords])),
+        'label_degree_secondary': tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[c[2] for c in chords])),
+        'label_quality': tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[c[3] for c in chords])),
+        'label_inversion': tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[c[4] for c in chords])),
+        'label_root': tf.train.Feature(int64_list=tf.train.Int64List(value=[c[5] for c in chords])),
+    }
+    if start is not None:
+        feature['start'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[start]))
+    if end is not None:
+        feature['end'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[end]))
 
-        # Get attributes in chord labels
-        key = str(chord['key'])
-        degree = str(chord['degree'])
-        quality = str(chord['quality'])
-        inversoin = int(chord['inversion'])
-
-        # Translate key to one-hot vector
-        key_vector = [0 for _ in range(24)]  # 24 major and minor modes, 0-11 for major keys, 12-23 for minor keys
-        tonic = key.capitalize()
-        if tonic in tonic_translation_dict.keys():
-            tonic = tonic_translation_dict[tonic]
-        tonic_hot = tonic_template.index(tonic)
-        # check mode
-        if key[0].islower():
-            tonic_hot += 12
-        key_vector[tonic_hot] = 1
-
-        # Translate degree to one-hot vector
-        degree_numerator_vector = [0 for _ in range(
-            21)]  # (7 diatonics *  3 chromatics  = 21: {0-6 diatonic, 7-13 sharp, 14-20 flat})
-        degree_denominator_vector = [0 for _ in range(
-            21)]  # (7 diatonics *  3 chromatics  = 21: {0-6 diatonic, 7-13 sharp, 14-20 flat})
-        # check numerator and denominator of degree
-        if '/' not in degree:
-            denominator = 1
-            numerator = translate_degree(degree)
-        else:
-            numarator_str = degree.split('/')[0]
-            denominator_str = degree.split('/')[1]
-            numerator = translate_degree(numarator_str)
-            denominator = translate_degree(denominator_str)
-        degree_numerator_vector[numerator - 1], degree_denominator_vector[denominator - 1] = 1, 1
-
-        # Translate quality to one-hot vector
-        quality_vector = [0 for _ in range(
-            10)]  # {'M': 0, 'm': 1, 'd': 2, 'a': 3, 'M7': 4, 'm7': 5, 'D7': 6, 'd7': 7, 'h7': 8, 'a6': 9}
-        quality_hot = quality_template.index(quality)
-        quality_vector[quality_hot] = 1
-
-        # Translate inversion to one-hot vector
-        inversoin_vector = [0 for _ in range(4)]  # {'ori.':0, '1st':1, '2nd', 2, '3rd': 3}
-        inversoin_hot = inversoin
-        inversoin_vector[inversoin_hot] = 1
-
-        all_vectors = (key_vector,
-                       degree_denominator_vector,
-                       degree_numerator_vector,
-                       quality_vector,
-                       inversoin_vector)
-
-        one_hot_vectors.append(all_vectors)
-
-    dt = [('key', object), ('pri_deg', object), ('sec_deg', object), ('quality', object), ('inversion', object)]
-    return np.array(one_hot_vectors, dtype=dt)
-
-
-def translate_degree(degree_str):
-    if ('+' not in degree_str and '-' not in degree_str) or ('+' in degree_str and degree_str[1] == '+'):
-        degree_hot = int(degree_str[0])
-    elif degree_str[0] == '-':
-        degree_hot = int(degree_str[1]) + 14
-    elif degree_str[0] == '+':
-        degree_hot = int(degree_str[1]) + 7
-
-    return degree_hot
-
-
-def augment_tchords(labels_onehot):
-    """
-    Augment chord labels (in one-hot representation)
-    :param labels_onehot:
-    :return: labels_aug
-    """
-
-    labels_aug = [None for _ in range(12)]
-    for m in range(len(labels_aug)):
-        temp = np.array(labels_onehot)
-        for i in range(temp.shape[0]):
-            if temp[i][24] != 1:
-                key = list(temp[i][:12]) if any(temp[i][:12]) else list(temp[i][12:24])
-                mode = 0 if any(temp[i][:12]) else 1
-                if m < 7:
-                    shift = m
-                else:
-                    shift = m - 12
-                temp[i] = list(np.roll(key, shift=shift)) + [0 for _ in range(12)] + [0] if mode == 0 \
-                    else [0 for _ in range(12)] + list(np.roll(key, shift=shift)) + [0]
-        labels_aug[m] = temp
-
-    return labels_aug
-
-
-def augment_rchords(labels_onehot):
-    labels_aug = [None for _ in range(12)]
-    for m in range(len(labels_aug)):
-        temp = np.array(labels_onehot)
-        for i in range(temp.shape[0]):
-            key = list(temp[i]['key'][:12]) if any(temp[i]['key'][:12]) else list(temp[i]['key'][12:])
-            mode = 0 if any(temp[i]['key'][:12]) else 1  # major -> 0, minor -> 1
-            if m < 7:
-                shift = m
-            else:
-                shift = m - 12
-            temp[i]['key'] = list(np.roll(key, shift=shift)) + [0 for _ in range(12)] if mode == 0 else [0 for _ in
-                                                                                                         range(
-                                                                                                             12)] + list(
-                np.roll(key, shift=shift))
-        labels_aug[m] = temp
-
-    return labels_aug
-
-
-def prepare_input_data(segments_pianoroll, segments_label, hop=32, num_steps=64, feature_size=61 * 32, label_type=None):
-    """
-    Rearrange segments_pianoroll and segments_label into the format [num_sequences, num_steps, feature_size] and [num_sequences, num_steps, num_classes] respectively
-    :param segments_pianoroll:
-    :param segments_label:
-    :param hop: hop size of sequences, default = 32 (4 beats)
-    :param num_steps: number of RNN time steps
-    :param feature_size: input feature size
-    :param label_type: string, 'chord_symbol' and 'chord_function'  are valid
-    :return: input_segments, input_labels
-    """
-
-    input_segments = [[None for _ in range(32)] for _ in range(12)]
-    input_labels = [[None for _ in range(32)] for _ in range(12)]
-    for m in range(12):
-        for p in range(32):
-            indices = list(range(len(segments_pianoroll[m][p])))  # indices of segments in the piece with m modulation
-            seq_indices = [indices[i:i + num_steps] for i in itertools.takewhile(lambda x: x + num_steps < len(indices),
-                                                                                 range(0, len(indices),
-                                                                                       hop))]  # split indices into sequences of length n_steps with hop size = hop
-            if (len(indices) - num_steps) / hop != 0:
-                seq_indices.append(indices[-num_steps:])
-            num_sequences = len(seq_indices)
-
-            if label_type == 'chord_symbol':
-                inputs = np.zeros(shape=(num_sequences, num_steps, feature_size), dtype=np.float32)
-                labels = np.zeros(shape=(num_sequences, num_steps), dtype=np.int32)
-                for n in range(num_sequences):
-                    inputs[n, :, :] = [segments_pianoroll[m][p][index] for index in seq_indices[n]]
-                    labels[n, :] = [np.argmax(vector) for vector in segments_label[m][p][seq_indices[n]]]
-            elif label_type == 'chord_function':
-                inputs = np.zeros(shape=(num_sequences, num_steps, feature_size), dtype=np.float32)
-                dt = [('key', 'int'), ('pri_deg', 'int'), ('sec_deg', 'int'), ('quality', 'int'), ('inversion', 'int')]
-                labels = np.zeros(shape=(num_sequences, num_steps), dtype=dt)
-                for n in range(num_sequences):
-                    inputs[n, :, :] = [segments_pianoroll[m][p][index] for index in seq_indices[n]]
-                    labels[n, :]['key'] = [np.argmax(vector) for vector in segments_label[m][p]['key'][seq_indices[n]]]
-                    labels[n, :]['pri_deg'] = [np.argmax(vector) for vector in
-                                               segments_label[m][p]['pri_deg'][seq_indices[n]]]
-                    labels[n, :]['sec_deg'] = [np.argmax(vector) for vector in
-                                               segments_label[m][p]['sec_deg'][seq_indices[n]]]
-                    labels[n, :]['quality'] = [np.argmax(vector) for vector in
-                                               segments_label[m][p]['quality'][seq_indices[n]]]
-                    labels[n, :]['inversion'] = [np.argmax(vector) for vector in
-                                                 segments_label[m][p]['inversion'][seq_indices[n]]]
-            else:
-                print('LabelTypeError: %s,' % label_type,
-                      'label_type should be \'chord_symbol\' or \'chord_function\'.')
-                quit()
-            input_segments[m][p] = inputs
-            input_labels[m][p] = labels
-
-    return input_segments, input_labels
-
-
-def split_input_data(input_segments, input_labels):
-    # split 32 pieces into three sets
-    train_indices = [4, 11, 16, 20, 26, 31, 3, 8, 12, 17, 23, 21, 27, 29, 30, 10, 1, 2]
-    valid_indices = [7, 18, 28, 15, 25, 5, 19]
-    test_indices = [0, 13, 22, 14, 19, 24, 6]
-
-    inputs_train = np.concatenate([input_segments[m][p] for m in range(12) for p in train_indices], axis=0)
-    inputs_valid = np.concatenate([input_segments[0][p] for p in valid_indices], axis=0)
-    inputs_test = np.concatenate([input_segments[0][p] for p in test_indices], axis=0)
-
-    labels_train = np.concatenate([input_labels[m][p] for m in range(12) for p in train_indices], axis=0)
-    labels_valid = np.concatenate([input_labels[0][p] for p in valid_indices], axis=0)
-    labels_test = np.concatenate([input_labels[0][p] for p in test_indices], axis=0)
-
-    return inputs_train, inputs_valid, inputs_test, labels_train, labels_valid, labels_test
-
-
-def get_training_data(label_type=None):
-    """
-    x is input data, y is label;
-    x has the shape [num_sequences, num_steps, feature_size];
-    if label_type == 'chord_symbol',
-        y has the shape [num_sequences, num_steps];
-    if label_type == 'chord_function',
-        y has the shape [num_sequences, num_steps],
-        and chord functions can be access by y[num_sequences, num_steps][function_name],
-        where 'key', 'pri_deg', 'sec_deg', 'quality', 'inversion' are valid function_name
-    """
-
-    print("Preprocessing the BPS-FH dataset:")
-
-    if label_type not in ['chord_symbol', 'chord_function']:
-        print('LabelTypeError: %s,' % label_type, 'label_type should be \'chord_symbol\' or \'chord_function\'.')
-        quit()
-
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'BPS_FH_Dataset')
-    print('load data...')
-    pianorolls, tdeviation = load_notes(directory=path)
-    chord_labels = load_chord_labels(directory=path)
-    print('segment data...')
-    segments_pianoroll, segments_label = segment_pianorolls(pianorolls, tdeviation, chord_labels, wsize=32, hsize=4,
-                                                            label_type=label_type)
-    print('prepare data...')
-    input_segments, input_labels = prepare_input_data(segments_pianoroll, segments_label, hop=32, num_steps=64,
-                                                      feature_size=1952, label_type=label_type)
-    print('split data...')
-    x_train, x_valid, x_test, y_train, y_valid, y_test = split_input_data(input_segments, input_labels)
-
-    lens = [len(segments) for segments in segments_pianoroll[0]]
-    total_segments = sum(
-        [sum([len(segments) for segments in segments_pianoroll[m]]) for m in range(len(segments_pianoroll))])
-    # total_labels = sum([sum([len(labels) for labels in segments_label[m]]) for m in range(len(segments_label))])
-    print('num_segments in each piece =', lens)
-    print('total_segments =', total_segments)
-    sets = [x_train, x_valid, x_test, y_train, y_valid, y_test]
-    print('shape_of_all_sets =', [set.shape for set in sets])
-
-    return sets
+    return feature
 
 
 if __name__ == '__main__':
-    """
-    x: the input data with shape = [num_sequences, num_steps, feature_size]
-    y: the ground truth with shape = [num_sequences, num_steps]
-    label_type: 'chord_symbol' for STL_BLSTM_RNNModel, and 'chord_function' for MTL_BLSTM_RNNModel 
-    """
-    [x_train, x_valid, x_test, y_train, y_valid, y_test] = get_training_data(label_type='chord_symbol')
+    print(f"Welcome to the preprocessing routine, whose goal is to create tfrecords for your model.\n"
+          f"You are currently working in the {MODE} mode.\n"
+          f"Thank you for choosing algomus productions and have a nice day!\n")
+
+    folders = [
+        os.path.join(DATA_FOLDER, 'train'),
+        os.path.join(DATA_FOLDER, 'valid'),
+        os.path.join(DATA_FOLDER, 'BPS')
+    ]
+    tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_BPS_TFRECORDS]
+    tfrecords = check_existence_tfrecords(tfrecords)
+
+    for folder, output_file in zip(folders, tfrecords):
+        with tf.io.TFRecordWriter(output_file) as writer:
+            logger.info(f'Working on {os.path.basename(output_file)}.')
+            chords_folder = os.path.join(folder, 'chords')
+            scores_folder = os.path.join(folder, 'scores')
+            file_names = ['.'.join(fn.split('.')[:-1]) for fn in os.listdir(chords_folder)]
+            for fn in file_names:
+                # if fn not in ['bsq_op127_no12_mov2']:
+                #     continue
+                sf = os.path.join(scores_folder, fn + ".mxl")
+                cf = os.path.join(chords_folder, fn + ".csv")
+
+                logger.info(f"Analysing {fn}")
+                chord_labels = load_chord_labels(cf)
+                if MODE.startswith('pitch_complete'):
+                    piano_roll = load_score_pitch_complete(sf, FPQ, PITCH_LOW, PITCH_HIGH)
+                    nl, nr = 6, 6
+                elif MODE.startswith('pitch_class'):  # beware! this must be after pitch_class_beat_strength
+                    piano_roll = load_score_pitch_bass(sf, FPQ)
+                    nl, nr = 6, 6
+                elif MODE.startswith('pitch_spelling'):
+                    piano_roll, nl_pitches, nr_pitches = load_score_spelling_bass(sf, FPQ)
+                    nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
+                    nl = min(nl_keys, nl_pitches)
+                    nr = min(nr_keys, nr_pitches)
+                    # logger.info(f'Acceptable transpositions (pitches, keys): '
+                    #             f'left {nl_pitches, nl_keys}; '
+                    #             f'right {nr_pitches - 1, nr_keys - 1}.')
+                else:
+                    raise ReferenceError("I shouldn't be here. "
+                                         "It looks like the name of some mode has been hard-coded in the wrong way.")
+                # visualize piano rolls excerpts (indexed by j)
+                # for j in range(len(piano_roll[0]) - 128, len(piano_roll[0]), 128):
+                #     visualize_piano_roll(piano_roll, i, FPQ, j, j+FPQ*16)
+
+                # Adjust the length of the piano roll to be an exact multiple of the HSIZE
+                npad = (- piano_roll.shape[1]) % HSIZE
+                piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant', constant_values=0)
+                n_frames_analysis = piano_roll.shape[1] // HSIZE
+
+                logger.info(f"Transposing {nl} times to the left and {nr - 1} to the right")
+                for s in range(-nl, nr):
+                    if output_file != TRAIN_TFRECORDS and s != 0:  # transpose only for training data
+                        continue
+                    if MODE == 'pitch_class' or MODE == 'pitch_class_beat_strength':
+                        pr_shifted = np.zeros(piano_roll.shape, dtype=np.int32)
+                        for i in range(12):
+                            pr_shifted[i, :] = piano_roll[(i - s) % 12, :]  # the minus sign is correct!
+                            pr_shifted[i + 12, :] = piano_roll[((i - s) % 12) + 12, :]
+                        for i in range(24, len(pr_shifted)):
+                            pr_shifted[i, :] = piano_roll[i, :]
+                    elif MODE.startswith('pitch_spelling'):
+                        # nL and nR are calculated s.t. transpositions never have three flats or sharps.
+                        # this means that they will never get out of the allotted 35 slots, and
+                        # general pitches and bass will never mix
+                        # that's why we can safely use roll without any validation of the result
+                        pr_shifted = np.roll(piano_roll, shift=s, axis=0)
+                    elif MODE == 'midi_number':
+                        pr_shifted = np.roll(piano_roll, shift=s, axis=0)
+
+                    ps = (MODE.startswith('pitch_spelling'))
+                    pp = 'fifth' if ps else 'semitone'  # definition of proximity for pitches
+                    chords = preprocess_chords(chord_labels, s, ps, pp)
+                    if any([x is None for c in chords for x in c]):
+                        logger.warning(f"skipping transposition {s}")
+                        continue
+                    if MODE.endswith('cut'):
+                        start, end = 0, CHUNK_SIZE
+                        while start < len(chords):
+                            chord_partial = chords[start:end]
+                            pr_partial = pr_shifted[:, 4 * start:4 * end]
+                            feature = create_feature_dictionary(pr_partial, chord_partial, fn, s, start, end)
+                            writer.write(
+                                tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
+                            start += CHUNK_SIZE
+                            end += CHUNK_SIZE
+                    else:
+                        feature = create_feature_dictionary(pr_shifted, chords, fn, s)
+                        writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
