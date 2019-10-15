@@ -1,4 +1,5 @@
 import os
+from math import ceil
 
 import tensorflow as tf
 
@@ -11,7 +12,7 @@ MODES = [
     'spelling_class_cut',
 ]
 
-MODE = MODES[5]
+MODE = MODES[4]
 
 TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3, 1, 14, 23, 15, 10, 25, 7]
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
@@ -122,23 +123,21 @@ BATCH_SIZE = 16  # 1
 SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
 
-# # number of records in datasets
-# N_TRAIN = count_records(TRAIN_TFRECORDS)  # if MODE == 'pitch_spelling' else 300
-# N_VALID = count_records(VALID_TFRECORDS)
-# N_TEST_BPS = count_records(TEST_BPS_TFRECORDS)
-#
-# VALID_BATCH_SIZE = find_best_batch_size(N_VALID, BATCH_SIZE)
-# TEST_BPS_BATCH_SIZE = find_best_batch_size(N_TEST_BPS, BATCH_SIZE)
-# TRAIN_STEPS = ceil(N_TRAIN / BATCH_SIZE)
-# VALID_STEPS = ceil(N_VALID / VALID_BATCH_SIZE)
-# TEST_BPS_STEPS = ceil(N_TEST_BPS / TEST_BPS_BATCH_SIZE)
-# MODE2INPUT_SHAPE = {
-#     'pitch_total': N_PITCHES,
-#     'pitch_bass': 24,
-#     'pitch_class': 12,
-#     'spelling_total': 35 * 7,
-#     'spelling_bass': 70,
-#     'spelling_class': 35,
-#     'pitch_spelling_cut': 70,
-#     # 'pitch_class_beat_strength': 27,
-# }
+# number of records in datasets
+N_TRAIN = count_records(TRAIN_TFRECORDS)  # if MODE == 'pitch_spelling' else 300
+N_VALID = count_records(VALID_TFRECORDS)
+N_TEST_BPS = count_records(TEST_BPS_TFRECORDS)
+
+VALID_BATCH_SIZE = find_best_batch_size(N_VALID, BATCH_SIZE)
+TEST_BPS_BATCH_SIZE = find_best_batch_size(N_TEST_BPS, BATCH_SIZE)
+TRAIN_STEPS = ceil(N_TRAIN / BATCH_SIZE)
+VALID_STEPS = ceil(N_VALID / VALID_BATCH_SIZE)
+TEST_BPS_STEPS = ceil(N_TEST_BPS / TEST_BPS_BATCH_SIZE)
+MODE2INPUT_SHAPE = {
+    'pitch_total_cut': 12 * 7,
+    'pitch_bass_cut': 12 * 2,
+    'pitch_class_cut': 12,
+    'spelling_total_cut': 35 * 7,
+    'spelling_bass_cut': 35 * 2,
+    'spelling_class_cut': 35,
+}

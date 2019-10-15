@@ -96,7 +96,7 @@ def load_score_beat_strength(score_file, fpq):
 
 def load_score_spelling_complete(score_file, fpq, mode='fifth'):
     if mode not in ['fifth', 'semitone']:
-        raise NotImplementedError("Only modes fifth and semiton are accepted")
+        raise NotImplementedError("Only modes fifth and semitone are accepted")
     score, n_frames = _load_score(score_file, fpq)
     piano_roll = np.zeros(shape=(35 * 7, n_frames), dtype=np.int32)
     flattest, sharpest = 35, 0
@@ -112,8 +112,8 @@ def load_score_spelling_complete(score_file, fpq, mode='fifth'):
                 print("skipped a note")
                 continue
             idx = PF2I[pitch_name] if mode == 'fifth' else PS2I[pitch_name]
-            flattest = min(flattest, idx)
-            sharpest = max(sharpest, idx)
+            flattest = min(flattest, idx if mode == 'fifth' else PS2PF[idx])
+            sharpest = max(sharpest, idx if mode == 'fifth' else PS2PF[idx])
             piano_roll[idx + 35 * octave, time] = 1
 
     num_flatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE

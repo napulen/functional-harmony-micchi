@@ -8,7 +8,7 @@ import tensorflow as tf
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from config import FPQ, TRAIN_TFRECORDS, VALID_TFRECORDS, DATA_FOLDER, PITCH_FIFTHS
+from config import FPQ, TRAIN_TFRECORDS, VALID_TFRECORDS, DATA_FOLDER, PITCH_FIFTHS, MODES
 from utils_music import load_score_pitch_complete, calculate_number_transpositions_key, load_score_spelling_bass, \
     load_chord_labels
 
@@ -167,20 +167,29 @@ def calculate_distribution_of_repetitions(r):
 
 
 if __name__ == '__main__':
+    for m in MODES[-2:]:
+        TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, f'train_{m}.tfrecords')
+        VALID_TFRECORDS = os.path.join(DATA_FOLDER, f'valid_{m}.tfrecords')
+        TEST_BPS_TFRECORDS = os.path.join(DATA_FOLDER, f'test-bps_{m}.tfrecords')
+        tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_BPS_TFRECORDS]
+        for f in tfrecords:
+            c = count_records(f)
+            print(f"{f} - {c} files")
+
     # pm, pM = find_pitch_extremes()
     # print(f'The pitch classes needed, including transpositions, are from {pm} to {pM}')
     # cProfile.run('visualize_transpositions()', sort='cumtime')
-    fw, sw = calculate_transpositions()
-
-    ff = np.array([x for x in fw])  # flattest note, between 0 and 34
-    ss = np.array([35 - x for x in sw])  # sharpest, between 0 and 34 as well, because sharpwards is between 1 and 35
-    r = ss - ff  # by constructions s >= f always, so r in [0, 34]
-    plot_flattest_sharpest(ff, ss)
-    plot_range_histogram(r)
-    plot_range_individual(ff, ss, r)
-
-    m1, s1, m2, s2 = calculate_distribution_of_repetitions(r)
-    print(f"{m1} +- {s1},   {m2} +- {s2}")
+    # fw, sw = calculate_transpositions()
+    #
+    # ff = np.array([x for x in fw])  # flattest note, between 0 and 34
+    # ss = np.array([35 - x for x in sw])  # sharpest, between 0 and 34 as well, because sharpwards is between 1 and 35
+    # r = ss - ff  # by constructions s >= f always, so r in [0, 34]
+    # plot_flattest_sharpest(ff, ss)
+    # plot_range_histogram(r)
+    # plot_range_individual(ff, ss, r)
+    #
+    # m1, s1, m2, s2 = calculate_distribution_of_repetitions(r)
+    # print(f"{m1} +- {s1},   {m2} +- {s2}")
     # c = count_records(TRAIN_TFRECORDS)
     # print(f'There is a total of {c} records in the train file')
     # c = count_records(VALID_TFRECORDS)
