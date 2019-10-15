@@ -1,6 +1,6 @@
-import tensorflow as tf
 import os
-from math import ceil
+
+import tensorflow as tf
 
 MODES = [
     'pitch_complete_cut',
@@ -11,7 +11,7 @@ MODES = [
     'spelling_class_cut',
 ]
 
-MODE = MODES[3]
+MODE = MODES[5]
 
 TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3, 1, 14, 23, 15, 10, 25, 7]
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]

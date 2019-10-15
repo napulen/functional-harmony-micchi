@@ -60,14 +60,6 @@ def check_existence_tfrecords(tfrecords):
     return tfrecords
 
 
-def preprocess_chords(chord_labels, s, ps, pp):
-    cl_shifted = shift_chord_labels(chord_labels, s, pp)
-    cl_full = attach_chord_root(cl_shifted, ps)
-    cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
-    cl_encoded = encode_chords(cl_segmented, pp)
-    return cl_encoded
-
-
 def create_feature_dictionary(piano_roll, chords, name, s=None, start=None, end=None):
     feature = {
         'name': tf.train.Feature(bytes_list=tf.train.BytesList(value=[name.encode('utf-8')])),
@@ -119,6 +111,8 @@ if __name__ == '__main__':
 
                 logger.info(f"Analysing {fn}")
                 chord_labels = load_chord_labels(cf)
+                cl_full = attach_chord_root(chord_labels, MODE.startswith('spelling'))
+
                 if MODE.startswith('pitch'):
                     nl, nr = 6, 6
                     if 'complete' in MODE:
@@ -141,9 +135,6 @@ if __name__ == '__main__':
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
                     nl = min(nl_keys, nl_pitches)
                     nr = min(nr_keys, nr_pitches)
-                    # logger.info(f'Acceptable transpositions (pitches, keys): '
-                    #             f'left {nl_pitches, nl_keys}; '
-                    #             f'right {nr_pitches - 1, nr_keys - 1}.')
                 else:
                     raise NotImplementedError("verify the mode")
 
@@ -152,9 +143,12 @@ if __name__ == '__main__':
                 piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant', constant_values=0)
                 n_frames_analysis = piano_roll.shape[1] // HSIZE
 
+                # Pre-process the chords
+                cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
+
                 logger.info(f"Transposing {nl} times to the left and {nr - 1} to the right")
                 for s in range(-nl, nr):
-                    if output_file != TRAIN_TFRECORDS and s != 0:  # transpose only for training data
+                    if folder != folders[0] and s != 0:  # transpose only for training data
                         continue
                     if MODE.startswith('pitch'):
                         if 'complete' in MODE:
@@ -174,7 +168,8 @@ if __name__ == '__main__':
                         pr_shifted = np.roll(piano_roll, shift=s, axis=0)
 
                     pp = 'fifth' if MODE.startswith('spelling') else 'semitone'  # definition of proximity for pitches
-                    chords = preprocess_chords(chord_labels, s, MODE.startswith('spelling'), pp)
+                    cl_shifted = shift_chord_labels(cl_segmented, s, pp)
+                    chords = encode_chords(cl_shifted, pp)
                     if any([x is None for c in chords for x in c]):
                         logger.warning(f"skipping transposition {s}")
                         continue

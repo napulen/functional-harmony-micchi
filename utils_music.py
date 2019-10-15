@@ -36,8 +36,6 @@ PS2PF = dict([(n, PITCH_FIFTHS.index(p)) for n, p in enumerate(PITCH_SEMITONES)]
 
 DT_READ = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
            ('inversion', 'int')]  # datatype for reading data from BPS-FH
-DT_FINAL = [('t', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'), ('inversion', 'int'),
-            ('root', '<U10')]  # final datatype for the chords annotation we use before encoding
 
 
 class HarmonicAnalysisError(Exception):
@@ -93,9 +91,7 @@ def load_score_beat_strength(score_file, fpq):
 
 
 ####################
-#
 # Load the score for the pitch spelling representation
-#
 ####################
 
 def load_score_spelling_complete(score_file, fpq, mode='fifth'):
@@ -174,31 +170,6 @@ def load_score_spelling_bass(score_file, fpq):
     t = np.arange(n_frames)
     bf = np.vectorize(PS2PF.get)(b % 35) + 35
     piano_roll[bf, t] = v
-
-    # score, n_frames = _load_score(score_file, fpq)
-    # piano_roll = np.zeros(shape=(35 * 2, n_frames), dtype=np.int32)
-    # flattest, sharpest = 35, 0
-    # for n in score.flat.notes:
-    #     pitches = np.array([x for x in n] if n.isChord else [n])
-    #     i_bass = np.argmin([p.pitch.midi for p in pitches])
-    #     start = int(round(n.offset * fpq))
-    #     end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
-    #     time = np.arange(start, end)
-    #     for i, note in enumerate(pitches):
-    #         nn = note.pitch.name
-    #         idx = P2I[nn]
-    #         flattest = min(flattest, idx)
-    #         sharpest = max(sharpest, idx)
-    #         piano_roll[idx, time] = 1
-    #         if i == i_bass:
-    #             piano_roll[idx + 35, time] = 1
-    #
-    # # v = np.max(piano_roll, axis=0)
-    # # p = np.argmax(piano_roll, axis=0)
-    # # for t in range(n_frames):
-    # #     piano_roll[p[t] + 35, t] = v[t]
-    # num_flatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
-    # num_sharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
     return piano_roll, num_flatwards, num_sharpwards
 
 
@@ -223,9 +194,7 @@ def load_score_spelling_class(score_file, fpq):
 
 
 ####################
-#
 # Load the score for the midi pitch representation
-#
 ####################
 
 
@@ -335,9 +304,7 @@ def load_score_pitch_class(score_file, fpq):
 
 
 ####################
-#
 # Load the chord labels
-#
 ####################
 
 
@@ -364,21 +331,23 @@ def shift_chord_labels(chord_labels, s, mode='semitone'):
     :param mode: can be either 'semitone' or 'fifth' and describes how transpositions are done.
     :return:
     """
-    new_labels = chord_labels.copy()
 
-    for i in range(len(new_labels)):
-        key = chord_labels[i]['key']
+    def shift_note(note):
         if mode == 'semitone':
-            # TODO: This never uses flats for keys!
-            key = find_enharmonic_equivalent(key)
-            idx = ((N2I[key[0].upper()] + s - 1) if ('-' in key) else (N2I[key.upper()] + s)) % 12
-            new_key = NOTES[idx] if key.isupper() else NOTES[idx].lower()
+            # BEWARE: this never uses flats!
+            note = find_enharmonic_equivalent(note)
+            idx = ((N2I[note[0].upper()] + s - 1) if ('-' in note) else (N2I[note.upper()] + s)) % 12
+            shifted_note = NOTES[idx] if note.isupper() else NOTES[idx].lower()
         elif mode == 'fifth':
-            idx = PF2I[key.upper()] + s
-            new_key = PITCH_FIFTHS[idx] if key.isupper() else PITCH_FIFTHS[idx].lower()
+            idx = PF2I[note.upper()] + s
+            if idx >= len(PITCH_FIFTHS):
+                return None
+            shifted_note = PITCH_FIFTHS[idx] if note.isupper() else PITCH_FIFTHS[idx].lower()
         else:
             raise ValueError('mode should be either "semitone" or "fifth"')
-        new_labels[i]['key'] = new_key
+        return shifted_note
+
+    new_labels = [[c[0], shift_note(c[1]), c[2], c[3], c[4], shift_note(c[5])] for c in chord_labels]
     return new_labels
 
 
@@ -416,10 +385,9 @@ def segment_chord_labels(chord_labels, n_frames, hsize=4, fpq=8):
             print(
                 f"More than one chord at frame {n}, time {seg_time, seg_time + hsize / fpq}:\n{[l for l in labels_found]}")
         label = labels_found[0]
-        label_array = np.array((seg_time, label['key'], label['degree'], label['quality'],
-                                label['inversion'], label['root']), dtype=DT_FINAL)
         for _ in range(k):
-            labels.append(label_array)
+            labels.append(
+                (seg_time, label['key'], label['degree'], label['quality'], label['inversion'], label['root']))
         k = 1
     return labels
 
@@ -428,18 +396,18 @@ def encode_chords(chords, mode='semitone'):
     """
     Associate every chord element with an integer that represents its category.
 
-    :param chords: in the namedtuple format
+    :param chords: [('t', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'), ('inversion', 'int'), ('root', '<U10')]
     :param mode:
     :return:
     """
     chords_enc = []
     n = 0
     for chord in chords:
-        key_enc = _encode_key(str(chord['key']), mode)
-        degree_p_enc, degree_s_enc = _encode_degree(str(chord['degree']))
-        quality_enc = _encode_quality(str(chord['quality']))
-        inversion_enc = int(chord['inversion'])
-        root_enc = _encode_root(str(chord['root']), mode, chord)
+        key_enc = _encode_key(str(chord[1]), mode)
+        degree_p_enc, degree_s_enc = _encode_degree(str(chord[2]))
+        quality_enc = _encode_quality(str(chord[3]))
+        inversion_enc = int(chord[4])
+        root_enc = _encode_root(str(chord[5]), mode, chord)
 
         chords_enc.append((key_enc, degree_p_enc, degree_s_enc, quality_enc, inversion_enc, root_enc))
         n += 1
@@ -667,10 +635,10 @@ def calculate_number_transpositions_key(chords):
         i = PF2I[k.upper()]
         if k.isupper():
             l = i - 1  # we don't use the left-most major key (F--)
-            r = 35 - i - 5  # we don't use the 5 right-most major keys AND it is the endpoint of a range
+            r = 35 - i - 5  # we don't use the 5 right-most major keys
         else:
             l = i - 4  # we don't use the 4 left-most minor keys (yes! different from the major case!)
-            r = 35 - i - 5  # we don't use the 5 right-most minor keys AND it is the endpoint of a range
+            r = 35 - i - 5  # we don't use the 5 right-most minor keys
         nl, nr = min(nl, l), min(nr, r)
     return nl, nr
 
