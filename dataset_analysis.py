@@ -8,7 +8,7 @@ import tensorflow as tf
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from config import FPQ, TRAIN_TFRECORDS, VALID_TFRECORDS, DATA_FOLDER, PITCH_LINE
+from config import FPQ, TRAIN_TFRECORDS, VALID_TFRECORDS, DATA_FOLDER, PITCH_FIFTHS
 from utils_music import load_score_pitch_complete, calculate_number_transpositions_key, load_score_spelling_bass, \
     load_chord_labels
 
@@ -90,7 +90,7 @@ def plot_flattest_sharpest(ff, ss):
     max_ytick = max_occurrence - max_occurrence % 4
     n_yticks = max_ytick // 4 + 1
     plt.ylabel("occurrences")
-    plt.xticks(np.arange(35), PITCH_LINE, rotation=90)
+    plt.xticks(np.arange(35), PITCH_FIFTHS, rotation=90)
     plt.yticks(np.linspace(0, max_ytick, n_yticks) / len(ff),
                [str(x) for x in np.linspace(0, max_ytick, n_yticks, dtype=int)])
     plt.legend()
