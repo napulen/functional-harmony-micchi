@@ -44,7 +44,9 @@ def setup_paths(exploratory, model_type):
 timeout = None
 exploratory = False
 # exploratory = True
-model_type = 'conv_gru_reduced'
+# model_type = 'conv_dil'
+# model_type = 'conv_gru'
+model_type = 'gru'
 if __name__ == '__main__':
     model_folder, model_name = setup_paths(exploratory, model_type)
     model_path = os.path.join(model_folder, model_name + '.h5')

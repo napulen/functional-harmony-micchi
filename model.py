@@ -99,24 +99,28 @@ def create_model(name, n, model_type, derive_root=False):
     :param derive_root:
     :return:
     """
-    if model_type not in ['conv_dil_reduced', 'conv_gru_reduced']:
+    if model_type not in ['conv_dil', 'conv_gru', 'gru']:
         raise ValueError("model_type not supported, check its value")
 
     notes = Input(shape=(None, n), name="piano_roll_input")
     mask = Input(shape=(None, 1), name="mask_input")
-    x = DenseNetLayer(notes, 4, 5, n=1)
-    x = PoolingLayer(x, 32, n=1)
-    x = DenseNetLayer(x, 4, 5, n=2)
-    x = PoolingLayer(x, 48, n=1)
 
-    if model_type == 'conv_dil_reduced':
+    if 'conv' in model_type:
+        x = DenseNetLayer(notes, 4, 5, n=1)
+        x = PoolingLayer(x, 32, n=1)
+        x = DenseNetLayer(x, 4, 5, n=2)
+        x = PoolingLayer(x, 48, n=1)
+    else:
+        x = MaxPooling1D(4, 4, padding='same', data_format='channels_last')(notes)
+
+    if 'dil' in model_type:
         x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, typically 5 measures before and after
 
     # Super-ugly hack otherwise tensorflow can't save the model, see https://stackoverflow.com/a/55229794/5048010
     x = Lambda(lambda t: __import__('tensorflow').multiply(*t), name='apply_mask')((x, mask))
     x = Masking()(x)  # is this useless?
 
-    if model_type == 'conv_gru_reduced':
+    if 'gru' in model_type:
         x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
 
     x = TimeDistributed(Dense(64, activation='tanh'))(x)
