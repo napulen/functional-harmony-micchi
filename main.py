@@ -24,7 +24,7 @@ def visualize_data(data):
 
 
 def setup_paths(exploratory, model_type):
-    os.makedirs('logs')
+    os.makedirs('logs', exist_ok=True)
     if exploratory:
         enable_eager_execution()
         name = 'temp'
