@@ -214,7 +214,7 @@ def load_score_pitch_complete(score_file, fpq):
         time = np.arange(start, end)
         for p in pitches:  # add notes to piano_roll
             piano_roll[p, time] = 1
-    return piano_roll
+    return piano_roll[24:108]  # from C1 to B7 included
 
 
 @deprecated(reason="Use the version without chordify, this one is here just for testing")
