@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.python.keras.models import load_model
 
 from config import FEATURES, TICK_LABELS, NOTES, MODE2INPUT_SHAPE, MODE, N_VALID, \
-    PITCH_LINE, VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_TFRECORDS, VALID_TFRECORDS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, \
+    PITCH_FIFTHS, VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_TFRECORDS, VALID_TFRECORDS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, \
     N_TEST_BPS
 from load_data import create_tfrecords_dataset
 from utils import create_dezrann_annotations
@@ -151,7 +151,7 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     c = np.zeros((n_classes, n_classes))
     for i, j in zip(root_pred[msk], root_der[msk]):
         c[i, j] += 1
-    labels = PITCH_LINE if n_classes == 35 else NOTES
+    labels = PITCH_FIFTHS if n_classes == 35 else NOTES
     sns.heatmap(c, xticklabels=labels, yticklabels=labels, linewidths=.5)
     plt.title(f"{name} - root prediction")
     plt.xlabel("PREDICTED")

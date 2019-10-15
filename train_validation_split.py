@@ -42,7 +42,7 @@ def create_training_validation_set_bps(i_trn, i_vld):
 
         chords_file = os.path.join(DATA_FOLDER, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
         output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'bps_{i:02d}_01.csv')
-        transform_bps_chord_files_to_csv(chords_file, output_chords_file)
+        copyfile(chords_file, output_chords_file)
     for i in i_vld:
         score_file = os.path.join(DATA_FOLDER, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
         output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'bps_{i:02d}_01.mxl')
@@ -50,7 +50,7 @@ def create_training_validation_set_bps(i_trn, i_vld):
 
         chords_file = os.path.join(DATA_FOLDER, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
         output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'bps_{i:02d}_01.csv')
-        transform_bps_chord_files_to_csv(chords_file, output_chords_file)
+        copyfile(chords_file, output_chords_file)
     return
 
 
@@ -78,7 +78,7 @@ def create_training_validation_set_wtc(s=18):
 
 
 def create_training_validation_set_songs(s=18):
-    file_names = [fn[:-4] for fn in os.listdir(os.path.join(DATA_FOLDER, '19th_Century_Songs', 'csvs'))]
+    file_names = [fn[:-4] for fn in os.listdir(os.path.join(DATA_FOLDER, '19th_Century_Songs', 'chords'))]
     n = len(file_names)
     seed(s)
     fn_trn = set(choice(file_names, size=n, replace=False))
@@ -103,7 +103,7 @@ def create_training_validation_set_songs(s=18):
 
 
 def create_training_validation_set_bsq(s=18):
-    file_names = [fn[:-4] for fn in os.listdir(os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'csvs_from_ABC'))]
+    file_names = [fn[:-4] for fn in os.listdir(os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'chords'))]
     n = len(file_names)
     seed(s)
     fn_trn = set(choice(file_names, size=n, replace=False))

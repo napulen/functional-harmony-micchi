@@ -4,11 +4,10 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from config import VALID_TFRECORDS, TRAIN_TFRECORDS, DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, MODE, \
-    TEST_BPS_TFRECORDS, CHUNK_SIZE
+from config import VALID_TFRECORDS, TRAIN_TFRECORDS, DATA_FOLDER, FPQ, HSIZE, MODE, TEST_BPS_TFRECORDS, CHUNK_SIZE
 from utils_music import load_score_pitch_complete, load_chord_labels, shift_chord_labels, segment_chord_labels, \
-    encode_chords, load_score_pitch_bass, load_score_beat_strength, load_score_spelling_bass, \
-    calculate_number_transpositions_key, attach_chord_root
+    encode_chords, load_score_pitch_bass, load_score_spelling_bass, calculate_number_transpositions_key, \
+    attach_chord_root, load_score_pitch_class, load_score_spelling_complete, load_score_spelling_class
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -120,14 +119,25 @@ if __name__ == '__main__':
 
                 logger.info(f"Analysing {fn}")
                 chord_labels = load_chord_labels(cf)
-                if MODE.startswith('pitch_complete'):
-                    piano_roll = load_score_pitch_complete(sf, FPQ, PITCH_LOW, PITCH_HIGH)
+                if MODE.startswith('pitch'):
                     nl, nr = 6, 6
-                elif MODE.startswith('pitch_class'):  # beware! this must be after pitch_class_beat_strength
-                    piano_roll = load_score_pitch_bass(sf, FPQ)
-                    nl, nr = 6, 6
-                elif MODE.startswith('pitch_spelling'):
-                    piano_roll, nl_pitches, nr_pitches = load_score_spelling_bass(sf, FPQ)
+                    if 'complete' in MODE:
+                        piano_roll = load_score_pitch_complete(sf, FPQ)
+                    elif 'bass' in MODE:
+                        piano_roll = load_score_pitch_bass(sf, FPQ)
+                    elif 'class' in MODE:
+                        piano_roll = load_score_pitch_class(sf, FPQ)
+                    else:
+                        raise NotImplementedError("verify the mode")
+                elif MODE.startswith('spelling'):
+                    if 'complete' in MODE:
+                        piano_roll, nl_pitches, nr_pitches = load_score_spelling_complete(sf, FPQ)
+                    elif 'bass' in MODE:
+                        piano_roll, nl_pitches, nr_pitches = load_score_spelling_bass(sf, FPQ)
+                    elif 'class' in MODE:
+                        piano_roll, nl_pitches, nr_pitches = load_score_spelling_class(sf, FPQ)
+                    else:
+                        raise NotImplementedError("verify the mode")
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
                     nl = min(nl_keys, nl_pitches)
                     nr = min(nr_keys, nr_pitches)
@@ -135,11 +145,7 @@ if __name__ == '__main__':
                     #             f'left {nl_pitches, nl_keys}; '
                     #             f'right {nr_pitches - 1, nr_keys - 1}.')
                 else:
-                    raise ReferenceError("I shouldn't be here. "
-                                         "It looks like the name of some mode has been hard-coded in the wrong way.")
-                # visualize piano rolls excerpts (indexed by j)
-                # for j in range(len(piano_roll[0]) - 128, len(piano_roll[0]), 128):
-                #     visualize_piano_roll(piano_roll, i, FPQ, j, j+FPQ*16)
+                    raise NotImplementedError("verify the mode")
 
                 # Adjust the length of the piano roll to be an exact multiple of the HSIZE
                 npad = (- piano_roll.shape[1]) % HSIZE
@@ -150,25 +156,25 @@ if __name__ == '__main__':
                 for s in range(-nl, nr):
                     if output_file != TRAIN_TFRECORDS and s != 0:  # transpose only for training data
                         continue
-                    if MODE == 'pitch_class' or MODE == 'pitch_class_beat_strength':
-                        pr_shifted = np.zeros(piano_roll.shape, dtype=np.int32)
-                        for i in range(12):
-                            pr_shifted[i, :] = piano_roll[(i - s) % 12, :]  # the minus sign is correct!
-                            pr_shifted[i + 12, :] = piano_roll[((i - s) % 12) + 12, :]
-                        for i in range(24, len(pr_shifted)):
-                            pr_shifted[i, :] = piano_roll[i, :]
-                    elif MODE.startswith('pitch_spelling'):
+                    if MODE.startswith('pitch'):
+                        if 'complete' in MODE:
+                            pr_shifted = np.roll(piano_roll, shift=s, axis=0)
+                        else:
+                            pr_shifted = np.zeros(piano_roll.shape, dtype=np.int32)
+                            for i in range(12):  # transpose the main part
+                                pr_shifted[i, :] = piano_roll[(i - s) % 12, :]  # the minus sign is correct!
+                            for i in range(12, pr_shifted.shape[0]):  # transpose the bass, if present
+                                pr_shifted[i, :] = piano_roll[((i - s) % 12) + 12, :]
+                    elif MODE.startswith('spelling'):
                         # nL and nR are calculated s.t. transpositions never have three flats or sharps.
                         # this means that they will never get out of the allotted 35 slots, and
                         # general pitches and bass will never mix
                         # that's why we can safely use roll without any validation of the result
-                        pr_shifted = np.roll(piano_roll, shift=s, axis=0)
-                    elif MODE == 'midi_number':
+                        # we also don't transpose to different octaves
                         pr_shifted = np.roll(piano_roll, shift=s, axis=0)
 
-                    ps = (MODE.startswith('pitch_spelling'))
-                    pp = 'fifth' if ps else 'semitone'  # definition of proximity for pitches
-                    chords = preprocess_chords(chord_labels, s, ps, pp)
+                    pp = 'fifth' if MODE.startswith('spelling') else 'semitone'  # definition of proximity for pitches
+                    chords = preprocess_chords(chord_labels, s, MODE.startswith('spelling'), pp)
                     if any([x is None for c in chords for x in c]):
                         logger.warning(f"skipping transposition {s}")
                         continue
