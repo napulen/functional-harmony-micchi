@@ -134,10 +134,10 @@ TRAIN_STEPS = ceil(N_TRAIN / BATCH_SIZE)
 VALID_STEPS = ceil(N_VALID / VALID_BATCH_SIZE)
 TEST_BPS_STEPS = ceil(N_TEST_BPS / TEST_BPS_BATCH_SIZE)
 MODE2INPUT_SHAPE = {
-    'pitch_total_cut': 12 * 7,
+    'pitch_complete_cut': 12 * 7,
     'pitch_bass_cut': 12 * 2,
     'pitch_class_cut': 12,
-    'spelling_total_cut': 35 * 7,
+    'spelling_complete_cut': 35 * 7,
     'spelling_bass_cut': 35 * 2,
     'spelling_class_cut': 35,
 }
