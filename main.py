@@ -1,36 +1,75 @@
-from tensorflow.python.keras import Input, Model
-from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard
-from tensorflow.python.keras.layers import Bidirectional, LSTM, Dense
+import os
+import time
 
-from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, TEST_TFRECORDS, CLASSES_ROOT, \
-    VALID_TFRECORDS, EPOCHS, STEPS_PER_EPOCH, WSIZE, N_PITCHES, CLASSES_KEY, CLASSES_DEGREE, CLASSES_INVERSION, \
-    CLASSES_QUALITY, CLASSES_SYMBOL, VALIDATION_STEPS
-from load_data import create_tfrecords_iterator
+import seaborn as sns
+from matplotlib import pyplot as plt
+from tensorflow import enable_eager_execution
+from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard, ModelCheckpoint
 
-train_data = create_tfrecords_iterator(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
-valid_data = create_tfrecords_iterator(VALID_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER)
+from config import TRAIN_TFRECORDS, SHUFFLE_BUFFER, BATCH_SIZE, VALID_TFRECORDS, EPOCHS, TRAIN_STEPS, \
+    MODE, MODE2INPUT_SHAPE, VALID_BATCH_SIZE, VALID_STEPS
+from load_data import create_tfrecords_dataset
+from model import create_model, TimeOut
 
-notes = Input(shape=(WSIZE, N_PITCHES))
-x = Bidirectional(LSTM(256))(notes)
-x = Dense(256)(x)
-o1 = Dense(CLASSES_KEY, activation='softmax', name='key')(x)
-o2 = Dense(CLASSES_DEGREE, activation='softmax', name='degree_1')(x)
-o3 = Dense(CLASSES_DEGREE, activation='softmax', name='degree_2')(x)
-o4 = Dense(CLASSES_QUALITY, activation='softmax', name='quality')(x)
-o5 = Dense(CLASSES_INVERSION, activation='softmax', name='inversion')(x)
-o6 = Dense(CLASSES_ROOT, activation='softmax', name='root')(x)
-o7 = Dense(CLASSES_SYMBOL, activation='softmax', name='symbol')(x)
 
-model = Model(inputs=notes, outputs=[o1, o2, o3, o4, o5, o6, o7])
+def visualize_data(data):
+    for x, y in data:
+        prs, masks, _, _ = x
+        for pr, mask in zip(prs, masks):
+            sns.heatmap(pr)
+            plt.show()
+            plt.plot(mask.numpy())
+            plt.show()
+    return
 
-callbacks = [
-    EarlyStopping(patience=3),
-    TensorBoard()
-]
 
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+def setup_paths(exploratory, model_type):
+    if exploratory:
+        enable_eager_execution()
+        name = 'temp'
+    else:
+        i = 0
+        name = '_'.join([model_type, MODE, str(i)])
+        while name in os.listdir('logs'):
+            i += 1
+            name = '_'.join([model_type, MODE, str(i)])
 
-model.fit(train_data, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, validation_data=valid_data,
-          validation_steps=VALIDATION_STEPS, callbacks=callbacks)
+    folder = os.path.join('logs', name)
+    os.makedirs(folder, exist_ok=True if exploratory else False)
 
-model.save('my_model.h5')
+    return folder, name
+
+
+timeout = None
+exploratory = False
+# exploratory = True
+model_type = 'conv_gru_reduced'
+if __name__ == '__main__':
+    model_folder, model_name = setup_paths(exploratory, model_type)
+    model_path = os.path.join(model_folder, model_name + '.h5')
+    n = MODE2INPUT_SHAPE[MODE]
+    train_data = create_tfrecords_dataset(TRAIN_TFRECORDS, BATCH_SIZE, SHUFFLE_BUFFER, n)
+    valid_data = create_tfrecords_dataset(VALID_TFRECORDS, VALID_BATCH_SIZE, 1, n)
+    # visualize_data(train_data)
+
+    model = create_model(model_name, n, model_type=model_type, derive_root=False)
+    model.summary()
+    print(model_name)
+
+    callbacks = [
+        EarlyStopping(patience=3),
+        TensorBoard(log_dir=model_folder),
+        ModelCheckpoint(filepath=model_path, save_best_only=True)
+    ]
+    if timeout is not None:
+        t0 = time.time()
+        callbacks.append(TimeOut(t0=t0, timeout=timeout))
+
+    # weights = [1., 0.5, 1., 1., 0.5, 2.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
+    weights = [1., 1., 1., 1., 1., 1.]  # [y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo]
+    model.compile(loss='categorical_crossentropy', loss_weights=weights, optimizer='adam', metrics=['accuracy'])
+
+    model.fit(train_data, epochs=EPOCHS, steps_per_epoch=TRAIN_STEPS, validation_data=valid_data,
+              validation_steps=VALID_STEPS, callbacks=callbacks)
+
+    # model.save(model_path)

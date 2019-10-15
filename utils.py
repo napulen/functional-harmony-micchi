@@ -1,196 +1,245 @@
-import tensorflow as tf
+import json
+import os
+from datetime import datetime
 
-from config import VALID_TFRECORDS, TRAIN_TFRECORDS, TEST_TFRECORDS
+import numpy as np
+import pandas as pd
 
-ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
-NOTES = ['C', 'C+', 'D', 'D+', 'E', 'F', 'F+', 'G', 'G+', 'A', 'A+', 'B']
-SCALES = {
-    'C': ['C', 'D', 'E', 'F', 'G', 'A', 'B'], 'a': ['A', 'B', 'C', 'D', 'E', 'F', 'G+'],
-    'G': ['G', 'A', 'B', 'C', 'D', 'E', 'F+'], 'e': ['E', 'F+', 'G', 'A', 'B', 'C', 'D+'],
-    'D': ['D', 'E', 'F+', 'G', 'A', 'B', 'C+'], 'b': ['B', 'C+', 'D', 'E', 'F+', 'G', 'A+'],
-    'A': ['A', 'B', 'C+', 'D', 'E', 'F+', 'G+'], 'f+': ['F+', 'G+', 'A', 'B', 'C+', 'D', 'E+'],
-    'E': ['E', 'F+', 'G+', 'A', 'B', 'C+', 'D+'], 'c+': ['C+', 'D+', 'E', 'F+', 'G+', 'A', 'B+'],
-    'B': ['B', 'C+', 'D+', 'E', 'F+', 'G+', 'A+'], 'g+': ['G+', 'A+', 'B', 'C+', 'D+', 'E', 'F++'],
-    'F+': ['F+', 'G+', 'A+', 'B', 'C+', 'D+', 'E+'], 'd+': ['D+', 'E+', 'F+', 'G+', 'A+', 'B', 'C++'],
-    'C+': ['C+', 'D+', 'E+', 'F+', 'G+', 'A+', 'B+'], 'a+': ['A+', 'B+', 'C+', 'D+', 'E+', 'F+', 'G++'],
-    'G+': ['G+', 'A+', 'B+', 'C+', 'D+', 'E+', 'F++'], 'e+': ['E+', 'F++', 'G+', 'A+', 'B+', 'C+', 'D++'],
-    'D+': ['D+', 'E+', 'F++', 'G+', 'A+', 'B+', 'C++'], 'b+': ['B+', 'C++', 'D+', 'E+', 'F++', 'G+', 'A++'],
-    'A+': ['A+', 'B+', 'C++', 'D+', 'E+', 'F++', 'G++'], 'f++': ['F++', 'G++', 'A+', 'B+', 'C++', 'D+', 'E++'],
-    'F': ['F', 'G', 'A', 'B-', 'C', 'D', 'E'], 'd': ['D', 'E', 'F', 'G', 'A', 'B-', 'C+'],
-    'B-': ['B-', 'C', 'D', 'E-', 'F', 'G', 'A'], 'g': ['G', 'A', 'B-', 'C', 'D', 'E-', 'F+'],
-    'E-': ['E-', 'F', 'G', 'A-', 'B-', 'C', 'D'], 'c': ['C', 'D', 'E-', 'F', 'G', 'A-', 'B'],
-    'A-': ['A-', 'B-', 'C', 'D-', 'E-', 'F', 'G'], 'f': ['F', 'G', 'A-', 'B-', 'C', 'D-', 'E'],
-    'D-': ['D-', 'E-', 'F', 'G-', 'A-', 'B-', 'C'], 'b-': ['B-', 'C', 'D-', 'E-', 'F', 'G-', 'A'],
-    'G-': ['G-', 'A-', 'B-', 'C-', 'D-', 'E-', 'F'], 'e-': ['E-', 'F', 'G-', 'A-', 'B-', 'C-', 'D'],
-    'C-': ['C-', 'D-', 'E-', 'F-', 'G-', 'A-', 'B-'], 'a-': ['A-', 'B-', 'C-', 'D-', 'E-', 'F-', 'G'],
-    'F-': ['F-', 'G-', 'A-', 'B--', 'C-', 'D-', 'E-'], 'd-': ['D-', 'E-', 'F-', 'G-', 'A-', 'B--', 'C']}
-R2I = dict([(e[1], e[0]) for e in enumerate(ROOTS)])
-N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
-F2S = dict()
-QUALITY = ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'a6']
-Q2I = dict([(e[1], e[0]) for e in enumerate(QUALITY)])
-SYMBOL = ['M', 'm', 'M7', 'm7', '7', 'aug', 'dim', 'dim7', 'm7(b5)']  # quality as encoded in chord symbols
-S2I = dict([(e[1], e[0]) for e in enumerate(SYMBOL)])
-Q2S = {'M': 'M', 'm': 'm', 'M7': 'M7', 'm7': 'm7', 'D7': '7', 'a': 'aug', 'd': 'dim', 'd7': 'dim7',
-       'h7': 'm7(b5)', 'a6': '7'}  # necessary only because the data is stored in non-standard notation
+from config import NOTES, QUALITY, KEYS_SPELLING
 
 
-def _encode_key(key):
-    """ Major keys: 0-11, Minor keys: 12-23 """
-    return N2I[key.upper()] + (12 if key.islower() else 0)
-
-
-def _encode_degree(degree):
+def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, model_folder):
     """
-    7 diatonics *  3 chromatics  = 21: {0-6 diatonic, 7-13 sharp, 14-20 flat)
-    :return: primary_degree, secondary_degree
+    Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net
+    This allows for a nice visualization of the analysis on top of the partition.
+    :param test_true: The annotated labels coming from our data, shape [n_chunks][labels](ts, classes)
+    :param test_pred: The output of the machine learning model, same shape as test_true
+    :param timesteps: number of timesteps per each data point
+    :param file_names: the name of the datafile where the chunk comes from
+    :param model_folder:
+    :return:
     """
+    os.makedirs(os.path.join(model_folder, 'analyses'), exist_ok=True)
 
-    if '/' in degree:
-        num, den = degree.split('/')
-        primary = _translate_degree(den)
-        secondary = _translate_degree(num)
-    else:
-        primary = 1
-        secondary = _translate_degree(degree)
-    return primary, secondary
+    n = len(test_true)  # same len as test_pred, timesteps, or filenames
+    offsets = np.zeros(n)
+    for i in range(1, n):
+        if file_names[i] == file_names[i - 1]:
+            offsets[i] = offsets[i - 1] + timesteps[i - 1]
+    annotation, labels, current_file = dict(), [], None
+    features = ['Tonality', 'Harmony']  # add a third element "Inversion" if needed
+    lines = [('top.3', 'bot.2'), ('top.2', 'bot.1'), ('top.1', 'bot.3')]
+
+    for y_true, y_pred, ts, name, t0 in zip(test_true, test_pred, timesteps, file_names, offsets):
+        if name != current_file:  # a new sonata started
+            if current_file is not None:  # save previous file, if it exists
+                annotation['labels'] = labels
+                with open(os.path.join(model_folder, 'analyses', f'{current_file}.dez'), 'w+') as fp:
+                    json.dump(annotation, fp)
+            annotation = {
+                "meta": {
+                    'title': name,
+                    'name': name,
+                    'date': str(datetime.now()),
+                    'producer': 'Algomus team'
+                }
+            }
+            current_file = name
+            labels = []
+
+        label_true_list = decode_results(y_true)
+        label_pred_list = decode_results(y_pred)
+
+        for feature, line, label_true, label_pred in zip(features, lines, label_true_list, label_pred_list):
+            assert len(label_pred) == len(label_true)
+            start_true, start_pred = t0 / 2, t0 / 2  # divided by two because we have one label every 8th note
+            for t in range(ts):
+                if t > 0:
+                    if label_true[t] != label_true[t - 1] or t == ts - 1:
+                        duration_true = (t + t0) / 2 - start_true
+                        labels.append({
+                            "type": feature,
+                            "start": start_true,
+                            "duration": duration_true,
+                            "line": line[0],
+                            "tag": label_true[t - 1],
+                            "comment": "target"
+                        })
+                        start_true = (t + t0) / 2
+                    if label_pred[t] != label_pred[t - 1] or t == ts - 1:
+                        duration_pred = (t + t0) / 2 - start_pred
+                        labels.append({
+                            "type": feature,
+                            "start": start_pred,
+                            "duration": duration_pred,
+                            "line": line[1],
+                            "tag": label_pred[t - 1],
+                            "comment": "prediction"
+                        })
+                        start_pred = (t + t0) / 2
+
+    annotation['labels'] = labels
+    with open(os.path.join(model_folder, 'analyses', f'{current_file}.dez'), 'w+') as fp:
+        json.dump(annotation, fp)
+    return
 
 
-def _translate_degree(degree_str):
-    if degree_str[0] == '-':
-        offset = 14
-    elif degree_str[0] == '+':
-        offset = 7
-    elif len(degree_str) == 2 and degree_str[1] == '+':
-        degree_str = degree_str[0]
-        offset = 0
-    else:
-        offset = 0
-    return int(degree_str) + offset
-
-
-def _encode_quality(quality):
-    return Q2I[quality]
-
-
-def _encode_symbol(symbol):
-    if '+' not in symbol and '-' not in symbol:
-        chord_root = symbol[0]
-        quality = symbol[1:]
-    else:
-        chord_root = symbol[:2]
-        quality = symbol[2:]
-
-    return N2I[chord_root], S2I[quality]
-
-
-def _find_enharmonic_equivalent(note):
-    """ Transform everything into one of the notes defined in NOTES """
-    if note in NOTES:
-        return note
-
-    if '++' in note:
-        if 'B' in note or 'E' in note:
-            note = ROOTS[(ROOTS.index(note[0]) + 1) % 7] + '+'
-        else:
-            note = ROOTS[ROOTS.index(note[0]) + 1]  # no problem when index == 6 because that's the case B++
-    elif '--' in note:  # if root = x--
-        if 'C' in note or 'F' in note:
-            note = ROOTS[ROOTS.index(note[0]) - 1] + '-'
-        else:
-            note = ROOTS[ROOTS.index(note[0]) - 1]
-
-    if note == 'F-' or note == 'C-':
-        note = ROOTS[ROOTS.index(note[0]) - 1]
-    elif note == 'E+' or note == 'B+':
-        note = ROOTS[(ROOTS.index(note[0]) + 1) % 7]
-
-    if note not in NOTES:  # there is a single flat left, and it's on a black key
-        note = ROOTS[ROOTS.index(note[0]) - 1] + '+'
-
-    return note
-
-
-def _find_chord_symbol(chord):
+def _fill_level(l, i_p=None):
     """
-    Translate roman numeral representations into chord symbols.
-    :param chord:
-    :return: chords_full
+    Fill a given level of the structural analysis with hold tokens.
+    This is done to distinguish when a missing data should be interpreted as a continuation of the previous section or
+    as a missing section. It uses the knowledge of section borders coming from the previous level because they enforce
+    borders on the current level as well (a section in level n+1 can't span two section of level n, not even partially)
+
+    :param l: the current level as coming from Mark Gotham's analysis
+    :param i_p: the borders of the sections of the previous levels, leave None if it's the first level
+    :return: a list filled with hold tokens when needed, and the list with all the borders from the current level
     """
-
-    # Translate chords
-    key = chord['key']
-    degree_str = chord['degree']
-    quality = chord['quality']
-
-    try:
-        return F2S[','.join([key, degree_str, quality])]
-    except KeyError:
-        pass
-
-    # FIND THE ROOT OF THE CHORD
-    if len(degree_str) == 1 or (len(degree_str) == 2 and degree_str[1] == '+'):  # case: degree = x, augmented chords
-        degree = int(degree_str[0])
-        root = SCALES[key][degree - 1]
-
-    elif degree_str == '+4':  # case: augmented 6th
-        degree = 6
-        root = SCALES[key][degree - 1]
-        if _is_major(key):  # case: major key
-            root = _flat_alteration(root)  # lower the sixth in a major key
-
-    # TODO: Verify these cases!
-    elif degree_str[0] == '-':  # case: chords on flattened degree
-        degree = int(degree_str[1])
-        root = SCALES[key][degree - 1]
-        root = _flat_alteration(root)  # the fundamental of the chord is lowered
-
-    elif '/' in degree_str:  # case: secondary chord
-        degree = degree_str
-        n = int(degree.split('/')[0]) if '+' not in degree.split('/')[0] else 6  # take care of augmented 6th chords
-        d = int(degree.split('/')[1])  # denominator
-        key2 = SCALES[key][abs(d) - 1]  # secondary key
-        if d < 0:
-            key2 = _flat_alteration(key2)
-        key2 = _find_enharmonic_equivalent(key2)
-
-        root = SCALES[key2][n - 1]
-        if '+' in degree.split('/')[0]:  # augmented 6th chords
-            if _is_major(key2):  # case: major key
-                root = _flat_alteration(root)
-    else:
-        raise ValueError(f"Can't understand the following chord degree: {degree_str}")
-
-    root = _find_enharmonic_equivalent(root)
-
-    quality_out = Q2S[quality]
-    chord_symbol = root + quality_out
-    F2S[','.join([key, degree_str, quality])] = chord_symbol
-    return chord_symbol
-
-
-def _flat_alteration(note):
-    """ Ex: _flat_alteration(G) = G-,  _flat_alteration(G+) = G """
-    return note[:-1] if '+' in note else note + '-'
-
-
-def _is_major(key):
-    """ The input needs to be a string like "A-" for A flat major, "b" for b minor, etc. """
-    return key[0].isupper()
-
-
-def count_records(tfrecord):
-    """ Count the number of lines in a tfrecord file. This is useful to establish 'steps_per_epoch' when training """
-    c = 0
-    if tf.__version__ == '1.12.0':
-        for _ in tf.io.tf_record_iterator(tfrecord):
+    i_c = np.array([i for i, r in enumerate(l) if not pd.isna(r)])  # beginning of sections in this level
+    if i_p is None:
+        i_p = [len(l)]
+    c, p = 0, 0  # indices over borders of current and previous level
+    v = np.nan  # current value (the section)
+    y, i_o = [], []
+    for i, x in enumerate(l):
+        hold = True  # becomes False when a new section starts
+        if c < len(i_c) and i == i_c[c]:  # a new section in this level starts
+            v = x
             c += 1
+            i_o.append(i)
+            hold = False
+        if p < len(i_p) and i == i_p[p]:  # a new section in the previous level starts
+            v = x  # this is nan if no new section in this level starts at this index
+            p += 1
+            if hold:  # if not hold, it means we have already added this border when checking i_c
+                i_o.append(i)
+            hold = False
+        if pd.isna(v):
+            y.append("Empty")
+        elif not hold:
+            y.append(v)
+        else:
+            y.append("Hold")
+    return y, i_o
+
+
+def _decode_key(yk):
+    n = len(yk)
+    k = np.argmax(yk)
+    if n == 24:
+        lower = k // 12
+        key = NOTES[k % 12]
+        return key.lower() if lower else key
+    elif n == 55:
+        return KEYS_SPELLING[k]
     else:
-        for _ in tf.data.TFRecordDataset(tfrecord):
-            c += 1
-    return c
+        raise ValueError('weird number of classes in the key')
 
 
-if __name__ == '__main__':
-    c = count_records(TEST_TFRECORDS)
-    print(f'There is a total of {c} records in the validation file')
+def _decode_roman(yp, ys, yq):
+    s = np.argmax(ys)
+    p = np.argmax(yp)
+    q = np.argmax(yq)
+
+    num_alt = s // 7
+    num = _int_to_roman((s % 7) + 1)
+    if num_alt == 1:
+        num += '+'
+    elif num_alt == 2:
+        num += '-'
+
+    den_alt = p // 7
+    den = _int_to_roman((p % 7) + 1)
+    if den_alt == 1:
+        den += '+'
+    elif den_alt == 2:
+        den += '-'
+
+    quality = QUALITY[q]
+    if quality == 'M':
+        num = num.upper()
+        quality = ''
+    elif quality == 'm':
+        num = num.lower()
+        quality = ''
+    return num + quality + ('/' + den if den != 'I' else '')
+
+
+def _int_to_roman(input):
+    """ Convert an integer to a Roman numeral. """
+
+    if not 0 < input < 8:
+        raise ValueError("Argument must be between 1 and 7")
+    ints = (5, 4, 1)
+    nums = ('V', 'IV', 'I')
+    result = []
+    for i in range(len(ints)):
+        count = int(input / ints[i])
+        result.append(nums[i] * count)
+        input -= ints[i] * count
+    return ''.join(result)
+
+
+def _roman_to_int(roman):
+    r2i = {
+        'I': 1,
+        'II': 2,
+        'III': 3,
+        'IV': 4,
+        'V': 5,
+        'VI': 6,
+        'VII': 7,
+    }
+    return r2i[roman.upper()]
+
+
+def find_scale_and_alteration(degree_str, minor_key):
+    nr = ''.join(filter(lambda x: x.upper() in ['V', 'I'], degree_str))
+    ni = _roman_to_int(nr)
+
+    a = ''.join(filter(lambda x: x.upper() not in ['V', 'I'], degree_str))
+    a = a.replace('#', '+')
+    a = a.replace('b', '-')
+    if minor_key and ni == 7:
+        if '+' in a:
+            a = a[:-1]
+        else:
+            a = a + '-'
+    return a, str(ni)
+
+
+def degrees_dcml_to_bps(degree_num, degree_den='', key_minor=True):
+    if not degree_den:
+        a, n = find_scale_and_alteration(degree_num, key_minor)
+        return a + n
+
+    da, dn = find_scale_and_alteration(degree_den, key_minor)
+    k2 = int(dn) - 1  # converts
+    if '+' in da:  # all keys on augmented degrees are minor
+        k2_minor = True
+    elif '-' in da:  # all keys on flattened degrees are major
+        k2_minor = False
+    elif (not key_minor and k2 in [1, 2, 5, 6]) or (key_minor and k2 in [0, 1, 3, 6]):  # minor secondary key
+        k2_minor = True
+    else:  # major secondary keys
+        k2_minor = False
+    na, nn = find_scale_and_alteration(degree_num, k2_minor)
+    return '/'.join([na + nn, da + dn])
+
+
+def _decode_inversion(yi):
+    i = np.argmax(yi)
+    return str(i)
+
+
+def decode_results(y):
+    """
+    Transform the outputs of the model into something readable by humans, example [G+, Vd7/V, '2']
+
+    :param y: it should have shape [features, timesteps], and every element should be an integer indicating the class
+    :return: keys, chords, inversions
+    """
+    key = [_decode_key(i) for i in y[0]]
+    chord = [_decode_roman(i[0], i[1], i[2]) for i in zip(y[1], y[2], y[3])]
+    inversion = [_decode_inversion(i) for i in y[4]]
+    return key, chord, inversion
