@@ -10,6 +10,13 @@ import xlrd
 from config import NOTES, QUALITY, KEYS_SPELLING
 
 
+def setup_tfrecords_paths(data_folder, mode):
+    train = os.path.join(data_folder, f'train_{mode}.tfrecords')
+    valid = os.path.join(data_folder, f'valid_{mode}.tfrecords')
+    test_bps = os.path.join(data_folder, f'test-bps_{mode}.tfrecords')
+    return train, valid, test_bps
+
+
 def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, model_folder):
     """
     Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net

@@ -24,7 +24,7 @@ from music21 import converter, note
 from music21.repeat import ExpanderException
 from numpy.lib.recfunctions import append_fields
 
-from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES
+from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
@@ -593,7 +593,7 @@ def find_root_full_output(y_pred, pitch_spelling=True):
         den, den_alt = dd % 7, dd // 7
         num, num_alt = dn % 7, dn // 7
 
-        key = KEYS_SPELLING[key_enc]
+        key = KEYS_SPELLING[key_enc] if pitch_spelling else KEYS_PITCH[key_enc]
         key2 = SCALES[key][den]  # secondary key
         if (key.isupper() and den in [1, 2, 5, 6]) or (key.islower() and den in [0, 1, 3, 6]):
             key2 = key2.lower()
@@ -605,7 +605,7 @@ def find_root_full_output(y_pred, pitch_spelling=True):
         try:
             root = SCALES[key2][num]
         except KeyError:
-            print(f'secondary key {key2} for chord {dd, dn} in key of {key}')
+            print(f'secondary key {key2} for degree {dn} / {dd} in key of {key}')
             root_pred.append(None)
             continue
 
@@ -615,8 +615,14 @@ def find_root_full_output(y_pred, pitch_spelling=True):
             root = _flat_alteration(root)
 
         if not pitch_spelling:
-            root = find_enharmonic_equivalent(PF2I[root])
-        root_pred.append(PF2I[root])
+            root = find_enharmonic_equivalent(root)
+            root_pred.append(N2I[root])
+        else:
+            try:
+                pred = PF2I[root]
+            except KeyError:
+                pred = -1
+            root_pred.append(pred)
 
     return np.array(root_pred)
 

@@ -1,14 +1,14 @@
 import math
 import os
-import cProfile
 from collections import Counter
 
-import numpy as np
-import tensorflow as tf
-import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+import tensorflow as tf
 
-from config import FPQ, TRAIN_TFRECORDS, VALID_TFRECORDS, DATA_FOLDER, PITCH_FIFTHS, MODES
+from config import FPQ, DATA_FOLDER, PITCH_FIFTHS, INPUT_TYPES
+from utils import setup_tfrecords_paths
 from utils_music import load_score_pitch_complete, calculate_number_transpositions_key, load_score_spelling_bass, \
     load_chord_labels
 
@@ -167,11 +167,9 @@ def calculate_distribution_of_repetitions(r):
 
 
 if __name__ == '__main__':
-    for m in MODES[-2:]:
-        TRAIN_TFRECORDS = os.path.join(DATA_FOLDER, f'train_{m}.tfrecords')
-        VALID_TFRECORDS = os.path.join(DATA_FOLDER, f'valid_{m}.tfrecords')
-        TEST_BPS_TFRECORDS = os.path.join(DATA_FOLDER, f'test-bps_{m}.tfrecords')
-        tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_BPS_TFRECORDS]
+    for m in INPUT_TYPES:
+        tfrecords = setup_tfrecords_paths(DATA_FOLDER, m)
+
         for f in tfrecords:
             c = count_records(f)
             print(f"{f} - {c} files")
