@@ -317,7 +317,7 @@ def compare_results(dataset, dezrann):
             'inversion': 59.1,
             'degree': 51.79,
             'secondary': 3.97,
-            'roman + inv ': 25.69,
+            'roman + inv': 25.69,
         }
         for feat in features:
             if feat not in bps_paper.keys():
