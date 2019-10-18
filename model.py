@@ -33,7 +33,7 @@ def DenseNetLayer(x, l, k, n=1):
     :param training: passed to the batch normalization layers
     :return:
     """
-    with name_scope(f"denseNet_{n}"):
+    with name_scope(f"denseNet_{n}") as scope:
         for _ in range(l):
             y = BatchNormalization()(x)
             y = Activation('relu')(y)
@@ -45,21 +45,20 @@ def DenseNetLayer(x, l, k, n=1):
     return x
 
 
-def PoolingLayer(x, k, n=1):
+def PoolingLayer(x, k, s, n=1):
     """
     Implementation of a DenseNetLayer
     :param x: input
-    :param l: number of elementary blocks in the layer
-    :param k: features generated at every block
-    :param n: unique identifier of the DenseNetLayer
-    :param training: passed to the batch normalization layers
+    :param k: feature maps before batch_norm
+    :param s: stride for the Pooling Layer
+    :param n: unique identifier of the Layer
     :return:
     """
-    with name_scope(f"poolingLayer_{n}"):
+    with name_scope(f"poolingLayer_{n}") as scope:
         y = BatchNormalization()(x)
         y = Activation('relu')(y)
         y = Conv1D(filters=k, kernel_size=1, padding='same', data_format='channels_last')(y)
-        y = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(y)
+        y = MaxPooling1D(s, s, padding='same', data_format='channels_last')(y)
     return y
 
 
@@ -115,9 +114,9 @@ def create_model(name, model_type, input_type, derive_root=False):
 
     if 'conv' in model_type:
         x = DenseNetLayer(notes, 4, 5, n=1)
-        x = PoolingLayer(x, 32, n=1)
+        x = PoolingLayer(x, 32, 2, n=1)
         x = DenseNetLayer(x, 4, 5, n=2)
-        x = PoolingLayer(x, 48, n=1)
+        x = PoolingLayer(x, 48, 2, n=1)
     else:
         x = MaxPooling1D(4, 4, padding='same', data_format='channels_last')(notes)
 

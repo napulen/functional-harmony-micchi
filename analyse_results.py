@@ -179,7 +179,7 @@ def find_input_type(model_name):
     return input_type
 
 
-def analyse_results(model_name, dataset='beethoven', comparison=False, dezrann=True):
+def analyse_results(model_name, dataset='validation', comparison=False, dezrann=True):
     model_folder = os.path.join('logs', model_name)
     model = load_model(os.path.join(model_folder, model_name + '.h5'))
     if not comparison:
@@ -196,7 +196,7 @@ def analyse_results(model_name, dataset='beethoven', comparison=False, dezrann=T
         steps = TEST_BPS_STEPS
         n_chunks = N_TEST_BPS
     elif dataset == 'validation':
-        data_file = train
+        data_file = valid
         batch_size = VALID_BATCH_SIZE
         steps = VALID_STEPS
         n_chunks = N_VALID
@@ -298,7 +298,7 @@ def compare_results(dataset, dezrann):
     n = len(models)
     results = []
     for i, model_name in enumerate(models):
-        # if model_name != 'gru_pitch_bass_cut_0':
+        # if model_name != 'conv_gru_pitch_bass_cut_1':
         #     continue
         print(f"model {i + 1} out of {n} - {model_name}")
         accuracies = analyse_results(model_name, dataset=dataset, comparison=True, dezrann=dezrann)
@@ -329,4 +329,5 @@ def compare_results(dataset, dezrann):
 if __name__ == '__main__':
     # dataset = 'beethoven'
     dataset = 'validation'
-    compare_results(dataset=dataset, dezrann=False)
+    compare_results(dataset=dataset, dezrann=True)
+    # analyse_results('conv_gru_spelling_bass_cut_1')

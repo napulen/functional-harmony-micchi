@@ -46,9 +46,9 @@ timeout = None
 exploratory = False
 # exploratory = True
 # model_type = 'conv_dil'
-# model_type = 'conv_gru'
-model_type = 'gru'
-input_type = 'pitch_bass_cut'
+model_type = 'conv_gru'
+# model_type = 'gru'
+input_type = 'spelling_bass_cut'
 if input_type not in INPUT_TYPES:
     raise ValueError('Choose a valid value for input_type')
 
