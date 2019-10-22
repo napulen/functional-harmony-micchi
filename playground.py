@@ -63,8 +63,6 @@ if __name__ == '__main__':
             _, n, mov = fn.split("_")
             # if fn not in ['ncs_Chausson_Ernest_-_7_Melodies_Op.2_No.7_-_Le_Colibri']:
             #     continue
-            if int(n) < 2:
-                continue
             print(fn)
             # cf = os.path.join(chords_folder, f"{fn}.csv")
             sf = os.path.join(scores_folder, f"{fn}.mxl")
@@ -80,6 +78,8 @@ if __name__ == '__main__':
             #             f'left {nl_pitches, nl_keys}; '
             #             f'right {nr_pitches - 1, nr_keys - 1}.')
 
+            if int(n) < 32:
+                continue
             score, n_frames = _load_score(sf, 8)
             measure_offset = list(score.measureOffsetMap().keys()) + [score.duration.quarterLength]
             measure_length = np.diff(measure_offset)
@@ -87,7 +87,6 @@ if __name__ == '__main__':
 
             # PROBLEMS IN TOTAL LENGTH IN THE FOLLOWING CASES
             npad = (- n_frames) % 4
-            print("hi")
             # print(f'{fn} - padding length {npad}')
             # n_frames_analysis = (n_frames + npad) // 4
             # # Verify that the two lengths match
