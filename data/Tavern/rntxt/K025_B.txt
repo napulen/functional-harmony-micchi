@@ -9,11 +9,11 @@ Form: Theme a
 
 Time Signature: 2/2
 
- b1 V
+m0 b1 D:V
 m1 b1 I
 m2 b1 V b2.5 V6
 m3 b1 I b2 V
-m4 b1 IV6 b1.5 viio b2.0 I
+m4 b1 IV6 b1.5 viio b2 I
 m5 b1 ii6 b2.5 V
 
 Form: Theme b
@@ -31,7 +31,7 @@ m12 b1 V b2.5 V
 m13 b1 I
 m14 b1 V b2.5 V6
 m15 b1 I b2 V
-m16 b1 IV6 b1.5 viio b2.0 I
+m16 b1 IV6 b1.5 viio b2 I
 m17 b1 ii6 b2.5 V
 
 Form: Variation 1 a
@@ -46,11 +46,11 @@ m23 b1 ii6 b2.5 V
 Form: Variation 1 b
 
 m24 b1 I b2.5 V
-m25 b1 I b1.75 V b2.0 I b2.75 V43
+m25 b1 I b1.75 V b2 I b2.75 V43
 m26 b1 I6 b2.5 V43
 m27 b1 I b2 V
 m28 b1 I
-m29 b1 I b1.5 viio b2.0 I
+m29 b1 I b1.5 viio b2 I
 
 Form: Variation 1 a2
 
@@ -64,7 +64,7 @@ m35 b1 ii6 b2.5 V
 Form: Variation 2 a
 
 m36 b1 I b2.5 V
-m37 b1 I b1.5 V b2.0 I
+m37 b1 I b1.5 V b2 I
 m38 b1 V b2.5 V6
 m39 b1 I b2 V
 m40 b1 V7 b2 I
@@ -73,16 +73,16 @@ m41 b1 ii65 b2 V b2.5 V7
 Form: Variation 2 b
 
 m42 b1 I b2.5 V42
-m43 b1 I6 b1.5 V6 b2.0 I b2.5 V43
-m44 b1 I6 b1.5 IV b2.0 I6 b2.5 V43
+m43 b1 I6 b1.5 V6 b2 I b2.5 V43
+m44 b1 I6 b1.5 IV b2 I6 b2.5 V43
 m45 b1 I b2 V
 m46 b1 I b2.5 V43
-m47 b1 I6 b1.5 V6 b2.0 I
+m47 b1 I6 b1.5 V6 b2 I
 
 Form: Variation 2 a2
 
 m48 b1 V b2.5 V
-m49 b1 I b1.5 V b2.0 I
+m49 b1 I b1.5 V b2 I
 m50 b1 V b2.5 V6
 m51 b1 I b2 V
 m52 b1 V7 b2 I
@@ -100,11 +100,11 @@ m59 b1 ii6 b2.5 V
 Form: Variation 3 b
 
 m60 b1 I b2.5 V42
-m61 b1 I b1.5 V65 b2.0 I b2.5 V43
-m62 b1 I6 b1.5 IV b2.0 I6 b2.5 V43
+m61 b1 I b1.5 V65 b2 I b2.5 V43
+m62 b1 I6 b1.5 IV b2 I6 b2.5 V43
 m63 b1 I b2 V
 m64 b1 I
-m65 b1 I6 b1.5 IV b2.0 I6 b2.5 V43 b2.75 I
+m65 b1 I6 b1.5 IV b2 I6 b2.5 V43 b2.75 I
 
 Form: Variation 3 a2
 
@@ -152,7 +152,7 @@ m91 b1 I
 m92 b1 V6 b4 V
 m93 b1 I b2 viiø7/V b3 V
 m94 b1 V7 b3 I
-m95 b1 ii65 b2.5 V65/V b3.0 V7
+m95 b1 ii65 b2.5 V65/V b3 V7
 
 Form: Variation 5 b
 
@@ -163,7 +163,7 @@ m96 b1 I b4 V
 m97 b1 I b2.5 V43
 m98 b1 I6 b2.5 viio7
 m99 b1 I b2 V
-m100 b1 I b1.25 V b2.0 V7
+m100 b1 I b1.25 V b2 V7
 m101 b1 I64 b1.75 IV b2.5 I64
 
 Form: Variation 5 a2
@@ -176,7 +176,7 @@ m103 b1 I
 m104 b1 V6 b4 V
 m105 b1 I b2 viiø7/V b3 V
 m106 b1 V7 b3 I
-m107 b1 ii65 b2.5 V65/V b3.0 V7
+m107 b1 ii65 b2.5 V65/V b3 V7
 
 Form: Variation 6 a
 
@@ -184,47 +184,47 @@ Form: Variation 6 a
 Time Signature: 2/2
 
 m108 b1 I b4 V
-m109 b1 I b1.5 ii42 b2.0 I
+m109 b1 I b1.5 ii42 b2 I
 m110 b1 V b2.5 V6
 m111 b1 I b2 V
-m112 b1 IV6 b1.5 viio b2.0 I b2.5 I6
-m113 b1 ii65 b1.5 ii7 b2.0 V
+m112 b1 IV6 b1.5 viio b2 I b2.5 I6
+m113 b1 ii65 b1.5 ii7 b2 V
 
 Form: Variation 6 b
 
-m114 b1 I b1.5 V b2.0 I b2.5 V
-m115 b1 I b1.5 viio b2.0 I b2.5 V43
-m116 b1 I6 b1.5 IV b2.0 I6 b2.5 V43
+m114 b1 I b1.5 V b2 I b2.5 V
+m115 b1 I b1.5 viio b2 I b2.5 V43
+m116 b1 I6 b1.5 IV b2 I6 b2.5 V43
 m117 b1 I b2 V b2.5 V42
-m118 b1 I6 b1.5 V b2.0 I b2.5 V43
+m118 b1 I6 b1.5 V b2 I b2.5 V43
 m119 b1 I6 b2 IV b2.5 viiø7/V
 
 Form: Variation 6 a2
 
 m120 b1 V b2.5 V
-m121 b1 I b1.5 ii42 b2.0 I
+m121 b1 I b1.5 ii42 b2 I
 m122 b1 V b2.5 V6
 m123 b1 I b2 V
-m124 b1 IV6 b1.5 viio b2.0 I b2.5 I6
-m125 b1 ii65 b1.5 ii7 b2.0 V
+m124 b1 IV6 b1.5 viio b2 I b2.5 I6
+m125 b1 ii65 b1.5 ii7 b2 V
 
 Form: Variation 7 a
 
-m126 b1 I b1.5 V b2.0 I b2.5 V
+m126 b1 I b1.5 V b2 I b2.5 V
 m127 b1 I
 m128 b1 V6
 m129 b1 I b2 V
-m130 b1 V6 b1.5 V65 b2.0 I
-m131 b1 ii6 b1.5 I6 b2.0 ii6 b2.5 V7
+m130 b1 V6 b1.5 V65 b2 I
+m131 b1 ii6 b1.5 I6 b2 ii6 b2.5 V7
 
 Form: Variation 7 b
 
 m132 b1 I b2.5 V
-m133 b1 I b1.75 V6 b2.0 I b2.5 V43
+m133 b1 I b1.75 V6 b2 I b2.5 V43
 m134 b1 I6 b2.5 V65
 m135 b1 I b2 V6 b2.5 V
-m136 b1 I b1.75 V6 b2.0 I b2.75 viio6
-m137 b1 I6 b1.5 IV b2.0 I6 b2.5 viio6/V
+m136 b1 I b1.75 V6 b2 I b2.75 viio6
+m137 b1 I6 b1.5 IV b2 I6 b2.5 viio6/V
 
 Form: Variation 7 a2
 
@@ -232,7 +232,7 @@ m138 b1 V b2.5 V
 m139 b1 I
 m140 b1 V6
 m141 b1 I b2 V
-m142 b1 V6 b1.5 V65 b2.0 I
-m143 b1 ii6 b1.5 I6 b2.0 ii6 b2.5 V7
+m142 b1 V6 b1.5 V65 b2 I
+m143 b1 ii6 b1.5 I6 b2 ii6 b2.5 V7
 m144 b1 I
 m144 b1 I

@@ -9,7 +9,7 @@ Form: Theme a
 
 Time Signature: 3/4
 
-m1 b1 i
+m1 b1 c:i
 m2 b1 V6
 m3 b1 V42/IV
 m4 b1 IV6
@@ -136,7 +136,7 @@ m95 b1 viio7 b2.5 V
 Form: Variation 12 a
 
 m96 b1 i
-m97 b1 I
+m97 b1 C:I
 m98 b1 V6
 m99 b1 V65/ii
 m100 b1 ii
@@ -191,7 +191,7 @@ m135 b1 ii6 b2 V7
 Form: Variation 17 a
 
 m136 b1 I
-m137 b1 i
+m137 b1 c:i
 m138 b1 V
 m139 b1 V7/IV
 m140 b1 IV

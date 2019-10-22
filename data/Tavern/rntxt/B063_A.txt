@@ -9,7 +9,7 @@ Form: Theme a
 
 Time Signature: 4/4
 
-m1 b1 i
+m1 b1 c:i
 m2 b1 V6
 m3 b1 V65 b4 V
 
@@ -261,7 +261,7 @@ m143 b1 i6 b2 iio6 b3 V
 Form: 9 a
 
 m144 b1 i
-m145 b1 I
+m145 b1 C:I
 m146 b1 I
 m147 b1 V
 m148 b1 V

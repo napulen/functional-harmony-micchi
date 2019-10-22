@@ -9,7 +9,7 @@ Form: Theme a
 
 Time Signature: 3/4
 
-m1 b1 I
+m1 b1 F:I
 m2 b1 I
 m3 b1 I
 m4 b1 I
@@ -23,7 +23,7 @@ m11 b1 I b2 ii6 b3 V
 
 Form: Theme b
 
-m12 b1 I b2.5 I b3.0 V6 b3.5 V42/IV
+m12 b1 I b2.5 I b3 V6 b3.5 V42/IV
 m13 b1 IV64 b3 V65
 m14 b1 I
 m15 b1 IV64
@@ -121,7 +121,7 @@ m87 b1 V7
 Form: Variation 4 a
 
 m88 b1 I
-m89 b1 i
+m89 b1 f:i
 m90 b1 i
 m91 b1 i
 m92 b1 i
@@ -163,7 +163,7 @@ Form: Variation 5 a
 Time Signature: 3/4
 
 m115 b1 adagio b1 V b5 V7
-m116 b1 I
+m116 b1 F:I
 m117 b1 I
 m118 b1 I
 m119 b1 I
@@ -199,7 +199,7 @@ Form: Variation 6 a
 
 Time Signature: 3/4
 
-m140 b1 V b3.6666666666666665 V b5.0 V b5.333333333333333 V7 b8.0 V7
+m140 b1 V b3.67 V b5.0 V b5.33 V7 b8.0 V7
 m141 b1 I
 m142 b1 I
 m143 b1 I
@@ -216,21 +216,21 @@ Form: Variation 6 b
 
 m152 b1 I b2 I6 b3 V
 m153 b1 I b2 I6 b3 V
-m154 b1 I b1.5 V42/IV b2.0 IV b2.5 V b3.0 V7/vi
-m155 b1 IV b1.5 viio6 b2.0 I6 b2.5 viio65/ii b3.0 ii6 b3.5 viio7/V
+m154 b1 I b1.5 V42/IV b2 IV b2.5 V b3 V7/vi
+m155 b1 IV b1.5 viio6 b2 I6 b2.5 viio65/ii b3 ii6 b3.5 viio7/V
 m156 b1 I64 b7 I64 b13 I64 b19 I64
 
 Time Signature: 33/8
 
-m157 b1 I64 b3.6666666666666665 I64 b6.333333333333333 I64 b9.0 I64 b11.666666666666666 viio7/V
+m157 b1 I64 b3.67 I64 b6.34 I64 b9.01 I64 b11.68 viio7/V
 
 Time Signature: 27/8
 
-m158 b1 viio7/V b1.3333333333333333 viio7/V b2.0 viio7/V b4.666666666666666 viio7/V b7.333333333333332 viio7/V
+m158 b1 viio7/V b1.33 viio7/V b2.0 viio7/V b4.67 viio7/V b7.34 viio7/V
 
 Time Signature: 16/4
 
-m159 b1 viio7 b5 viio7 b9 I6 b10.5 V65/IV b11.0 IV b12.5 V65/IV b13.0 IV b14.5 V65/IV b15.0 IV b15.5 V65/IV b16.0 IV b16.5 V65/IV
+m159 b1 viio7 b5 viio7 b9 I6 b10.5 V65/IV b11 IV b12.5 V65/IV b13 IV b14.5 V65/IV b15 IV b15.5 V65/IV b16 IV b16.5 V65/IV
 
 Time Signature: 7/4
 
@@ -242,7 +242,7 @@ m161 b1 I64 b5 I64 b9 I64 b11 I64 b15 I64
 
 Time Signature: 9/8
 
-m162 b1 ii b1.3333333333333333 ii
+m162 b1 ii b1.33 ii
 
 Time Signature: 4/2
 

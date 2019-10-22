@@ -9,7 +9,7 @@ Form: Theme a
 
 Time Signature: 4/4
 
-m0 b1 V
+m0 b1 C:V
 m1 b1 I
 m2 b1 IV b4 viio
 m3 b1 V7
@@ -121,7 +121,7 @@ m63 b1 V7
 
 Form: Variation 4 a
 
-m64 b1 I b3 I b3.5 V
+m64 b1 I b3 I b3.5 c:V
 m65 b1 i6
 m66 b1 V42/-II
 m67 b1 V7
@@ -149,7 +149,7 @@ m79 b1 viio65/V b3 V7
 
 Form: Variation 5 a
 
-m80 b1 i b3 i b3.5 V
+m80 b1 i b3 i b3.5 C:V
 m81 b1 I
 m82 b1 ii6 b4 V7/V
 m83 b1 V b3 viio/V b4 V42
@@ -205,7 +205,7 @@ m111 b1 V7
 
 Form: Variation 7 a
 
-m112 b1 I b3 I b3.5 V
+m112 b1 I b3 I b3.5 c:V
 m113 b1 i6
 m114 b1 iiø65
 m115 b1 V7
@@ -233,7 +233,7 @@ m127 b1 V7
 
 Form: Variation 8 a
 
-m128 b1 i b3 i b3.5 V
+m128 b1 i b3 i b3.5 C:V
 m129 b1 I
 m130 b1 ii6
 m131 b1 V7

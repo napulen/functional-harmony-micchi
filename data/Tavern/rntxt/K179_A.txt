@@ -9,7 +9,7 @@ Form: Theme a
 
 Time Signature: 3/4
 
-m1 b1 I
+m1 b1 C:I
 m2 b1 V7
 m3 b1 I
 
@@ -18,7 +18,7 @@ Form: Theme b
 m4 b1 V
 m5 b1 I
 m6 b1 V7
-m7 b1 I b1.5 IV b2.0 V
+m7 b1 I b1.5 IV b2 V
 
 Form: Theme c
 

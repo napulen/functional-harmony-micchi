@@ -47,9 +47,7 @@
 8E	4r	4r
 8r	.	.
 *	*v	*v
-*END	*END
 =9	=9
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -98,8 +96,6 @@
 4A 4c#	4a
 [8AA	8r
 ==	==
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -155,8 +151,6 @@
 4A 4c#	4a
 8AA	8r
 ==	==
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -224,8 +218,6 @@
 12BJ	.
 8e	8r
 ==	==
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -290,8 +282,6 @@
 .	12gg#'
 .	12ff#'J
 =41	=41
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -352,8 +342,6 @@
 12C#J	.
 8AA	8r
 ==	==
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -429,8 +417,6 @@
 8BJ	.
 8E	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -501,8 +487,6 @@
 8EJ	.
 8A	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -573,8 +557,6 @@
 8EEJ	.
 8AAA	8r
 ==	==
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -639,8 +621,6 @@
 =80	=80
 8EE	8g#L) 8ee
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -706,8 +686,6 @@
 =88	=88
 8AA	8c#L 8a
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -780,8 +758,6 @@
 8AA	4r
 8r	.
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[]	*k[]
@@ -830,8 +806,6 @@
 8BJ	.
 8E) 8G	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[]	*k[]
@@ -878,8 +852,6 @@
 8GJ	.
 8C	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[]	*k[]
@@ -926,8 +898,6 @@
 8EJ	.
 8AA	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -981,8 +951,6 @@
 8EE	.
 8E	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1040,8 +1008,6 @@
 8AA	.
 8A	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1099,8 +1065,6 @@
 8AA	.
 8AL	4r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1177,8 +1141,6 @@
 .	16bJJ
 8r	8e
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1249,8 +1211,6 @@
 .	16cc#
 .	16ddJJ
 =161	=161
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1313,8 +1273,6 @@
 8EJ	.
 8AA	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1371,8 +1329,6 @@
 8e	.
 8E	8r
 ==	==
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefG2	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1429,8 +1385,6 @@
 8eJ	.
 8A	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1487,8 +1441,6 @@
 8EJ	.
 16AA	16r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1565,8 +1517,6 @@
 8E	16r
 .	16eLL
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1641,8 +1591,6 @@
 16r	8a'
 16ELL	.
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1718,8 +1666,6 @@
 8EJ	.
 8AA	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1783,8 +1729,6 @@
 .	8f#'J
 8r	8e'
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1897,8 +1841,6 @@
 16BBJJ	.
 [8EE	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -1968,8 +1910,6 @@
 .	16f#
 .	16g#JJ
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -2053,8 +1993,6 @@
 4A 4c#	4a
 [8AA	8r
 =	=
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]
@@ -2118,8 +2056,6 @@
 4r	8cc#'L)
 .	8b#J
 =255	=255
-*END	*END
-**kern	**kern
 *staff2	*staff1
 *clefF4	*clefG2
 *k[f#c#g#]	*k[f#c#g#]

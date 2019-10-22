@@ -9,7 +9,7 @@ Form: Theme a
 
 Time Signature: 2/2
 
- b1 V
+m0 b1 D:V
 m1 b1 I
 m2 b1 V b2.5 V65
 m3 b1 I b2 V
@@ -23,7 +23,7 @@ m7 b1 I
 m8 b1 I6 b2.5 viio
 m9 b1 I b2 V
 m10 b1 I
-m11 b1 I6 b1.5 V6 b2.0 I
+m11 b1 I6 b1.5 V6 b2 I
 
 Form: Theme a2
 
@@ -50,7 +50,7 @@ m25 b1 I
 m26 b1 I6
 m27 b1 I b2 V
 m28 b1 I
-m29 b1 I b1.5 viiø7 b2.0 I
+m29 b1 I b1.5 viiø7 b2 I
 
 Form: Variation 1 a2
 
@@ -64,7 +64,7 @@ m35 b1 ii6 b2.5 V
 Form: Variation 2 a
 
 m36 b1 I b2.5 V
-m37 b1 I b1.5 V b2.0 I
+m37 b1 I b1.5 V b2 I
 m38 b1 V b2.5 V6
 m39 b1 I b2 V
 m40 b1 V65 b2 I
@@ -73,16 +73,16 @@ m41 b1 ii65 b2 V7
 Form: Variation 2 b
 
 m42 b1 I b2.5 V42
-m43 b1 I6 b1.5 V6 b2.0 I
+m43 b1 I6 b1.5 V6 b2 I
 m44 b1 I6
 m45 b1 I b2 V
 m46 b1 I
-m47 b1 I6 b1.5 V6 b2.0 I
+m47 b1 I6 b1.5 V6 b2 I
 
 Form: Variation 2 a2
 
 m48 b1 V b1.5 V
-m49 b1 I b1.5 V b2.0 I
+m49 b1 I b1.5 V b2 I
 m50 b1 V b2.5 V6
 m51 b1 I b2 V
 m52 b1 V65 b2 I
@@ -152,7 +152,7 @@ m91 b1 I
 m92 b1 V6 b4 V7
 m93 b1 I b2 viiø7/V b3 V
 m94 b1 V7 b3 I
-m95 b1 ii65 b2.5 V65/V b3.0 V7
+m95 b1 ii65 b2.5 V65/V b3 V7
 
 Form: Variation 5 b
 
@@ -176,7 +176,7 @@ m103 b1 I
 m104 b1 V6 b4 V7
 m105 b1 I b2 viiø7/V b3 V
 m106 b1 V7 b3 I
-m107 b1 ii65 b2.5 V65/V b3.0 V7
+m107 b1 ii65 b2.5 V65/V b3 V7
 
 Form: Variation 6 a
 
@@ -192,8 +192,8 @@ m113 b1 ii7 b2 V
 
 Form: Variation 6 b
 
-m114 b1 I b1.5 V b2.0 I b2.5 V
-m115 b1 I b1.5 viio b2.0 I
+m114 b1 I b1.5 V b2 I b2.5 V
+m115 b1 I b1.5 viio b2 I
 m116 b1 I6
 m117 b1 I b2 V b2.5 V42
 m118 b1 I6 b2 I
@@ -205,26 +205,26 @@ m120 b1 V b2.5 V
 m121 b1 I
 m122 b1 V b2.5 V6
 m123 b1 I b2 V
-m124 b1 IV6 b1.5 viio b2.0 I
+m124 b1 IV6 b1.5 viio b2 I
 m125 b1 ii7 b2 V
 
 Form: Variation 7 a
 
-m126 b1 I b1.5 V b2.0 I b2.5 V
+m126 b1 I b1.5 V b2 I b2.5 V
 m127 b1 I
 m128 b1 V65
 m129 b1 I b2 V
 m130 b1 V65 b2 I
-m131 b1 ii6 b1.5 I6 b2.0 ii6 b2.5 V7
+m131 b1 ii6 b1.5 I6 b2 ii6 b2.5 V7
 
 Form: Variation 7 b
 
 m132 b1 I b2.5 V
-m133 b1 I b1.75 V6 b2.0 I b2.5 V43
+m133 b1 I b1.75 V6 b2 I b2.5 V43
 m134 b1 I6 b2.5 V65
 m135 b1 I b2 V6 b2.5 V
-m136 b1 I b1.75 V6 b2.0 I b2.75 viio6
-m137 b1 I6 b1.5 IV b2.0 I6 b2.5 viio6/V
+m136 b1 I b1.75 V6 b2 I b2.75 viio6
+m137 b1 I6 b1.5 IV b2 I6 b2.5 viio6/V
 
 Form: Variation 7 a2
 
@@ -232,7 +232,7 @@ m138 b1 V b2.5 V
 m139 b1 I
 m140 b1 V65
 m141 b1 I b2 V
-m142 b1 V6 b1.5 V65 b2.0 I
-m143 b1 ii6 b1.5 I6 b2.0 ii6 b2.5 V7
+m142 b1 V6 b1.5 V65 b2 I
+m143 b1 ii6 b1.5 I6 b2 ii6 b2.5 V7
 m144 b1 I
 m144 b1 I

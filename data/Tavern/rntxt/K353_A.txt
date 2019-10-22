@@ -9,7 +9,7 @@ Form: Theme a
 
 Time Signature: 6/8
 
- b1 I
+m0 b1 E-:I
 m1 b1 V65 b2 V7
 m2 b1 I
 m3 b1 V7
@@ -186,7 +186,7 @@ Form: Variation 8 b
 
 m100 b1 I b2 V6
 m101 b1 IV6/V b2 V65/V
-m102 b1 I/V b1.6666666666666665 IV/V b1.9999999999999998 I6/V
+m102 b1 I/V b1.67 IV/V b2.0 I6/V
 m103 b1 IV6/V b2 V65/V
 
 Form: Variation 8 a2
@@ -198,7 +198,7 @@ m107 b1 V65
 
 Form: Variation 9 a
 
-m108 b1 I b2 i
+m108 b1 I b2 e-:i
 m109 b1 viio7 b2 V65
 m110 b1 i b2 VI
 m111 b1 iio6 b2 V7
@@ -219,7 +219,7 @@ m119 b1 V7
 
 Form: Variation 10 a
 
-m120 b1 i b2 I
+m120 b1 i b2 E-:I
 m121 b1 V43 b2 V7
 m122 b1 I
 m123 b1 V43 b2 V7
@@ -279,12 +279,12 @@ m152 b1 I
 m153 b1 I6/V
 m154 b1 ii6/V
 m155 b1 V42/V
-m156 b1 I6/V b1.5 V42/V b2.0 I6/V b2.5 V43/V
+m156 b1 I6/V b1.5 V42/V b2 I6/V b2.5 V43/V
 m157 b1 I6/V
 m158 b1 ii6/V
 m159 b1 V7/V
-m160 b1 I/V b1.5 V7/V b2.0 I/V b2.5 V7/V
-m161 b1 I/V b1.5 V7/V b2.0 I/V b2.5 V7/V
+m160 b1 I/V b1.5 V7/V b2 I/V b2.5 V7/V
+m161 b1 I/V b1.5 V7/V b2 I/V b2.5 V7/V
 m162 b1 I/V
 m163 b1 V7
 m164 b1 V7

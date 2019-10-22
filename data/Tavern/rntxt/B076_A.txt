@@ -9,7 +9,7 @@ Form: Theme a
 
 Time Signature: 3/8
 
-m1 b1 I
+m1 b1 F:I
 m2 b1 V
 m3 b1 V7
 m4 b1 I
@@ -174,7 +174,7 @@ m119 b1 V7
 Form: Variation 5 a
 
 m120 b1 I
-m121 b1 i
+m121 b1 d:i
 m122 b1 V
 m123 b1 V42
 m124 b1 i6 b1.67 i
@@ -206,7 +206,7 @@ m143 b1 V7
 
 Form: Variation 6 a
 
-m144 b1 i b1.33 viio
+m144 b1 i b1.33 B-:viio
 m145 b1 I
 m146 b1 V
 m147 b1 V7
@@ -239,7 +239,7 @@ m167 b1 V7
 
 Form: Variation 7 a
 
-m168 b1 I b1.33 ii b1.66 V
+m168 b1 I b1.33 F:ii b1.66 V
 m169 b1 I
 m170 b1 V6
 m171 b1 V6
