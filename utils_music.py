@@ -397,7 +397,7 @@ def encode_chords(chords, mode='semitone'):
     Associate every chord element with an integer that represents its category.
 
     :param chords: [('t', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'), ('inversion', 'int'), ('root', '<U10')]
-    :param mode:
+    :param mode: (key_enc, degree_p_enc, degree_s_enc, quality_enc, inversion_enc, root_enc)
     :return:
     """
     chords_enc = []
@@ -423,7 +423,7 @@ def _encode_key(key, mode):
     # minor keys are always encoded after major keys
     if mode == 'semitone':
         # 12 because there are 12 pitch classes
-        res = N2I[key.upper()] + (12 if key.islower() else 0)
+        res = N2I[find_enharmonic_equivalent(key).upper()] + (12 if key.islower() else 0)
     elif mode == 'fifth':
         # -1 because we don't use F-- as a key (it has triple flats) and that is the first element in the PITCH_LINE
         # + 35 because there are 35 total major keys and this is the theoretical distance between a major key

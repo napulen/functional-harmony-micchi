@@ -319,11 +319,19 @@ def compare_results(dataset, dezrann):
             'secondary': 3.97,
             'roman + inv': 25.69,
         }
+
+        temperley = {
+            'key': 66.42,
+        }
+
         for feat in features:
             if feat not in bps_paper.keys():
                 bps_paper[feat] = 'NA'
+            if feat not in temperley.keys():
+                temperley[feat] = 'NA'
 
         w.writerow(['bps-fh_paper'] + [bps_paper[feat] for feat in features])
+        w.writerow(['temperley'] + [temperley[feat] for feat in features])
 
 
 if __name__ == '__main__':
