@@ -132,8 +132,7 @@ def visualize_results(y_true, y_pred, name, mode='probabilities', pitch_spelling
             colorbar.set_ticks([-1, 0, +1])
             colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
 
-        ax.set(ylabel=FEATURES[j], xlabel='time',
-               title=f"{name} - {FEATURES[j]}")
+        ax.set(ylabel=FEATURES[j], xlabel='time', title=f"{name} - {FEATURES[j]}")
         # figManager = plt.get_current_fig_manager()
         # figManager.window.showMaximized()
         plt.show()
@@ -321,7 +320,7 @@ def compare_results(dataset, dezrann):
         }
 
         temperley = {
-            'key': 66.42,
+            'key': 67.03,
         }
 
         for feat in features:
