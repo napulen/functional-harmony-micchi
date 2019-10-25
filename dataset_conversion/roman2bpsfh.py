@@ -220,10 +220,8 @@ class Test(unittest.TestCase):
 
         base = os.path.join('..', 'data')
 
-        # corpus = 'Bach Preludes'
-        corpus = '19th_Century_Songs'
-        # corpus = 'Beethoven String Quartets (MR and DT)/'
-        # corpus = 'Mozart Sonatas/'
+        corpus = 'Bach_WTC_1_Preludes'
+        # corpus = '19th_Century_Songs'
         # corpus = 'Beethoven_4tets/'
 
         # txtPath = f'{base}{corpus}/temp/'

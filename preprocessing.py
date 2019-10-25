@@ -4,11 +4,11 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from config import VALID_TFRECORDS, TRAIN_TFRECORDS, DATA_FOLDER, FPQ, PITCH_LOW, PITCH_HIGH, HSIZE, MODE, \
-    TEST_BPS_TFRECORDS, CHUNK_SIZE
+from config import DATA_FOLDER, FPQ, HSIZE, CHUNK_SIZE, INPUT_TYPES
+from utils import setup_tfrecords_paths
 from utils_music import load_score_pitch_complete, load_chord_labels, shift_chord_labels, segment_chord_labels, \
-    encode_chords, load_score_pitch_bass, load_score_beat_strength, load_score_spelling_bass, \
-    calculate_number_transpositions_key, attach_chord_root
+    encode_chords, load_score_pitch_bass, load_score_spelling_bass, calculate_number_transpositions_key, \
+    attach_chord_root, load_score_pitch_class, load_score_spelling_complete, load_score_spelling_class
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -61,14 +61,6 @@ def check_existence_tfrecords(tfrecords):
     return tfrecords
 
 
-def preprocess_chords(chord_labels, s, ps, pp):
-    cl_shifted = shift_chord_labels(chord_labels, s, pp)
-    cl_full = attach_chord_root(cl_shifted, ps)
-    cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
-    cl_encoded = encode_chords(cl_segmented, pp)
-    return cl_encoded
-
-
 def create_feature_dictionary(piano_roll, chords, name, s=None, start=None, end=None):
     feature = {
         'name': tf.train.Feature(bytes_list=tf.train.BytesList(value=[name.encode('utf-8')])),
@@ -93,9 +85,12 @@ def create_feature_dictionary(piano_roll, chords, name, s=None, start=None, end=
     return feature
 
 
-if __name__ == '__main__':
+def create_tfrecords(input_type):
+    if input_type not in INPUT_TYPES:
+        raise ValueError('Choose a valid value for input_type')
+
     print(f"Welcome to the preprocessing routine, whose goal is to create tfrecords for your model.\n"
-          f"You are currently working in the {MODE} mode.\n"
+          f"You are currently working in the {input_type} mode.\n"
           f"Thank you for choosing algomus productions and have a nice day!\n")
 
     folders = [
@@ -103,7 +98,8 @@ if __name__ == '__main__':
         os.path.join(DATA_FOLDER, 'valid'),
         os.path.join(DATA_FOLDER, 'BPS')
     ]
-    tfrecords = [TRAIN_TFRECORDS, VALID_TFRECORDS, TEST_BPS_TFRECORDS]
+
+    tfrecords = setup_tfrecords_paths(DATA_FOLDER, input_type)
     tfrecords = check_existence_tfrecords(tfrecords)
 
     for folder, output_file in zip(folders, tfrecords):
@@ -120,59 +116,70 @@ if __name__ == '__main__':
 
                 logger.info(f"Analysing {fn}")
                 chord_labels = load_chord_labels(cf)
-                if MODE.startswith('pitch_complete'):
-                    piano_roll = load_score_pitch_complete(sf, FPQ, PITCH_LOW, PITCH_HIGH)
+                cl_full = attach_chord_root(chord_labels, input_type.startswith('spelling'))
+
+                if input_type.startswith('pitch'):
                     nl, nr = 6, 6
-                elif MODE.startswith('pitch_class'):  # beware! this must be after pitch_class_beat_strength
-                    piano_roll = load_score_pitch_bass(sf, FPQ)
-                    nl, nr = 6, 6
-                elif MODE.startswith('pitch_spelling'):
-                    piano_roll, nl_pitches, nr_pitches = load_score_spelling_bass(sf, FPQ)
+                    if 'complete' in input_type:
+                        piano_roll = load_score_pitch_complete(sf, FPQ)
+                    elif 'bass' in input_type:
+                        piano_roll = load_score_pitch_bass(sf, FPQ)
+                    elif 'class' in input_type:
+                        piano_roll = load_score_pitch_class(sf, FPQ)
+                    else:
+                        raise NotImplementedError("verify the input_type")
+                elif input_type.startswith('spelling'):
+                    if 'complete' in input_type:
+                        piano_roll, nl_pitches, nr_pitches = load_score_spelling_complete(sf, FPQ)
+                    elif 'bass' in input_type:
+                        piano_roll, nl_pitches, nr_pitches = load_score_spelling_bass(sf, FPQ)
+                    elif 'class' in input_type:
+                        piano_roll, nl_pitches, nr_pitches = load_score_spelling_class(sf, FPQ)
+                    else:
+                        raise NotImplementedError("verify the input_type")
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
                     nl = min(nl_keys, nl_pitches)
                     nr = min(nr_keys, nr_pitches)
-                    # logger.info(f'Acceptable transpositions (pitches, keys): '
-                    #             f'left {nl_pitches, nl_keys}; '
-                    #             f'right {nr_pitches - 1, nr_keys - 1}.')
                 else:
-                    raise ReferenceError("I shouldn't be here. "
-                                         "It looks like the name of some mode has been hard-coded in the wrong way.")
-                # visualize piano rolls excerpts (indexed by j)
-                # for j in range(len(piano_roll[0]) - 128, len(piano_roll[0]), 128):
-                #     visualize_piano_roll(piano_roll, i, FPQ, j, j+FPQ*16)
+                    raise NotImplementedError("verify the input_type")
 
                 # Adjust the length of the piano roll to be an exact multiple of the HSIZE
                 npad = (- piano_roll.shape[1]) % HSIZE
                 piano_roll = np.pad(piano_roll, ((0, 0), (0, npad)), 'constant', constant_values=0)
                 n_frames_analysis = piano_roll.shape[1] // HSIZE
 
+                # Pre-process the chords
+                cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
+
                 logger.info(f"Transposing {nl} times to the left and {nr - 1} to the right")
                 for s in range(-nl, nr):
-                    if output_file != TRAIN_TFRECORDS and s != 0:  # transpose only for training data
+                    if folder != folders[0] and s != 0:  # transpose only for training data
                         continue
-                    if MODE == 'pitch_class' or MODE == 'pitch_class_beat_strength':
-                        pr_shifted = np.zeros(piano_roll.shape, dtype=np.int32)
-                        for i in range(12):
-                            pr_shifted[i, :] = piano_roll[(i - s) % 12, :]  # the minus sign is correct!
-                            pr_shifted[i + 12, :] = piano_roll[((i - s) % 12) + 12, :]
-                        for i in range(24, len(pr_shifted)):
-                            pr_shifted[i, :] = piano_roll[i, :]
-                    elif MODE.startswith('pitch_spelling'):
+                    if input_type.startswith('pitch'):
+                        if 'complete' in input_type:
+                            pr_shifted = np.roll(piano_roll, shift=s, axis=0)
+                        else:
+                            pr_shifted = np.zeros(piano_roll.shape, dtype=np.int32)
+                            for i in range(12):  # transpose the main part
+                                pr_shifted[i, :] = piano_roll[(i - s) % 12, :]  # the minus sign is correct!
+                            for i in range(12, pr_shifted.shape[0]):  # transpose the bass, if present
+                                pr_shifted[i, :] = piano_roll[((i - s) % 12) + 12, :]
+                    elif input_type.startswith('spelling'):
                         # nL and nR are calculated s.t. transpositions never have three flats or sharps.
                         # this means that they will never get out of the allotted 35 slots, and
                         # general pitches and bass will never mix
                         # that's why we can safely use roll without any validation of the result
-                        pr_shifted = np.roll(piano_roll, shift=s, axis=0)
-                    elif MODE == 'midi_number':
+                        # we also don't transpose to different octaves
                         pr_shifted = np.roll(piano_roll, shift=s, axis=0)
 
-                    ps = (MODE.startswith('pitch_spelling'))
-                    pp = 'fifth' if ps else 'semitone'  # definition of proximity for pitches
-                    chords = preprocess_chords(chord_labels, s, ps, pp)
+                    pp = 'fifth' if input_type.startswith(
+                        'spelling') else 'semitone'  # definition of proximity for pitches
+                    cl_shifted = shift_chord_labels(cl_segmented, s, pp)
+                    chords = encode_chords(cl_shifted, pp)
                     if any([x is None for c in chords for x in c]):
                         logger.warning(f"skipping transposition {s}")
                         continue
-                    if MODE.endswith('cut'):
+                    if input_type.endswith('cut'):
                         start, end = 0, CHUNK_SIZE
                         while start < len(chords):
                             chord_partial = chords[start:end]
@@ -185,3 +192,8 @@ if __name__ == '__main__':
                     else:
                         feature = create_feature_dictionary(pr_shifted, chords, fn, s)
                         writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
+    return
+
+
+if __name__ == '__main__':
+    input_type = 'spelling_complete_cut'

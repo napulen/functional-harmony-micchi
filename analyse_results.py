@@ -5,9 +5,9 @@ x -> [data points] (timesteps, pitches)
 y -> [data points] [outputs] (timesteps, output_features)
 
 """
-
+import csv
 import os
-import shutil
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,11 +15,11 @@ import seaborn as sns
 import tensorflow as tf
 from tensorflow.python.keras.models import load_model
 
-from config import FEATURES, TICK_LABELS, NOTES, MODE2INPUT_SHAPE, MODE, N_VALID, \
-    PITCH_LINE, VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_TFRECORDS, VALID_TFRECORDS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, \
-    N_TEST_BPS
+from config import FEATURES, NOTES, N_VALID, PITCH_FIFTHS, \
+    VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, N_TEST_BPS, DATA_FOLDER, KEYS_PITCH, \
+    KEYS_SPELLING, QUALITY
 from load_data import create_tfrecords_dataset
-from utils import create_dezrann_annotations
+from utils import create_dezrann_annotations, setup_tfrecords_paths, find_input_type
 from utils_music import Q2I, find_root_full_output
 
 
@@ -90,6 +90,14 @@ def visualize_results(y_true, y_pred, name, mode='probabilities', pitch_spelling
         raise ValueError('mode should be either probabilities or predictions')
     cmap = sns.color_palette(['#d73027', '#f7f7f7', '#3027d7', '#000000']) if mode == 'predictions' else 'RdGy'
 
+    tick_labels = [
+        KEYS_PITCH if not pitch_spelling else KEYS_SPELLING,
+        [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
+        [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
+        QUALITY,
+        [str(x) for x in range(4)],
+        NOTES if not pitch_spelling else PITCH_FIFTHS,
+    ]
     for j in range(6):
         if j == 0:
             if pitch_spelling:
@@ -101,11 +109,11 @@ def visualize_results(y_true, y_pred, name, mode='probabilities', pitch_spelling
 
             a = y_pred[j][:, ordering]
             b = y_true[j][:, ordering]
-            yticklabels = [TICK_LABELS[j][o] for o in ordering]
+            yticklabels = [tick_labels[j][o] for o in ordering]
         else:
             a = y_pred[j]
             b = y_true[j]
-            yticklabels = TICK_LABELS[j]
+            yticklabels = tick_labels[j]
 
         if mode == 'predictions':
             a = (a == np.max(a, axis=-1, keepdims=True))
@@ -124,8 +132,7 @@ def visualize_results(y_true, y_pred, name, mode='probabilities', pitch_spelling
             colorbar.set_ticks([-1, 0, +1])
             colorbar.set_ticklabels(['False Pos', 'True', 'False Neg'])
 
-        ax.set(ylabel=FEATURES[j], xlabel='time',
-               title=f"{name} - {FEATURES[j]}")
+        ax.set(ylabel=FEATURES[j], xlabel='time', title=f"{name} - {FEATURES[j]}")
         # figManager = plt.get_current_fig_manager()
         # figManager.window.showMaximized()
         plt.show()
@@ -151,7 +158,7 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     c = np.zeros((n_classes, n_classes))
     for i, j in zip(root_pred[msk], root_der[msk]):
         c[i, j] += 1
-    labels = PITCH_LINE if n_classes == 35 else NOTES
+    labels = PITCH_FIFTHS if n_classes == 35 else NOTES
     sns.heatmap(c, xticklabels=labels, yticklabels=labels, linewidths=.5)
     plt.title(f"{name} - root prediction")
     plt.xlabel("PREDICTED")
@@ -160,97 +167,164 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
-i = 4
-model_type = 'conv_gru_reduced'
-model_name = '_'.join([model_type, MODE, str(i)])
-model_folder = os.path.join('logs', model_name)
-model = load_model(os.path.join(model_folder, model_name + '.h5'))
-model.summary()
-print(model_name)
+def analyse_results(model_name, dataset='validation', comparison=False, dezrann=True):
+    model_folder = os.path.join('logs', model_name)
+    model = load_model(os.path.join(model_folder, model_name + '.h5'))
+    if not comparison:
+        model.summary()
+        print(model_name)
 
-dataset = 'beethoven'
-if dataset == 'beethoven':
-    data_file = TEST_BPS_TFRECORDS
-    batch_size = TEST_BPS_BATCH_SIZE
-    steps = TEST_BPS_STEPS
-    n_chunks = N_TEST_BPS
-elif dataset == 'validation':
-    data_file = VALID_TFRECORDS
-    batch_size = VALID_BATCH_SIZE
-    steps = VALID_STEPS
-    n_chunks = N_VALID
-else:
-    raise ValueError("dataset should be either validation or beethoven")
+    input_type = find_input_type(model_name)
+    train, valid, test_bps = setup_tfrecords_paths(DATA_FOLDER, input_type)
+    ps = input_type.startswith('spelling')
 
-test_data = create_tfrecords_dataset(data_file, batch_size, shuffle_buffer=1, n=MODE2INPUT_SHAPE[MODE])
-""" Retrieve the true labels """
-piano_rolls, test_true, timesteps, file_names = [], [], [], []  # test_true structure = [n_chunks][LABELS](ts, classes)
-test_data_iter = test_data.make_one_shot_iterator()
-(x, m, fn, s), y = test_data_iter.get_next()
-with tf.Session() as sess:
-    for i in range(steps):
-        file_name, piano_roll, labels = sess.run(
-            [fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
-        # all elements in the batch have different length, so we have to find the correct number of ts for each
-        [timesteps.append(np.sum(d, dtype=int)) for d in labels[0]]  # every label has a single 1 per timestep
-        [piano_rolls.append(d[:4 * ts]) for d, ts in zip(piano_roll, timesteps)]
-        [file_names.append(fn[0].decode('utf-8')) for fn in file_name]
-        for e in range(batch_size):  # e is the element in the batch
-            test_true.append([d[e, :timesteps[e + i * batch_size], :] for d in
-                              labels])  # appends something of shape (timesteps[e], output_features)
-# test_true structure = [n_chunks][LABELS](ts, classes)
+    if dataset == 'beethoven':
+        data_file = test_bps
+        batch_size = TEST_BPS_BATCH_SIZE
+        steps = TEST_BPS_STEPS
+        n_chunks = N_TEST_BPS
+    elif dataset == 'validation':
+        data_file = valid
+        batch_size = VALID_BATCH_SIZE
+        steps = VALID_STEPS
+        n_chunks = N_VALID
+    else:
+        raise ValueError("dataset should be either validation or beethoven")
 
-""" Predict new labels """
-# test_pred = []  # It will have shape: [pieces][features](length of sonata, feature size)
-temp = model.predict(test_data, steps=steps, verbose=True)
-test_pred = [[d[e, :timesteps[e]] for d in temp] for e in range(n_chunks)]
+    test_data = create_tfrecords_dataset(data_file, batch_size, shuffle_buffer=1, input_type=input_type)
 
-""" Visualize data """
-for pr, y_true, y_pred, ts, fn in zip(piano_rolls, test_true, test_pred, timesteps, file_names):
-    # visualize_piano_roll(pr, fn)
-    # visualize_results(y_true, y_pred, fn, mode='predictions')
-    # visualize_results(y_true, y_pred, fn, mode='probabilities')
-    # visualize_chord_changes(y_true, y_pred, fn, ts, True)
-    # visualize_chord_changes(y_true, y_pred, fn, ts, False)
-    # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=CLASSES_ROOT, name=fn)
-    pass
+    """ Retrieve the true labels """
+    piano_rolls, test_true, timesteps, file_names = [], [], [], []  # test_true structure = [n_chunks][LABELS](ts, classes)
+    test_data_iter = test_data.make_one_shot_iterator()
+    (x, m, fn, s), y = test_data_iter.get_next()
+    with tf.Session() as sess:
+        for i in range(steps):
+            file_name, piano_roll, labels = sess.run(
+                [fn, x, y])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
+            # all elements in the batch have different length, so we have to find the correct number of ts for each
+            [timesteps.append(np.sum(d, dtype=int)) for d in labels[0]]  # every label has a single 1 per timestep
+            [piano_rolls.append(d[:4 * ts]) for d, ts in zip(piano_roll, timesteps)]
+            [file_names.append(fn[0].decode('utf-8')) for fn in file_name]
+            for e in range(batch_size):  # e is the element in the batch, append shape (timesteps[j], output_features)
+                test_true.append([d[e, :timesteps[e + i * batch_size], :] for d in labels])
+    # test_true structure = [n_chunks][LABELS](ts, classes)
 
-""" Create Dezrann annotations """
-create_dezrann_annotations(test_true, test_pred, timesteps, file_names, model_folder=model_folder)
+    """ Predict new labels """
+    # test_pred = []  # It will have shape: [pieces][features](length of sonata, feature size)
+    temp = model.predict(test_data, steps=steps, verbose=True)
+    test_pred = [[d[e, :timesteps[e]] for d in temp] for e in range(n_chunks)]
 
-"""" Calculate accuracy etc. """
-roman_tp, root_tp = 0, 0
-root_coherence = 0
-degree_tp, secondary_tp, secondary_total, d7_tp, d7_total = 0, 0, 0, 0, 0
-total_predictions = np.sum(timesteps)  # one prediction per timestep
-true_positives = np.zeros(6)  # true positives for each separate feature
-for step in range(n_chunks):
-    y_true, y_pred = test_true[step], test_pred[step]  # shape: [outputs], (timestep, output features)
-    correct = np.array([check_predictions(y_true, y_pred, j) for j in range(6)])  # shape: (output, timestep)
-    true_positives += np.sum(correct, axis=-1)  # true positives per every output
-    roman_tp += np.sum(np.prod(correct[:4], axis=0), axis=-1)
-    degree_tp += np.sum(np.prod(correct[1:3], axis=0), axis=-1)
-    secondary_msk = (np.argmax(y_true[1], axis=-1) != 0)  # only chords on secondary degrees
-    secondary_total += sum(secondary_msk)
-    secondary_tp += np.sum(np.prod(correct[1:3], axis=0)[secondary_msk], axis=-1)
-    root_der = find_root_full_output(y_pred)
-    root_coherence += np.sum(root_der == np.argmax(y_pred[5], axis=-1))  # if predicted and derived root are the same
-    root_tp += np.sum(root_der == np.argmax(y_true[5], axis=-1))
-    d7_msk = (np.argmax(y_true[3], axis=-1) == Q2I['d7'])
-    d7_total += sum(d7_msk)
-    d7_tp += np.sum(np.prod(correct[:4], axis=0)[d7_msk], axis=-1)
+    """ Visualize data """
+    if not comparison:
+        for pr, y_true, y_pred, ts, fn in zip(piano_rolls, test_true, test_pred, timesteps, file_names):
+            # visualize_piano_roll(pr, fn)
+            # visualize_results(y_true, y_pred, fn, mode='predictions', pitch_spelling=input_type.startswith('spelling'))
+            # visualize_results(y_true, y_pred, fn, mode='probabilities', pitch_spelling=input_type.startswith('spelling'))
+            # visualize_chord_changes(y_true, y_pred, fn, ts, True)
+            # visualize_chord_changes(y_true, y_pred, fn, ts, False)
+            # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=CLASSES_ROOT, name=fn)
+            pass
 
-acc = true_positives / total_predictions
-degree_acc = degree_tp / total_predictions
-secondary_acc = secondary_tp / secondary_total
-roman_acc = roman_tp / total_predictions
-print(f"accuracy for the different items:")
-for f, a in zip(FEATURES, acc):
-    print(f"{f:10} : {a:.4f}")
-print(f'')
-print(f'degree        : {degree_tp / total_predictions:.4f}')
-print(f'secondary     : {secondary_tp / secondary_total:.4f}')
-print(f'derived root  : {root_tp / total_predictions:.4f}')
-print(f"roman no inv  : {roman_acc:.4f}")
-print(f'root_coherence: {root_coherence / total_predictions:.4f}')
-print(f'd7 no inv     : {d7_tp / d7_total:.4f}')
+    """ Create Dezrann annotations """
+    if dezrann:
+        create_dezrann_annotations(test_pred, test_true, timesteps, file_names,
+                                   output_folder=os.path.join(model_folder, 'analyses'))
+
+    """" Calculate accuracy etc. """
+    roman_tp, roman_inv_tp, root_tp = 0, 0, 0
+    root_coherence = 0
+    degree_tp, secondary_tp, secondary_total, d7_tp, d7_total = 0, 0, 0, 0, 0
+    total_predictions = np.sum(timesteps)  # one prediction per timestep
+    true_positives = np.zeros(6)  # true positives for each separate feature
+    for step in range(n_chunks):
+        y_true, y_pred = test_true[step], test_pred[step]  # shape: [outputs], (timestep, output features)
+        correct = np.array([check_predictions(y_true, y_pred, j) for j in range(6)])  # shape: (output, timestep)
+        true_positives += np.sum(correct, axis=-1)  # true positives per every output
+        roman_tp += np.sum(np.prod(correct[:4], axis=0), axis=-1)
+        roman_inv_tp += np.sum(np.prod(correct[:5], axis=0), axis=-1)
+        degree_tp += np.sum(np.prod(correct[1:3], axis=0), axis=-1)
+        secondary_msk = (np.argmax(y_true[1], axis=-1) != 0)  # only chords on secondary degrees
+        secondary_total += sum(secondary_msk)
+        secondary_tp += np.sum(np.prod(correct[1:3], axis=0)[secondary_msk], axis=-1)
+        root_der = find_root_full_output(y_pred, pitch_spelling=ps)
+        root_coherence += np.sum(
+            root_der == np.argmax(y_pred[5], axis=-1))  # if predicted and derived root are the same
+        root_tp += np.sum(root_der == np.argmax(y_true[5], axis=-1))
+        d7_msk = (np.argmax(y_true[3], axis=-1) == Q2I['d7'])
+        d7_total += sum(d7_msk)
+        d7_tp += np.sum(np.prod(correct[:4], axis=0)[d7_msk], axis=-1)
+
+    acc = 100 * true_positives / total_predictions
+    derived_features = ['degree', 'secondary', 'derived root', 'roman', 'roman + inv', 'root coherence', 'd7 no inv']
+    keys = FEATURES + derived_features
+    values = [a for a in acc] + [
+        100 * degree_tp / total_predictions,
+        100 * secondary_tp / secondary_total,
+        100 * root_tp / total_predictions,
+        100 * roman_tp / total_predictions,
+        100 * roman_inv_tp / total_predictions,
+        100 * root_coherence / total_predictions,
+        100 * d7_tp / d7_total,
+    ]
+    accuracies = dict(zip(keys, values))
+    if not comparison:
+        print(f"accuracy for the different items:")
+        for k, v in accuracies.items():
+            print(f'{k:15}: {v:2.2f} %')
+
+    return accuracies
+
+
+def compare_results(dataset, dezrann):
+    """
+    Check all the models in the log folder and derive their accuracy scores, then write a comparison table to file
+
+    :param dataset: either beethoven (all 32 sonatas) or validation (7 sonatas not in training set)
+    :param dezrann: boolean, whether to write dezrann analyses to file
+    :return:
+    """
+    models = sorted(os.listdir('logs'))
+    n = len(models)
+    results = []
+    for i, model_name in enumerate(models):
+        # if model_name != 'conv_gru_pitch_bass_cut_1':
+        #     continue
+        print(f"model {i + 1} out of {n} - {model_name}")
+        accuracies = analyse_results(model_name, dataset=dataset, comparison=True, dezrann=dezrann)
+        results.append((model_name, accuracies))
+
+    features = list(results[0][1].keys())
+    file_path = f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv'
+    with open(file_path, 'w+') as f:
+        w = csv.writer(f)
+        w.writerow(['model name'] + features)
+        for model_name, accuracies in results:
+            w.writerow([model_name] + [round(accuracies[feat], 2) for feat in features])
+        bps_paper = {
+            'key': 66.65,
+            'quality': 60.59,
+            'inversion': 59.1,
+            'degree': 51.79,
+            'secondary': 3.97,
+            'roman + inv': 25.69,
+        }
+
+        temperley = {
+            'key': 67.03,
+        }
+
+        for feat in features:
+            if feat not in bps_paper.keys():
+                bps_paper[feat] = 'NA'
+            if feat not in temperley.keys():
+                temperley[feat] = 'NA'
+
+        w.writerow(['bps-fh_paper'] + [bps_paper[feat] for feat in features])
+        w.writerow(['temperley'] + [temperley[feat] for feat in features])
+
+
+if __name__ == '__main__':
+    # dataset = 'beethoven'
+    dataset = 'validation'
+    compare_results(dataset=dataset, dezrann=True)
+    # analyse_results('conv_gru_spelling_bass_cut_1')

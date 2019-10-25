@@ -21,22 +21,21 @@ import numpy as np
 import seaborn as sns
 from deprecated import deprecated
 from music21 import converter, note
-from music21.chord import Chord
 from music21.repeat import ExpanderException
 from numpy.lib.recfunctions import append_fields
 
-from config import PITCH_LOW, NOTES, PITCH_LINE, QUALITY, SCALES, KEYS_SPELLING
+from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
 Q2I = dict([(e[1], e[0]) for e in enumerate(QUALITY)])
-P2I = dict([(e[1], e[0]) for e in enumerate(PITCH_LINE)])
-K2I = dict([(e[1], e[0]) for e in enumerate(KEYS_SPELLING)])
+PF2I = dict([(e[1], e[0]) for e in enumerate(PITCH_FIFTHS)])
+PS2I = dict([(e[1], e[0]) for e in enumerate(PITCH_SEMITONES)])
+PF2PS = dict([(n, PITCH_SEMITONES.index(p)) for n, p in enumerate(PITCH_FIFTHS)])
+PS2PF = dict([(n, PITCH_FIFTHS.index(p)) for n, p in enumerate(PITCH_SEMITONES)])
 
 DT_READ = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
            ('inversion', 'int')]  # datatype for reading data from BPS-FH
-DT_FINAL = [('t', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'), ('inversion', 'int'),
-            ('root', '<U10')]  # final datatype for the chords annotation we use before encoding
 
 
 class HarmonicAnalysisError(Exception):
@@ -91,8 +90,39 @@ def load_score_beat_strength(score_file, fpq):
     return beat_strength
 
 
-""" Load the score for the pitch spelling representation """
-def load_score_spelling_bass(score_file, fpq):
+####################
+# Load the score for the pitch spelling representation
+####################
+
+def load_score_spelling_complete(score_file, fpq, mode='fifth'):
+    if mode not in ['fifth', 'semitone']:
+        raise NotImplementedError("Only modes fifth and semitone are accepted")
+    score, n_frames = _load_score(score_file, fpq)
+    piano_roll = np.zeros(shape=(35 * 7, n_frames), dtype=np.int32)
+    flattest, sharpest = 35, 0
+    for n in score.flat.notes:
+        notes = np.array([x for x in n] if n.isChord else [n])
+        start = int(round(n.offset * fpq))
+        end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
+        time = np.arange(start, end)
+        for i, note in enumerate(notes):
+            pitch_name = note.pitch.name
+            octave = note.pitch.octave - 1
+            if octave < 0 or octave >= 7:  # we keep just 7 octaves in total
+                print("skipped a note")
+                continue
+            idx = PF2I[pitch_name] if mode == 'fifth' else PS2I[pitch_name]
+            flattest = min(flattest, idx if mode == 'fifth' else PS2PF[idx])
+            sharpest = max(sharpest, idx if mode == 'fifth' else PS2PF[idx])
+            piano_roll[idx + 35 * octave, time] = 1
+
+    num_flatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
+    num_sharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
+    return piano_roll, num_flatwards, num_sharpwards
+
+
+@deprecated(reason="Use the version without chordify, this one is here just for testing")
+def load_score_spelling_bass_chordify(score_file, fpq):
     score, n_frames = _load_score(score_file, fpq)
     score = score.chordify()  # this is very comfy but super slow (several seconds on long pieces)
     piano_roll = np.zeros(shape=(35 * 2, n_frames), dtype=np.int32)
@@ -103,7 +133,7 @@ def load_score_spelling_bass(score_file, fpq):
         time = np.arange(start, end)
         for i, note in enumerate(chord):
             nn = note.pitch.name
-            idx = P2I[nn]
+            idx = PF2I[nn]
             flattest = min(flattest, idx)
             sharpest = max(sharpest, idx)
             piano_roll[idx, time] = 1
@@ -112,14 +142,10 @@ def load_score_spelling_bass(score_file, fpq):
 
     numFlatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
     numSharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
-    # Show the result
-    # sns.heatmap(piano_roll)
-    # plt.show()
     return piano_roll, numFlatwards, numSharpwards
 
 
-@deprecated(reason="Really, you shouldn't use this. It doesn't work properly yet.")
-def load_score_spelling_bass_2(score_file, fpq):
+def load_score_spelling_bass(score_file, fpq):
     """
      NOTE: DO NOT USE THIS!! IT DOESN"T WORK YET
      An attempt at getting rid of the very slow chordify, still not working because the bass is not properly done
@@ -128,46 +154,56 @@ def load_score_spelling_bass_2(score_file, fpq):
     :param fpq:
     :return:
     """
-
-    score, n_frames = _load_score(score_file, fpq)
+    # Encode with an ordering that is comfortable for finding out the bass
+    pr_complete, num_flatwards, num_sharpwards = load_score_spelling_complete(score_file, fpq, mode='semitone')
+    n_frames = pr_complete.shape[1]
     piano_roll = np.zeros(shape=(35 * 2, n_frames), dtype=np.int32)
+
+    # associate every note with its note name spelling
+    p, t = pr_complete.nonzero()
+    pf = np.vectorize(PS2PF.get)(p % 35)
+    piano_roll[pf, t] = 1  # go to fifth ordering, that is comfortable for transpositions
+
+    # store information on the bass
+    b = np.argmax(pr_complete, axis=0)
+    v = np.max(pr_complete, axis=0)
+    t = np.arange(n_frames)
+    bf = np.vectorize(PS2PF.get)(b % 35) + 35
+    piano_roll[bf, t] = v
+    return piano_roll, num_flatwards, num_sharpwards
+
+
+def load_score_spelling_class(score_file, fpq):
+    score, n_frames = _load_score(score_file, fpq)
+    piano_roll = np.zeros(shape=(35, n_frames), dtype=np.int32)
     flattest, sharpest = 35, 0
     for n in score.flat.notes:
-        pitches = np.array([x for x in n] if n.isChord else [n])
-        i_bass = np.argmin([p.pitch.midi for p in pitches])
+        pitch_names = np.array([x.pitch.name for x in n] if n.isChord else [n.pitch.name])
         start = int(round(n.offset * fpq))
         end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
         time = np.arange(start, end)
-        for i, note in enumerate(pitches):
-            nn = note.pitch.name
-            idx = P2I[nn]
+        for pn in pitch_names:
+            idx = PF2I[pn]
             flattest = min(flattest, idx)
             sharpest = max(sharpest, idx)
             piano_roll[idx, time] = 1
-            if i == i_bass:
-                piano_roll[idx + 35, time] = 1
 
-    # v = np.max(piano_roll, axis=0)
-    # p = np.argmax(piano_roll, axis=0)
-    # for t in range(n_frames):
-    #     piano_roll[p[t] + 35, t] = v[t]
-    numFlatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
-    numSharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
-    # Show the result
-    # sns.heatmap(piano_roll)
-    # plt.show()
-    return piano_roll, numFlatwards, numSharpwards
+    num_flatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
+    num_sharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
+    return piano_roll, num_flatwards, num_sharpwards
 
 
-""" Load the score for the midi pitch representation """
-def load_score_pitch_complete(score_file, fpq, pitch_low=0, pitch_high=128):
+####################
+# Load the score for the midi pitch representation
+####################
+
+
+def load_score_pitch_complete(score_file, fpq):
     """
     Load notes in each piece, which is then represented as piano roll.
-    :param pitch_low:
-    :param pitch_high:
     :param score_file: the path to the file to analyse
     :param fpq: frames per quarter note, default =  8 (that is, 32th note as 1 unit in piano roll)
-    :return: piano_roll
+    :return: piano_roll, 128 different pitches
     """
     score, n_frames = _load_score(score_file, fpq)
     piano_roll = np.zeros(shape=(128, n_frames), dtype=np.int32)  # MIDI numbers are between 1 and 128
@@ -178,10 +214,11 @@ def load_score_pitch_complete(score_file, fpq, pitch_low=0, pitch_high=128):
         time = np.arange(start, end)
         for p in pitches:  # add notes to piano_roll
             piano_roll[p, time] = 1
-    return piano_roll[pitch_low:pitch_high]
+    return piano_roll[24:108]  # from C1 to B7 included
 
 
-def load_score_pitch_bass(score_file, fpq):
+@deprecated(reason="Use the version without chordify, this one is here just for testing")
+def load_score_pitch_bass_chordify(score_file, fpq):
     """
     Load a score and create a piano roll with 12 pitch class + 12 bass
     :param score_file:
@@ -199,6 +236,30 @@ def load_score_pitch_bass(score_file, fpq):
         for p in pitches:  # add notes to piano_roll
             piano_roll[p, time] = 1
         piano_roll[pitches[0] + 12, time] = 1  # add the bass
+    return piano_roll
+
+
+def load_score_pitch_bass(score_file, fpq):
+    """
+    Load a score and create a piano roll with 12 pitch class + 12 bass
+    :param score_file:
+    :param fpq:
+    :return:
+    """
+    pr_complete = load_score_pitch_complete(score_file, fpq)
+    n_frames = pr_complete.shape[1]
+    piano_roll = np.zeros(shape=(12 * 2, n_frames), dtype=np.int32)
+
+    # associate every note with its class
+    p, t = pr_complete.nonzero()
+    piano_roll[p % 12, t] = 1
+
+    # store information on the bass
+    p = np.argmax(pr_complete, axis=0)
+    v = np.max(pr_complete, axis=0)
+    t = np.arange(n_frames)
+    piano_roll[p % 12 + 12, t] = v
+
     return piano_roll
 
 
@@ -242,11 +303,9 @@ def load_score_pitch_class(score_file, fpq):
     return piano_roll
 
 
-def visualize_piano_roll(pr, sonata, fpq, start=None, end=None):
-    p = sns.heatmap(pr[::-1, start:end])
-    plt.title(f'Sonata {sonata}, quarters (start, end) = {start / fpq, end / fpq}')
-    plt.show(p)
-    return
+####################
+# Load the chord labels
+####################
 
 
 def load_chord_labels(chords_file):
@@ -272,21 +331,23 @@ def shift_chord_labels(chord_labels, s, mode='semitone'):
     :param mode: can be either 'semitone' or 'fifth' and describes how transpositions are done.
     :return:
     """
-    new_labels = chord_labels.copy()
 
-    for i in range(len(new_labels)):
-        key = chord_labels[i]['key']
+    def shift_note(note):
         if mode == 'semitone':
-            # TODO: This never uses flats for keys!
-            key = find_enharmonic_equivalent(key)
-            idx = ((N2I[key[0].upper()] + s - 1) if ('-' in key) else (N2I[key.upper()] + s)) % 12
-            new_key = NOTES[idx] if key.isupper() else NOTES[idx].lower()
+            # BEWARE: this never uses flats!
+            note = find_enharmonic_equivalent(note)
+            idx = ((N2I[note[0].upper()] + s - 1) if ('-' in note) else (N2I[note.upper()] + s)) % 12
+            shifted_note = NOTES[idx] if note.isupper() else NOTES[idx].lower()
         elif mode == 'fifth':
-            idx = P2I[key.upper()] + s
-            new_key = PITCH_LINE[idx] if key.isupper() else PITCH_LINE[idx].lower()
+            idx = PF2I[note.upper()] + s
+            if idx >= len(PITCH_FIFTHS):
+                return None
+            shifted_note = PITCH_FIFTHS[idx] if note.isupper() else PITCH_FIFTHS[idx].lower()
         else:
             raise ValueError('mode should be either "semitone" or "fifth"')
-        new_labels[i]['key'] = new_key
+        return shifted_note
+
+    new_labels = [[c[0], shift_note(c[1]), c[2], c[3], c[4], shift_note(c[5])] for c in chord_labels]
     return new_labels
 
 
@@ -324,10 +385,9 @@ def segment_chord_labels(chord_labels, n_frames, hsize=4, fpq=8):
             print(
                 f"More than one chord at frame {n}, time {seg_time, seg_time + hsize / fpq}:\n{[l for l in labels_found]}")
         label = labels_found[0]
-        label_array = np.array((seg_time, label['key'], label['degree'], label['quality'],
-                                label['inversion'], label['root']), dtype=DT_FINAL)
         for _ in range(k):
-            labels.append(label_array)
+            labels.append(
+                (seg_time, label['key'], label['degree'], label['quality'], label['inversion'], label['root']))
         k = 1
     return labels
 
@@ -336,51 +396,23 @@ def encode_chords(chords, mode='semitone'):
     """
     Associate every chord element with an integer that represents its category.
 
-    :param chords: in the namedtuple format
-    :param mode:
+    :param chords: [('t', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'), ('inversion', 'int'), ('root', '<U10')]
+    :param mode: (key_enc, degree_p_enc, degree_s_enc, quality_enc, inversion_enc, root_enc)
     :return:
     """
     chords_enc = []
     n = 0
     for chord in chords:
-        key_enc = _encode_key(str(chord['key']), mode)
-        degree_p_enc, degree_s_enc = _encode_degree(str(chord['degree']))
-        quality_enc = _encode_quality(str(chord['quality']))
-        inversion_enc = int(chord['inversion'])
-        root_enc = _encode_root(str(chord['root']), mode, chord)
+        key_enc = _encode_key(str(chord[1]), mode)
+        degree_p_enc, degree_s_enc = _encode_degree(str(chord[2]))
+        quality_enc = _encode_quality(str(chord[3]))
+        inversion_enc = int(chord[4])
+        root_enc = _encode_root(str(chord[5]), mode, chord)
 
         chords_enc.append((key_enc, degree_p_enc, degree_s_enc, quality_enc, inversion_enc, root_enc))
         n += 1
 
     return chords_enc
-
-
-def find_bass_notes(piano_roll):
-    """
-    Given a piano roll, return the pitch class of the lowest note every 4 time-step.
-    The output encoding is C = 0, C# = 1, ... B = 11
-
-    :param piano_roll:
-    :return:
-    """
-    bass = np.argmax(piano_roll, axis=0)
-    bass = np.array([np.min(bass[4 * i:4 * (i + 1)]) for i in range(len(bass) // 4)])
-    return bass + PITCH_LOW - 60  # C4 is the midi pitch 60
-
-
-def calculate_number_transpositions_key(chords):
-    keys = set([c['key'] for c in chords])
-    nl, nr = 35, 35  # number of transpositions to the left or to the right
-    for k in keys:
-        i = P2I[k.upper()]
-        if k.isupper():
-            l = i - 1  # we don't use the left-most major key (F--)
-            r = 35 - i - 5  # we don't use the 5 right-most major keys AND it is the endpoint of a range
-        else:
-            l = i - 4  # we don't use the 4 left-most minor keys (yes! different from the major case!)
-            r = 35 - i - 5  # we don't use the 5 right-most minor keys AND it is the endpoint of a range
-        nl, nr = min(nl, l), min(nr, r)
-    return nl, nr
 
 
 def _encode_key(key, mode):
@@ -391,13 +423,13 @@ def _encode_key(key, mode):
     # minor keys are always encoded after major keys
     if mode == 'semitone':
         # 12 because there are 12 pitch classes
-        res = N2I[key.upper()] + (12 if key.islower() else 0)
+        res = N2I[find_enharmonic_equivalent(key).upper()] + (12 if key.islower() else 0)
     elif mode == 'fifth':
         # -1 because we don't use F-- as a key (it has triple flats) and that is the first element in the PITCH_LINE
         # + 35 because there are 35 total major keys and this is the theoretical distance between a major key
         # and its minor equivalent if all keys were used
         # -9 because we don't use the last 5 major keys (triple sharps) and the first 4 minor keys (triple flats)
-        res = P2I[key.upper()] - 1 + (35 - 9 if key.islower() else 0)
+        res = PF2I[key.upper()] - 1 + (35 - 9 if key.islower() else 0)
     else:
         raise ValueError("_encode_key: Mode not recognized")
     return res
@@ -413,7 +445,7 @@ def _encode_root(root, mode, chord):
             # raise KeyError(f'{root} for chord {chord}')
     elif mode == 'fifth':
         try:
-            res = P2I[root]
+            res = PF2I[root]
         except KeyError:
             print(f'invalid root {root} for chord {chord}')
             res = None
@@ -561,7 +593,7 @@ def find_root_full_output(y_pred, pitch_spelling=True):
         den, den_alt = dd % 7, dd // 7
         num, num_alt = dn % 7, dn // 7
 
-        key = KEYS_SPELLING[key_enc]
+        key = KEYS_SPELLING[key_enc] if pitch_spelling else KEYS_PITCH[key_enc]
         key2 = SCALES[key][den]  # secondary key
         if (key.isupper() and den in [1, 2, 5, 6]) or (key.islower() and den in [0, 1, 3, 6]):
             key2 = key2.lower()
@@ -573,7 +605,7 @@ def find_root_full_output(y_pred, pitch_spelling=True):
         try:
             root = SCALES[key2][num]
         except KeyError:
-            print(f'secondary key {key2} for chord {dd, dn} in key of {key}')
+            print(f'secondary key {key2} for degree {dn} / {dd} in key of {key}')
             root_pred.append(None)
             continue
 
@@ -583,16 +615,48 @@ def find_root_full_output(y_pred, pitch_spelling=True):
             root = _flat_alteration(root)
 
         if not pitch_spelling:
-            root = find_enharmonic_equivalent(P2I[root])
-        root_pred.append(P2I[root])
+            root = find_enharmonic_equivalent(root)
+            root_pred.append(N2I[root])
+        else:
+            try:
+                pred = PF2I[root]
+            except KeyError:
+                pred = -1
+            root_pred.append(pred)
 
     return np.array(root_pred)
 
 
+def visualize_piano_roll(pr, sonata, fpq, start=None, end=None):
+    p = sns.heatmap(pr[::-1, start:end])
+    plt.title(f'Sonata {sonata}, quarters (start, end) = {start / fpq, end / fpq}')
+    plt.show(p)
+    return
+
+
+def calculate_number_transpositions_key(chords):
+    keys = set([c['key'] for c in chords])
+    nl, nr = 35, 35  # number of transpositions to the left or to the right
+    for k in keys:
+        i = PF2I[k.upper()]
+        if k.isupper():
+            l = i - 1  # we don't use the left-most major key (F--)
+            r = 35 - i - 5  # we don't use the 5 right-most major keys
+        else:
+            l = i - 4  # we don't use the 4 left-most minor keys (yes! different from the major case!)
+            r = 35 - i - 5  # we don't use the 5 right-most minor keys
+        nl, nr = min(nl, l), min(nr, r)
+    return nl, nr
+
+
 if __name__ == '__main__':
     # score_file = '/home/gianluca/PycharmProjects/functional-harmony/test_data/score.mxl'
-    score_file = '/home/gianluca/PycharmProjects/functional-harmony/data/test-bps/scores/bps_01_01.mxl'
-    fpq = 8
-    pr1 = load_score_pitch_class(score_file, fpq)
-    pr2 = load_score_pitch_class_2(score_file, fpq)
-    print('hi')
+    score_file = '/home/gianluca/PycharmProjects/functional-harmony/test_data/bps_01_01.mxl'
+    # fpq = 8
+    # pr, _, _ = load_score_spelling_bass(score_file, fpq)
+    # pr2, _, _ = load_score_spelling_bass_chordify(score_file, fpq)
+    # sns.heatmap(pr2 - pr)
+    # plt.xticks(np.arange(8) * 32 + 8, np.arange(8) + 1)
+    # plt.yticks(np.arange(70) + 0.5, PITCH_FIFTHS + ['b ' + p for p in PITCH_FIFTHS])
+    # plt.show()
+    # print('hi')

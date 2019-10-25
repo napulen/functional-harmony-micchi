@@ -8,7 +8,7 @@ from tensorflow.python.keras.callbacks import Callback
 from tensorflow.python.keras.layers import Conv1D, Concatenate, MaxPooling1D, TimeDistributed, Dense, Lambda, \
     BatchNormalization, Masking, GRU, Bidirectional, Activation
 
-from config import CLASSES_KEY, CLASSES_DEGREE, CLASSES_QUALITY, CLASSES_INVERSION, CLASSES_ROOT
+from config import INPUT_TYPE2INPUT_SHAPE
 
 
 class TimeOut(Callback):
@@ -33,7 +33,7 @@ def DenseNetLayer(x, l, k, n=1):
     :param training: passed to the batch normalization layers
     :return:
     """
-    with name_scope(f"denseNet_{n}"):
+    with name_scope(f"denseNet_{n}") as scope:
         for _ in range(l):
             y = BatchNormalization()(x)
             y = Activation('relu')(y)
@@ -45,21 +45,20 @@ def DenseNetLayer(x, l, k, n=1):
     return x
 
 
-def PoolingLayer(x, k, n=1):
+def PoolingLayer(x, k, s, n=1):
     """
     Implementation of a DenseNetLayer
     :param x: input
-    :param l: number of elementary blocks in the layer
-    :param k: features generated at every block
-    :param n: unique identifier of the DenseNetLayer
-    :param training: passed to the batch normalization layers
+    :param k: feature maps before batch_norm
+    :param s: stride for the Pooling Layer
+    :param n: unique identifier of the Layer
     :return:
     """
-    with name_scope(f"poolingLayer_{n}"):
+    with name_scope(f"poolingLayer_{n}") as scope:
         y = BatchNormalization()(x)
         y = Activation('relu')(y)
         y = Conv1D(filters=k, kernel_size=1, padding='same', data_format='channels_last')(y)
-        y = MaxPooling1D(2, 2, padding='same', data_format='channels_last')(y)
+        y = MaxPooling1D(s, s, padding='same', data_format='channels_last')(y)
     return y
 
 
@@ -78,56 +77,67 @@ def DilatedConvLayer(x, l, k):
     return x
 
 
-def MultiTaskLayer(x, derive_root):
-    o0 = TimeDistributed(Dense(CLASSES_KEY, activation='softmax'), name='key')(x)
-    o1 = TimeDistributed(Dense(CLASSES_DEGREE, activation='softmax'), name='degree_1')(x)
-    o2 = TimeDistributed(Dense(CLASSES_DEGREE, activation='softmax'), name='degree_2')(x)
-    o3 = TimeDistributed(Dense(CLASSES_QUALITY, activation='softmax'), name='quality')(x)
-    o4 = TimeDistributed(Dense(CLASSES_INVERSION, activation='softmax'), name='inversion')(x)
-    if derive_root:
-        o5 = Lambda(find_root_no_spelling, name='root')([o0, o1, o2])
+def MultiTaskLayer(x, derive_root, input_type):
+    classes_key = 55 if input_type.startswith('spelling') else 24  # Major keys: 0-11, Minor keys: 12-23
+    classes_degree = 21  # 7 degrees * 3: regular, diminished, augmented
+    classes_root = 35 if input_type.startswith('spelling') else 12  # the twelve notes without enharmonic duplicates
+    classes_quality = 12  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6', 'It+6', 'Fr+6']
+    classes_inversion = 4  # root position, 1st, 2nd, and 3rd inversion (the last only for seventh chords)
+
+    o0 = TimeDistributed(Dense(classes_key, activation='softmax'), name='key')(x)
+    o1 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_1')(x)
+    o2 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_2')(x)
+    o3 = TimeDistributed(Dense(classes_quality, activation='softmax'), name='quality')(x)
+    o4 = TimeDistributed(Dense(classes_inversion, activation='softmax'), name='inversion')(x)
+    if derive_root and input_type.startswith('pitch'):
+        o5 = Lambda(find_root_pitch, name='root')([o0, o1, o2])
     else:
-        o5 = TimeDistributed(Dense(CLASSES_ROOT, activation='softmax'), name='root')(x)
+        o5 = TimeDistributed(Dense(classes_root, activation='softmax'), name='root')(x)
     return [o0, o1, o2, o3, o4, o5]
 
 
-def create_model(name, n, model_type, derive_root=False):
+def create_model(name, model_type, input_type, derive_root=False):
     """
 
     :param name:
-    :param n: number of input features
+    :param model_type:
+    :param input_type:
     :param derive_root:
     :return:
     """
-    if model_type not in ['conv_dil_reduced', 'conv_gru_reduced']:
+    if model_type not in ['conv_dil', 'conv_gru', 'gru']:
         raise ValueError("model_type not supported, check its value")
 
+    n = INPUT_TYPE2INPUT_SHAPE[input_type]
     notes = Input(shape=(None, n), name="piano_roll_input")
     mask = Input(shape=(None, 1), name="mask_input")
-    x = DenseNetLayer(notes, 4, 5, n=1)
-    x = PoolingLayer(x, 32, n=1)
-    x = DenseNetLayer(x, 4, 5, n=2)
-    x = PoolingLayer(x, 48, n=1)
 
-    if model_type == 'conv_dil_reduced':
+    if 'conv' in model_type:
+        x = DenseNetLayer(notes, 4, 5, n=1)
+        x = PoolingLayer(x, 32, 2, n=1)
+        x = DenseNetLayer(x, 4, 5, n=2)
+        x = PoolingLayer(x, 48, 2, n=1)
+    else:
+        x = MaxPooling1D(4, 4, padding='same', data_format='channels_last')(notes)
+
+    if 'dil' in model_type:
         x = DilatedConvLayer(x, 4, 64)  # total context: 3**4 = 81 eight notes, typically 5 measures before and after
 
     # Super-ugly hack otherwise tensorflow can't save the model, see https://stackoverflow.com/a/55229794/5048010
     x = Lambda(lambda t: __import__('tensorflow').multiply(*t), name='apply_mask')((x, mask))
     x = Masking()(x)  # is this useless?
 
-    if model_type == 'conv_gru_reduced':
+    if 'gru' in model_type:
         x = Bidirectional(GRU(64, return_sequences=True, dropout=0.3))(x)
 
     x = TimeDistributed(Dense(64, activation='tanh'))(x)
-    y = MultiTaskLayer(x, derive_root)
+    y = MultiTaskLayer(x, derive_root, input_type)
     model = Model(inputs=[notes, mask], outputs=y, name=name)
     return model
 
 
-def find_root_no_spelling(x):
-    key, degree_den, degree_num = tf.argmax(x[0], axis=-1), tf.argmax(x[1], axis=-1), tf.argmax(
-        x[2], axis=-1)
+def find_root_pitch(x):
+    key, degree_den, degree_num = tf.argmax(x[0], axis=-1), tf.argmax(x[1], axis=-1), tf.argmax(x[2], axis=-1)
 
     deg2sem_maj = np.array([0, 2, 4, 5, 7, 9, 11], dtype=np.int64)
     deg2sem_min = np.array([0, 2, 3, 5, 7, 8, 10], dtype=np.int64)
@@ -148,4 +158,4 @@ def find_root_no_spelling(x):
     # primary degree = IV, secondary degree = V
     # in C, that corresponds to the dominant on the fourth degree: C -> F -> C again
     root_pred = (key % 12 + n_num + n_den) % 12
-    return tf.one_hot(root_pred, depth=CLASSES_ROOT, axis=-1)
+    return tf.one_hot(root_pred, depth=12, axis=-1)

@@ -1,14 +1,14 @@
 import math
 import os
-import cProfile
 from collections import Counter
 
-import numpy as np
-import tensorflow as tf
-import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+import tensorflow as tf
 
-from config import FPQ, TRAIN_TFRECORDS, VALID_TFRECORDS, DATA_FOLDER, PITCH_LINE
+from config import FPQ, DATA_FOLDER, PITCH_FIFTHS, INPUT_TYPES
+from utils import setup_tfrecords_paths
 from utils_music import load_score_pitch_complete, calculate_number_transpositions_key, load_score_spelling_bass, \
     load_chord_labels
 
@@ -90,7 +90,7 @@ def plot_flattest_sharpest(ff, ss):
     max_ytick = max_occurrence - max_occurrence % 4
     n_yticks = max_ytick // 4 + 1
     plt.ylabel("occurrences")
-    plt.xticks(np.arange(35), PITCH_LINE, rotation=90)
+    plt.xticks(np.arange(35), PITCH_FIFTHS, rotation=90)
     plt.yticks(np.linspace(0, max_ytick, n_yticks) / len(ff),
                [str(x) for x in np.linspace(0, max_ytick, n_yticks, dtype=int)])
     plt.legend()
@@ -167,20 +167,27 @@ def calculate_distribution_of_repetitions(r):
 
 
 if __name__ == '__main__':
+    for m in INPUT_TYPES:
+        tfrecords = setup_tfrecords_paths(DATA_FOLDER, m)
+
+        for f in tfrecords:
+            c = count_records(f)
+            print(f"{f} - {c} files")
+
     # pm, pM = find_pitch_extremes()
     # print(f'The pitch classes needed, including transpositions, are from {pm} to {pM}')
     # cProfile.run('visualize_transpositions()', sort='cumtime')
-    fw, sw = calculate_transpositions()
-
-    ff = np.array([x for x in fw])  # flattest note, between 0 and 34
-    ss = np.array([35 - x for x in sw])  # sharpest, between 0 and 34 as well, because sharpwards is between 1 and 35
-    r = ss - ff  # by constructions s >= f always, so r in [0, 34]
-    plot_flattest_sharpest(ff, ss)
-    plot_range_histogram(r)
-    plot_range_individual(ff, ss, r)
-
-    m1, s1, m2, s2 = calculate_distribution_of_repetitions(r)
-    print(f"{m1} +- {s1},   {m2} +- {s2}")
+    # fw, sw = calculate_transpositions()
+    #
+    # ff = np.array([x for x in fw])  # flattest note, between 0 and 34
+    # ss = np.array([35 - x for x in sw])  # sharpest, between 0 and 34 as well, because sharpwards is between 1 and 35
+    # r = ss - ff  # by constructions s >= f always, so r in [0, 34]
+    # plot_flattest_sharpest(ff, ss)
+    # plot_range_histogram(r)
+    # plot_range_individual(ff, ss, r)
+    #
+    # m1, s1, m2, s2 = calculate_distribution_of_repetitions(r)
+    # print(f"{m1} +- {s1},   {m2} +- {s2}")
     # c = count_records(TRAIN_TFRECORDS)
     # print(f'There is a total of {c} records in the train file')
     # c = count_records(VALID_TFRECORDS)
