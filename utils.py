@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import xlrd
 
-from config import NOTES, QUALITY, KEYS_SPELLING
+from config import NOTES, QUALITY, KEYS_SPELLING, INPUT_TYPES
 
 
 def setup_tfrecords_paths(data_folder, mode):
@@ -17,20 +17,26 @@ def setup_tfrecords_paths(data_folder, mode):
     return train, valid, test_bps
 
 
-def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, model_folder):
+def create_dezrann_annotations(model_output, annotations, timesteps, file_names, output_folder):
     """
     Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net
     This allows for a nice visualization of the analysis on top of the partition.
-    :param test_true: The annotated labels coming from our data, shape [n_chunks][labels](ts, classes)
-    :param test_pred: The output of the machine learning model, same shape as test_true
+    :param model_output: The output of the machine learning model, shape [n_chunks][labels](ts, classes)
+    :param annotations: The annotated labels coming from our data, same shape as the model_output, put None if no annotated data
     :param timesteps: number of timesteps per each data point
     :param file_names: the name of the datafile where the chunk comes from
-    :param model_folder:
+    :param output_folder: could be typically the model folder or the score folder
     :return:
     """
-    os.makedirs(os.path.join(model_folder, 'analyses'), exist_ok=True)
+    os.makedirs(output_folder, exist_ok=True)
 
-    n = len(test_true)  # same len as test_pred, timesteps, or filenames
+    if annotations is None:
+        annotations = model_output  # this allows to just consider one case
+        save_reference = False
+    else:
+        save_reference = True
+
+    n = len(annotations)  # same len as test_pred, timesteps, or filenames
     offsets = np.zeros(n)
     for i in range(1, n):
         if file_names[i] == file_names[i - 1]:
@@ -39,11 +45,11 @@ def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, mode
     features = ['Tonality', 'Harmony']  # add a third element "Inversion" if needed
     lines = [('top.3', 'bot.2'), ('top.2', 'bot.1'), ('top.1', 'bot.3')]
 
-    for y_true, y_pred, ts, name, t0 in zip(test_true, test_pred, timesteps, file_names, offsets):
+    for y_true, y_pred, ts, name, t0 in zip(annotations, model_output, timesteps, file_names, offsets):
         if name != current_file:  # a new sonata started
             if current_file is not None:  # save previous file, if it exists
                 annotation['labels'] = labels
-                with open(os.path.join(model_folder, 'analyses', f'{current_file}.dez'), 'w+') as fp:
+                with open(os.path.join(output_folder, f'{current_file}.dez'), 'w+') as fp:
                     json.dump(annotation, fp)
             annotation = {
                 "meta": {
@@ -64,7 +70,7 @@ def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, mode
             start_true, start_pred = t0 / 2, t0 / 2  # divided by two because we have one label every 8th note
             for t in range(ts):
                 if t > 0:
-                    if label_true[t] != label_true[t - 1] or t == ts - 1:
+                    if save_reference and (label_true[t] != label_true[t - 1] or t == ts - 1):
                         duration_true = (t + t0) / 2 - start_true
                         labels.append({
                             "type": feature,
@@ -88,7 +94,7 @@ def create_dezrann_annotations(test_true, test_pred, timesteps, file_names, mode
                         start_pred = (t + t0) / 2
 
     annotation['labels'] = labels
-    with open(os.path.join(model_folder, 'analyses', f'{current_file}.dez'), 'w+') as fp:
+    with open(os.path.join(output_folder, f'{current_file}.dez'), 'w+') as fp:
         json.dump(annotation, fp)
     return
 
@@ -278,3 +284,14 @@ def transform_bps_chord_files_to_csv(chords_file, output_file):
         writer = csv.writer(f)
         writer.writerows(chords)
     return
+
+
+def find_input_type(model_name):
+    input_type = None
+    for ip in INPUT_TYPES:
+        if ip in model_name:
+            input_type = ip
+            break
+    if input_type is None:
+        raise AttributeError("can't determine which data needs to be fed to the algorithm...")
+    return input_type

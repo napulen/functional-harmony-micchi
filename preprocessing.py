@@ -85,9 +85,7 @@ def create_feature_dictionary(piano_roll, chords, name, s=None, start=None, end=
     return feature
 
 
-input_type = 'spelling_complete_cut'
-
-if __name__ == '__main__':
+def create_tfrecords(input_type):
     if input_type not in INPUT_TYPES:
         raise ValueError('Choose a valid value for input_type')
 
@@ -194,3 +192,8 @@ if __name__ == '__main__':
                     else:
                         feature = create_feature_dictionary(pr_shifted, chords, fn, s)
                         writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
+    return
+
+
+if __name__ == '__main__':
+    input_type = 'spelling_complete_cut'

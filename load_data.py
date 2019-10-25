@@ -20,7 +20,7 @@ def _parse_function(proto, n, classes_key, classes_degree, classes_quality, clas
     parsed_features = tf.io.parse_single_example(proto, feature)
     filename = parsed_features['name']
     transposition = parsed_features['transposition']
-    piano_roll = tf.transpose(tf.reshape(parsed_features['piano_roll'], (n, -1)))
+    piano_roll = tf.transpose(tf.reshape(parsed_features['piano_roll'], (n, -1)))  # NB transpose!: final shape (-1, n)
     mask = tf.ones([tf.shape(parsed_features['label_key'])[0], 1], tf.bool)  # whatever label would work
     y_key = tf.one_hot(parsed_features['label_key'], depth=classes_key)
     y_dg1 = tf.one_hot(parsed_features['label_degree_primary'], depth=classes_degree)

@@ -16,10 +16,10 @@ import tensorflow as tf
 from tensorflow.python.keras.models import load_model
 
 from config import FEATURES, NOTES, N_VALID, PITCH_FIFTHS, \
-    VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, N_TEST_BPS, DATA_FOLDER, INPUT_TYPES, \
-    KEYS_PITCH, KEYS_SPELLING, QUALITY
+    VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, N_TEST_BPS, DATA_FOLDER, KEYS_PITCH, \
+    KEYS_SPELLING, QUALITY
 from load_data import create_tfrecords_dataset
-from utils import create_dezrann_annotations, setup_tfrecords_paths
+from utils import create_dezrann_annotations, setup_tfrecords_paths, find_input_type
 from utils_music import Q2I, find_root_full_output
 
 
@@ -167,17 +167,6 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
-def find_input_type(model_name):
-    input_type = None
-    for ip in INPUT_TYPES:
-        if ip in model_name:
-            input_type = ip
-            break
-    if input_type is None:
-        raise AttributeError("can't determine which data needs to be fed to the algorithm...")
-    return input_type
-
-
 def analyse_results(model_name, dataset='validation', comparison=False, dezrann=True):
     model_folder = os.path.join('logs', model_name)
     model = load_model(os.path.join(model_folder, model_name + '.h5'))
@@ -238,7 +227,8 @@ def analyse_results(model_name, dataset='validation', comparison=False, dezrann=
 
     """ Create Dezrann annotations """
     if dezrann:
-        create_dezrann_annotations(test_true, test_pred, timesteps, file_names, model_folder=model_folder)
+        create_dezrann_annotations(test_pred, test_true, timesteps, file_names,
+                                   output_folder=os.path.join(model_folder, 'analyses'))
 
     """" Calculate accuracy etc. """
     roman_tp, roman_inv_tp, root_tp = 0, 0, 0
