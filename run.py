@@ -60,7 +60,7 @@ def prepare_input_from_xml(sf, input_type):
             pr = np.transpose(piano_roll[:, 4 * start:4 * end])
             ts = pr.shape[0]
             # 4*CHUNK_SIZE because it was adapted to chords, not piano rolls who have a higher resolution
-            score.append(np.pad(pr, ((0, 4 * CHUNK_SIZE - ts), (0, 0))))
+            score.append(np.pad(pr, ((0, 4 * CHUNK_SIZE - ts), (0, 0)), mode='constant'))
             start += CHUNK_SIZE
             end += CHUNK_SIZE
             m = np.ones(CHUNK_SIZE, dtype=bool)  # correct size
