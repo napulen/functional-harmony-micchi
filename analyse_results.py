@@ -168,7 +168,7 @@ def plot_coherence(root_pred, root_der, n_classes, name):
 
 
 def analyse_results(model_name, dataset='validation', comparison=False, dezrann=True):
-    model_folder = os.path.join('logs', model_name)
+    model_folder = os.path.join('models', model_name)
     model = load_model(os.path.join(model_folder, model_name + '.h5'))
     if not comparison:
         model.summary()
@@ -283,7 +283,7 @@ def compare_results(dataset, dezrann):
     :param dezrann: boolean, whether to write dezrann analyses to file
     :return:
     """
-    models = sorted(os.listdir('logs'))
+    models = sorted(os.listdir('models'))
     n = len(models)
     results = []
     for i, model_name in enumerate(models):

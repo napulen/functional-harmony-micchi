@@ -78,7 +78,7 @@ def create_dezrann_annotations(model_output, annotations, timesteps, file_names,
                             "duration": duration_true,
                             "line": line[0],
                             "tag": label_true[t - 1],
-                            "comment": "target"
+                            "comment": "target",
                         })
                         start_true = (t + t0) / 2
                     if label_pred[t] != label_pred[t - 1] or t == ts - 1:
@@ -89,7 +89,7 @@ def create_dezrann_annotations(model_output, annotations, timesteps, file_names,
                             "duration": duration_pred,
                             "line": line[1],
                             "tag": label_pred[t - 1],
-                            "comment": "prediction"
+                            "comment": "prediction",
                         })
                         start_pred = (t + t0) / 2
 

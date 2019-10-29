@@ -25,18 +25,18 @@ def visualize_data(data):
 
 
 def setup_model_paths(exploratory, model_type, input_type):
-    os.makedirs('logs', exist_ok=True)
+    os.makedirs('models', exist_ok=True)
     if exploratory:
         enable_eager_execution()
         name = 'temp'
     else:
         i = 0
         name = '_'.join([model_type, input_type, str(i)])
-        while name in os.listdir('logs'):
+        while name in os.listdir('models'):
             i += 1
             name = '_'.join([model_type, input_type, str(i)])
 
-    folder = os.path.join('logs', name)
+    folder = os.path.join('models', name)
     os.makedirs(folder, exist_ok=True if exploratory else False)
 
     return folder, name
@@ -46,9 +46,9 @@ timeout = None
 exploratory = False
 # exploratory = True
 # model_type = 'conv_dil'
-model_type = 'conv_gru'
-# model_type = 'gru'
-input_type = 'spelling_bass_cut'
+# model_type = 'conv_gru'
+model_type = 'gru'
+input_type = 'spelling_complete_cut'
 if input_type not in INPUT_TYPES:
     raise ValueError('Choose a valid value for input_type')
 

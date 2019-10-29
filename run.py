@@ -78,7 +78,7 @@ def get_args():
     input_valid = False
     model = None
     while not input_valid:
-        models = [m for m in os.listdir('logs') if m + '.h5' in os.listdir(os.path.join('logs', m))]
+        models = [m for m in os.listdir('models') if m + '.h5' in os.listdir(os.path.join('models', m))]
         model_choice = [str(n) + '. ' + m for n, m in enumerate(models)]
         print(f"Please choose the model you want to apply:")
         for c in model_choice:
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', dest='model_name', action='store', type=str, help='name of the model')
     parser.set_defaults(interactive=False)
     parser.set_defaults(music_path=os.path.join(DATA_FOLDER, 'BPS_other-movements', 'scores'))
-    parser.set_defaults(model_name='conv_gru_spelling_bass_cut_1')
+    parser.set_defaults(model_name='conv_gru_spelling_bass_cut_0')
     args = parser.parse_args()
 
     if args.interactive:
@@ -129,7 +129,7 @@ if __name__ == '__main__':
         files = [args.music_path]
 
     dezrann_folder = os.path.join('analyses', '_'.join([args.model_name, datetime.now().strftime("%Y-%m-%d_%H-%M")]))
-    model_folder = os.path.join('logs', args.model_name)
+    model_folder = os.path.join('models', args.model_name)
     model = load_model(os.path.join(model_folder, args.model_name + '.h5'))
     input_type = find_input_type(args.model_name)
     for sf in files:
