@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime
 from math import ceil
 
@@ -123,6 +124,9 @@ if __name__ == '__main__':
         print(f"Selected scores: {args.music_path}\n"
               f"Selected model: {args.model_name}\n"
               f"If that's not what you wanted, try to run the script with the option -i (interactive mode)")
+        ans = input('press Enter to continue or type q to quit...\n')
+        if ans == 'q':
+            sys.exit()
     try:
         files = sorted([os.path.join(args.music_path, m) for m in os.listdir(args.music_path)])
     except NotADirectoryError:
