@@ -1,0 +1,15 @@
+Problems due to time signature changes:
+bps-01-04 : measures on the two parts are shifted, so there is a measure bar every white note instead of a black note.
+bps-06-02 : there's a problem around the second repeat, for which measure numbers are shifted. But the two parts are correctly synced.
+bps-06-03 : same as the previous one, problem where there are broken measures
+bps-10-02 : still the same
+and 11-03
+and 13-04
+and 18-03
+and 28-03
+and 29-04
+
+Ohter issues:
+bps-28-03 : ending cadenza has been cut to avoid measure length issues
+bps-32-02 : this is a complete mess, almost unusable; I think it's mostly a visualization problem, but it's so hard to decipher!
+
