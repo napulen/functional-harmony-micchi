@@ -91,12 +91,12 @@ def visualize_results(y_true, y_pred, name, mode='probabilities', pitch_spelling
     cmap = sns.color_palette(['#d73027', '#f7f7f7', '#3027d7', '#000000']) if mode == 'predictions' else 'RdGy'
 
     tick_labels = [
-        KEYS_PITCH if not pitch_spelling else KEYS_SPELLING,
+        KEYS_SPELLING if pitch_spelling else KEYS_PITCH,
         [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
         [str(x + 1) for x in range(7)] + [str(x + 1) + 'b' for x in range(7)] + [str(x + 1) + '#' for x in range(7)],
         QUALITY,
         [str(x) for x in range(4)],
-        NOTES if not pitch_spelling else PITCH_FIFTHS,
+        PITCH_FIFTHS if pitch_spelling else NOTES,
     ]
     for j in range(6):
         if j == 0:
@@ -324,7 +324,7 @@ def compare_results(dataset, dezrann):
 
 
 if __name__ == '__main__':
-    # dataset = 'beethoven'
-    dataset = 'validation'
-    compare_results(dataset=dataset, dezrann=True)
-    # analyse_results('conv_gru_spelling_bass_cut_1')
+    dataset = 'beethoven'
+    # dataset = 'validation'
+    # compare_results(dataset=dataset, dezrann=True)
+    analyse_results('conv_gru_pitch_bass_cut_0', dataset=dataset)

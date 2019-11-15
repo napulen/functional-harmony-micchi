@@ -56,7 +56,8 @@ def create_dezrann_annotations(model_output, annotations, timesteps, file_names,
                     'title': name,
                     'name': name,
                     'date': str(datetime.now()),
-                    'producer': 'Algomus team'
+                    'producer': 'Algomus team',
+                    'ioi': False,
                 }
             }
             current_file = name

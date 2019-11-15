@@ -1,4 +1,4 @@
-'''
+"""
 Converts music21 Roman text files into the BPS-FH format.
 Work in progress.
 
@@ -10,7 +10,7 @@ ISSUES / TODO:
 Should now be sorted:
 - Format of beats (not fractions);
 - Discrepancy between start/end of score/analysis;
-'''
+"""
 
 import os
 import unittest
@@ -26,17 +26,21 @@ def roman2bps(analysis, score, test):
 
     outData = []
 
-    initialBeatLength = score.recurse().getTimeSignatures()[0].beatDuration.quarterLength
-    scoreMeasureOffset = list(score.measureOffsetMap().keys())
+    initialBeatLength = score.recurse().stream().getTimeSignatures()[0].beatDuration.quarterLength  # Is this always 1?
+    # scoreMeasureOffset = list(score.measureOffsetMap().keys())
+    scoreMOM = score.measureOffsetMap()
+    scoreMeasureOffset = [k for k in scoreMOM.keys() if
+                          scoreMOM[k][0].numberSuffix is None]  # the [0] because there are two parts
     scoreMeasureOffset.append(score.duration.quarterLength)
 
     if test:
         scoreMeasureLength = np.diff(scoreMeasureOffset)
-        nMeasures = len(scoreMeasureLength)
+        nScoreMeasures = len(scoreMeasureLength)
 
         measureOffset = list(analysis.measureOffsetMap().keys())
         measureLength = np.diff(measureOffset)
         measureLength = np.append(measureLength, score.duration.quarterLength - measureOffset[-1])
+        nMeasures = len(measureLength)
 
         scoreTimeChange = []
         timeChange = []
@@ -220,12 +224,14 @@ class Test(unittest.TestCase):
 
         base = os.path.join('..', 'data')
 
-        corpus = 'Bach_WTC_1_Preludes'
+        # corpus = os.path.join('Tavern', 'Beethoven')
+        corpus = os.path.join('Tavern', 'Mozart')
+        # corpus = 'Bach_WTC_1_Preludes'
         # corpus = '19th_Century_Songs'
         # corpus = 'Beethoven_4tets/'
 
         # txtPath = f'{base}{corpus}/temp/'
-        txtPath = os.path.join(base, corpus, 'rntxt')
+        txtPath = os.path.join(base, corpus, 'txt')
         scorePath = os.path.join(base, corpus, 'scores')
         csvPath = os.path.join(base, corpus, 'chords')
         os.makedirs(csvPath, exist_ok=True)
@@ -244,11 +250,14 @@ class Test(unittest.TestCase):
             # if op != '18' or no != '6' or mv != '4':
             #     test = True
             #     continue
+            if 'K398' not in file:
+                continue
             # print(f'====== Op. {op} No. {no} mov {mv} ======')
             # sf = f'op. {op} No. {no}'
             # score = converter.parse(os.path.join(scorePath, sf, f'{file[:-4]}.mxl'))
             print(file)
-            score = converter.parse(os.path.join(scorePath, f'{file[:-4]}.mxl'))
+            sf = f'{file.split("_")[0]}.mxl' if 'Tavern' in corpus else f'{file[:-4]}.mxl'
+            score = converter.parse(os.path.join(scorePath, sf))
             analysis = converter.parse(os.path.join(txtPath, file), format='romanText')
             data = roman2bps(analysis, score, test)
             writeCSV(data, csvPath, file[:-4])

@@ -19,6 +19,8 @@ pitch_profile_maj = np.array([5., 2., 3.5, 2., 4.5, 4., 2., 4.5, 2., 3.5, 1.5, 4
 pitch_profile_maj -= np.mean(pitch_profile_maj)
 pitch_profile_min = [5., 2., 3.5, 4.5, 2., 4., 2., 4.5, 3.5, 2., 1.5, 4.]
 pitch_profile_min -= np.mean(pitch_profile_min)
+d2s_minor = [0, 2, 3, 5, 7, 8, 11]
+d2s_major = [0, 2, 4, 5, 7, 9, 11]
 
 context = 65  # 4 quarter notes on each side + the current note
 pad = 32  # the amount to pad on each side of the input tensor to give a context of the correct size
@@ -26,8 +28,38 @@ hop_size = 4  # distance between successive predictions
 x = build_weight_matrix(pitch_profile_maj, pitch_profile_min)  # shape (keys, notes)
 sigma_x = np.std(x, axis=1)
 
+
 # x_var = np.sum(x ** 2, axis=1)  # shape (keys)
 # x_var = np.var(x, axis=1)
+
+
+def tonicise_key(key, pd):
+    """
+
+    :param key:
+    :param pd: primary degree
+    :return:
+    """
+    k = key % 12  # remove information about major / minor
+    minor_key = bool(key // 12)  # false = major, true = minor
+
+    # add the primary degree to the key, knowing that it's built on the scale
+    d = pd % 7
+    kt = k + (d2s_minor[d] if minor_key else d2s_major[d])
+    d_mode = pd // 7  # 0 = diatonic, 1 = augmented, 2 = dimished
+    if d_mode == 1:
+        kt += 1
+    elif d_mode == 2:
+        kt -= 1
+
+    if (not minor_key and d in [1, 2, 5, 6]) or (minor_key and d in [0, 1, 3, 6]):
+        minor_key = True
+    else:
+        minor_key = False
+
+    kt = kt % 12  # put everything back to the reference octave
+    kt = kt + (12 if minor_key else 0)  # reinsert minor if needed
+    return kt
 
 
 def load_data(sf, cf):
@@ -40,7 +72,8 @@ def load_data(sf, cf):
     cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
     chords = encode_chords(cl_segmented, mode='semitone')
     keys = [c[0] for c in chords]
-    return piano_roll, keys
+    keys_tonicised = [tonicise_key(c[0], c[1]) for c in chords]
+    return piano_roll, keys, keys_tonicised
 
 
 def visualize_key_temperley(y_pred, y_true, name):
@@ -70,7 +103,7 @@ def visualize_key_temperley(y_pred, y_true, name):
 
 
 def analyse_piece(sf, cf):
-    notes, keys = load_data(sf, cf)  # shape (notes, timesteps), (timesteps)
+    notes, keys, kt = load_data(sf, cf)  # shape (notes, timesteps), (timesteps)
     notes = np.pad(notes, ((0, 0), (pad, pad)))  # gives enough context on borders
     ts = notes.shape[1]
     res = []
@@ -81,7 +114,7 @@ def analyse_piece(sf, cf):
 
         res.append(pred)
 
-    return res, keys
+    return res, keys, kt
 
 
 if __name__ == '__main__':
@@ -89,16 +122,18 @@ if __name__ == '__main__':
     chords_folder = os.path.join(folder, 'chords')
     scores_folder = os.path.join(folder, 'scores')
     file_names = sorted(['.'.join(fn.split('.')[:-1]) for fn in os.listdir(chords_folder)])
-    tp = 0  # true positives
+    tp, tp_alt = 0, 0  # true positives
     N = 0  # total number of predictions
     for fn in file_names:
         sf = os.path.join(scores_folder, fn + ".mxl")
         cf = os.path.join(chords_folder, fn + ".csv")
-        y_pred, y_true = analyse_piece(sf, cf)
+        y_pred, y_true, y_alt = analyse_piece(sf, cf)
         # visualize_key_temperley(y_pred, y_true, sf)
         N_last = len(y_true)
         N += N_last
         tp_last = sum([yp == yt for yp, yt in zip(y_pred, y_true)])
         tp += tp_last
-        print(f'{fn}, accuracy : {tp_last / N_last}')
-    print(f'Total average accuracy: {tp / N}')
+        tp_alt_last = sum([yp == ya for yp, ya in zip(y_pred, y_alt)])
+        tp_alt += tp_alt_last
+        print(f'{fn}, accuracy : {tp_last / N_last:.3f}, with tonicisation : {tp_alt_last / N_last:.3f}')
+    print(f'Total average accuracy : {tp / N:.3f}, with tonicisation : {tp_alt / N:.3f}')
