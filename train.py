@@ -60,7 +60,7 @@ if __name__ == '__main__':
     valid_data = create_tfrecords_dataset(valid_path, VALID_BATCH_SIZE, 1, input_type)
     # visualize_data(train_data)
 
-    n_train = 13_464 if input_type.startswith('pitch') else 20_704  # count_records(train_path)
+    n_train = 19_872 if input_type.startswith('pitch') else 30_199  # count_records(train_path)
     train_steps = ceil(n_train / BATCH_SIZE)
 
     model = create_model(model_name, model_type=model_type, input_type=input_type, derive_root=False)

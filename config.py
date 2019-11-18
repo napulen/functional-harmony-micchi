@@ -104,7 +104,7 @@ SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
 
 # number of records in datasets
-N_VALID = 99  # count_records(VALID_TFRECORDS)
+N_VALID = 101  # count_records(VALID_TFRECORDS)
 N_TEST_BPS = 401  # count_records(TEST_BPS_TFRECORDS)
 
 VALID_BATCH_SIZE = find_best_batch_size(N_VALID, BATCH_SIZE)

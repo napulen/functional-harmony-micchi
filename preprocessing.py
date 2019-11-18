@@ -196,5 +196,6 @@ def create_tfrecords(input_type):
 
 
 if __name__ == '__main__':
-    input_type = 'spelling_complete_cut'
-    create_tfrecords(input_type)
+    input_type = INPUT_TYPES
+    for it in input_type:
+        create_tfrecords(it)

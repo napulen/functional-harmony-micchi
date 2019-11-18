@@ -225,8 +225,8 @@ class Test(unittest.TestCase):
         base = os.path.join('..', 'data')
 
         # corpus = os.path.join('Tavern', 'Beethoven')
-        corpus = os.path.join('Tavern', 'Mozart')
-        # corpus = 'Bach_WTC_1_Preludes'
+        # corpus = os.path.join('Tavern', 'Mozart')
+        corpus = 'Bach_WTC_1_Preludes'
         # corpus = '19th_Century_Songs'
         # corpus = 'Beethoven_4tets/'
 
@@ -250,8 +250,8 @@ class Test(unittest.TestCase):
             # if op != '18' or no != '6' or mv != '4':
             #     test = True
             #     continue
-            if 'K398' not in file:
-                continue
+            # if 'K398' not in file:
+            #     continue
             # print(f'====== Op. {op} No. {no} mov {mv} ======')
             # sf = f'op. {op} No. {no}'
             # score = converter.parse(os.path.join(scorePath, sf, f'{file[:-4]}.mxl'))

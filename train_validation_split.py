@@ -49,12 +49,41 @@ def create_training_validation_set_wtc(s=18):
     return
 
 
+def create_training_validation_set_tavern(s=18):
+    for composer in ['Beethoven', 'Mozart']:
+        file_names = [fn[:-4] for fn in os.listdir(os.path.join(DATA_FOLDER, 'Tavern', composer, 'chords'))]
+        n = len(file_names)
+        seed(s)
+        fn_trn = set(choice(file_names, size=n, replace=False))
+        fn_vld = set(file_names).difference(fn_trn)
+        for fn in fn_trn:
+            score_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'scores', f'{fn.split("_")[0]}.mxl')
+            output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'tvn_{fn}.mxl')
+            copyfile(score_file, output_score_file)
+    
+            chords_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'chords', f"{fn}.csv")
+            output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'tvn_{fn}.csv')
+            copyfile(chords_file, output_chords_file)
+        for fn in fn_vld:
+            score_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'scores', f'{fn.split("_")[0]}.mxl')
+            output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'tvn_{fn}.mxl')
+            copyfile(score_file, output_score_file)
+    
+            chords_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'chords', f"{fn}.csv")
+            output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'tvn_{fn}.csv')
+            copyfile(chords_file, output_chords_file)
+    return
+
+
 def create_training_validation_set_songs(s=18):
     file_names = [fn[:-4] for fn in os.listdir(os.path.join(DATA_FOLDER, '19th_Century_Songs', 'chords'))]
     n = len(file_names)
     seed(s)
     fn_trn = set(choice(file_names, size=n, replace=False))
     fn_vld = set(file_names).difference(fn_trn)
+    example = 'Schubert_Franz_-_Winterreise_D.911_No.12_-_Einsamkeit'  # this we want to keep for validation
+    fn_trn.discard(example)
+    fn_vld.add(example)
     for fn in fn_trn:
         score_file = os.path.join(DATA_FOLDER, '19th_Century_Songs', 'scores', f"{fn}.mxl")
         output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'ncs_{fn}.mxl')
@@ -109,3 +138,4 @@ if __name__ == '__main__':
     create_training_validation_set_wtc()
     create_training_validation_set_songs()
     create_training_validation_set_bsq()
+    create_training_validation_set_tavern()
