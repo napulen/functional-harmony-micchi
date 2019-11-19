@@ -24,13 +24,16 @@ from music21 import converter, note
 from music21.repeat import ExpanderException
 from numpy.lib.recfunctions import append_fields
 
-from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH
+from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH, START_MAJ, END_MAJ, \
+    START_MIN, END_MIN
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
 Q2I = dict([(e[1], e[0]) for e in enumerate(QUALITY)])
 PF2I = dict([(e[1], e[0]) for e in enumerate(PITCH_FIFTHS)])
 PS2I = dict([(e[1], e[0]) for e in enumerate(PITCH_SEMITONES)])
+KS2I = dict([(e[1], e[0]) for e in enumerate(KEYS_SPELLING)])
+KP2I = dict([(e[1], e[0]) for e in enumerate(KEYS_PITCH)])
 PF2PS = dict([(n, PITCH_SEMITONES.index(p)) for n, p in enumerate(PITCH_FIFTHS)])
 PS2PF = dict([(n, PITCH_FIFTHS.index(p)) for n, p in enumerate(PITCH_SEMITONES)])
 
@@ -423,13 +426,15 @@ def _encode_key(key, mode):
     # minor keys are always encoded after major keys
     if mode == 'semitone':
         # 12 because there are 12 pitch classes
-        res = N2I[find_enharmonic_equivalent(key).upper()] + (12 if key.islower() else 0)
+        # res = N2I[find_enharmonic_equivalent(key).upper()] + (12 if key.islower() else 0)
+        res = KP2I[find_enharmonic_equivalent(key)]
     elif mode == 'fifth':
         # -1 because we don't use F-- as a key (it has triple flats) and that is the first element in the PITCH_LINE
         # + 35 because there are 35 total major keys and this is the theoretical distance between a major key
         # and its minor equivalent if all keys were used
         # -9 because we don't use the last 5 major keys (triple sharps) and the first 4 minor keys (triple flats)
-        res = PF2I[key.upper()] - 1 + (35 - 9 if key.islower() else 0)
+        # res = PF2I[key.upper()] - START_MAJ + (END_MAJ - START_MIN if key.islower() else 0)
+        res = KS2I[key]
     else:
         raise ValueError("_encode_key: Mode not recognized")
     return res
@@ -615,8 +620,7 @@ def find_root_full_output(y_pred, pitch_spelling=True):
             root = _flat_alteration(root)
 
         if not pitch_spelling:
-            root = find_enharmonic_equivalent(root)
-            root_pred.append(N2I[root])
+            root_pred.append(N2I[find_enharmonic_equivalent(root)])
         else:
             try:
                 pred = PF2I[root]
@@ -640,11 +644,11 @@ def calculate_number_transpositions_key(chords):
     for k in keys:
         i = PF2I[k.upper()]
         if k.isupper():
-            l = i - 1  # we don't use the left-most major key (F--)
-            r = 35 - i - 5  # we don't use the 5 right-most major keys
+            l = i - START_MAJ  # we don't use the left-most major key (F--)
+            r = END_MAJ - i  # we don't use the 5 right-most major keys
         else:
-            l = i - 4  # we don't use the 4 left-most minor keys (yes! different from the major case!)
-            r = 35 - i - 5  # we don't use the 5 right-most minor keys
+            l = i - START_MIN  # we don't use the 4 left-most minor keys (yes! different from the major case!)
+            r = END_MIN - i  # we don't use the 5 right-most minor keys
         nl, nr = min(nl, l), min(nr, r)
     return nl, nr
 

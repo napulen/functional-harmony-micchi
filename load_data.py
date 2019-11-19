@@ -46,7 +46,7 @@ def create_tfrecords_dataset(input_path, batch_size, shuffle_buffer, input_type)
         return _parse_function(proto, n, classes_key, classes_degree, classes_quality, classes_inversion, classes_root)
 
     n = INPUT_TYPE2INPUT_SHAPE[input_type]
-    classes_key = 55 if input_type.startswith('spelling') else 24  # Major keys: 0-11, Minor keys: 12-23
+    classes_key = 30 if input_type.startswith('spelling') else 24  # Major keys: 0-11, Minor keys: 12-23
     classes_degree = 21  # 7 degrees * 3: regular, diminished, augmented
     classes_root = 35 if input_type.startswith('spelling') else 12  # the twelve notes without enharmonic duplicates
     classes_quality = 12  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6', 'It+6', 'Fr+6']

@@ -6,7 +6,9 @@ from numpy.random.mtrand import choice, seed
 from config import DATA_FOLDER, VALID_INDICES, TRAIN_INDICES
 
 
-def create_training_validation_set_bps(i_trn, i_vld):
+def create_training_validation_set_bps(i_trn=None):
+    i_trn = set(choice(range(1, 33), size=round(0.9*32), replace=False)) if i_trn is None else set(i_trn)
+    i_vld = set(range(1, 33)).difference(i_trn)
     for i in i_trn:
         score_file = os.path.join(DATA_FOLDER, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
         output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'bps_{i:02d}_01.mxl')
@@ -28,7 +30,7 @@ def create_training_validation_set_bps(i_trn, i_vld):
 
 def create_training_validation_set_wtc(s=18):
     seed(s)
-    i_trn = set(choice(range(1, 25), size=24, replace=False))
+    i_trn = set(choice(range(1, 25), size=round(0.9*24), replace=False))
     i_vld = set(range(1, 25)).difference(i_trn)
     for i in i_trn:
         score_file = os.path.join(DATA_FOLDER, 'Bach_WTC_1_Preludes', 'scores', f"wtc_i_prelude_{i:02d}.mxl")
@@ -51,26 +53,29 @@ def create_training_validation_set_wtc(s=18):
 
 def create_training_validation_set_tavern(s=18):
     for composer in ['Beethoven', 'Mozart']:
-        file_names = [fn[:-4] for fn in os.listdir(os.path.join(DATA_FOLDER, 'Tavern', composer, 'chords'))]
+        file_names = [fn.split("_")[0]
+                      for fn in os.listdir(os.path.join(DATA_FOLDER, 'Tavern', composer, 'chords'))
+                      if fn.split("_")[1].startswith('A')]
         n = len(file_names)
         seed(s)
-        fn_trn = set(choice(file_names, size=n, replace=False))
+        fn_trn = set(choice(file_names, size=round(0.9*n), replace=False))
         fn_vld = set(file_names).difference(fn_trn)
         for fn in fn_trn:
-            score_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'scores', f'{fn.split("_")[0]}.mxl')
-            output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'tvn_{fn}.mxl')
+            for ext in ["A", "B"]:
+                score_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'scores', f'{fn}.mxl')
+                output_score_file = os.path.join(DATA_FOLDER, 'train', 'scores', f'tvn_{"_".join([fn, ext])}.mxl')
+                copyfile(score_file, output_score_file)
+
+                chords_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'chords', f'{"_".join([fn, ext])}.csv')
+                output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'tvn_{"_".join([fn, ext])}.csv')
+                copyfile(chords_file, output_chords_file)
+        for fn in fn_vld:  # In the validation set, put only one analysis.
+            score_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'scores', f'{fn}.mxl')
+            output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'tvn_{fn}_A.mxl')
             copyfile(score_file, output_score_file)
-    
-            chords_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'chords', f"{fn}.csv")
-            output_chords_file = os.path.join(DATA_FOLDER, 'train', 'chords', f'tvn_{fn}.csv')
-            copyfile(chords_file, output_chords_file)
-        for fn in fn_vld:
-            score_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'scores', f'{fn.split("_")[0]}.mxl')
-            output_score_file = os.path.join(DATA_FOLDER, 'valid', 'scores', f'tvn_{fn}.mxl')
-            copyfile(score_file, output_score_file)
-    
-            chords_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'chords', f"{fn}.csv")
-            output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'tvn_{fn}.csv')
+
+            chords_file = os.path.join(DATA_FOLDER, 'Tavern', composer, 'chords', f'{fn}_A.csv')
+            output_chords_file = os.path.join(DATA_FOLDER, 'valid', 'chords', f'tvn_{fn}_A.csv')
             copyfile(chords_file, output_chords_file)
     return
 
@@ -79,7 +84,7 @@ def create_training_validation_set_songs(s=18):
     file_names = [fn[:-4] for fn in os.listdir(os.path.join(DATA_FOLDER, '19th_Century_Songs', 'chords'))]
     n = len(file_names)
     seed(s)
-    fn_trn = set(choice(file_names, size=n, replace=False))
+    fn_trn = set(choice(file_names, size=round(0.9*n), replace=False))
     fn_vld = set(file_names).difference(fn_trn)
     example = 'Schubert_Franz_-_Winterreise_D.911_No.12_-_Einsamkeit'  # this we want to keep for validation
     fn_trn.discard(example)
@@ -107,7 +112,7 @@ def create_training_validation_set_bsq(s=18):
     file_names = [fn[:-4] for fn in os.listdir(os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'chords'))]
     n = len(file_names)
     seed(s)
-    fn_trn = set(choice(file_names, size=n, replace=False))
+    fn_trn = set(choice(file_names, size=round(0.9*n), replace=False))
     fn_vld = set(file_names).difference(fn_trn)
     for fn in fn_trn:
         score_file = os.path.join(DATA_FOLDER, 'Beethoven_4tets', 'scores', f"{fn}.mxl")
@@ -134,7 +139,7 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(DATA_FOLDER, 'valid', 'scores'), exist_ok=True)
     os.makedirs(os.path.join(DATA_FOLDER, 'valid', 'chords'), exist_ok=True)
 
-    create_training_validation_set_bps(TRAIN_INDICES, VALID_INDICES)
+    create_training_validation_set_bps()
     create_training_validation_set_wtc()
     create_training_validation_set_songs()
     create_training_validation_set_bsq()

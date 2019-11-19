@@ -12,8 +12,6 @@ INPUT_TYPES = [
     'spelling_class_cut',
 ]
 
-MODE = INPUT_TYPES[5]
-
 TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3, 1, 14, 23, 15, 10, 25, 7]
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
@@ -41,10 +39,9 @@ PITCH_SEMITONES = [
 
 SCALES = {
     'C--': ['C--', 'D--', 'E--', 'F--', 'G--', 'A--', 'B--'],
-    # 'c--': ['C--', 'D--', 'E---', 'F--', 'G--', 'A---', 'B--'],
-    'G--': ['G--', 'A--', 'B--', 'C--', 'D--', 'E--', 'F-'],
-    # 'g--': ['G--', 'A--', 'B---', 'C--', 'D--', 'E---', 'F-'],
-    'D--': ['D--', 'E--', 'F-', 'G--', 'A--', 'B--', 'C-'],  # 'd--': ['D--', 'E--', 'F--', 'G--', 'A--', 'B---', 'C-'],
+    'c--': ['C--', 'D--', 'E---', 'F--', 'G--', 'A---', 'B--'],
+    'G--': ['G--', 'A--', 'B--', 'C--', 'D--', 'E--', 'F-'], 'g--': ['G--', 'A--', 'B---', 'C--', 'D--', 'E---', 'F-'],
+    'D--': ['D--', 'E--', 'F-', 'G--', 'A--', 'B--', 'C-'], 'd--': ['D--', 'E--', 'F--', 'G--', 'A--', 'B---', 'C-'],
     'A--': ['A--', 'B--', 'C-', 'D--', 'E--', 'F-', 'G-'], 'a--': ['A--', 'B--', 'C--', 'D--', 'E--', 'F--', 'G-'],
     'E--': ['E--', 'F-', 'G-', 'A--', 'B--', 'C-', 'D-'], 'e--': ['E--', 'F-', 'G--', 'A--', 'B--', 'C--', 'D-'],
     'B--': ['B--', 'C-', 'D-', 'E--', 'F-', 'G-', 'A-'], 'b--': ['B--', 'C-', 'D--', 'E--', 'F-', 'G--', 'A-'],
@@ -74,7 +71,15 @@ SCALES = {
 }
 QUALITY = ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6', 'It+6', 'Fr+6']
 
-KEYS_SPELLING = PITCH_FIFTHS[1:30] + [p.lower() for p in PITCH_FIFTHS[4:-5]]
+# including START, excluding END
+START_MAJ, END_MAJ, START_MIN, END_MIN = [
+    PITCH_FIFTHS.index(p) for p in ['C-', 'G#', 'a-'.upper(), 'e#'.upper()]
+]  # [C-, G#) and [a-, e#) when using 30 keys
+# START_MAJ, END_MAJ, START_MIN, END_MIN = [
+#     PITCH_FIFTHS.index(p) for p in ['C--', 'G##', 'a--'.upper(), 'g##'.upper()]
+# ]  # [C--, G##) and [a--, g##) when using 55 keys
+KEYS_SPELLING = PITCH_FIFTHS[START_MAJ:END_MAJ] + [p.lower() for p in PITCH_FIFTHS[START_MIN:END_MIN]]
+
 KEYS_PITCH = (NOTES + [n.lower() for n in NOTES])
 
 
@@ -104,7 +109,7 @@ SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
 
 # number of records in datasets
-N_VALID = 101  # count_records(VALID_TFRECORDS)
+N_VALID = 162  # count_records(VALID_TFRECORDS)
 N_TEST_BPS = 401  # count_records(TEST_BPS_TFRECORDS)
 
 VALID_BATCH_SIZE = find_best_batch_size(N_VALID, BATCH_SIZE)

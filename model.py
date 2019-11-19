@@ -23,24 +23,24 @@ class TimeOut(Callback):
             self.model.stop_training = True
 
 
-def DenseNetLayer(x, l, k, n=1):
+def DenseNetLayer(x, b, f, n=1):
     """
     Implementation of a DenseNetLayer
     :param x: input
-    :param l: number of elementary blocks in the layer
-    :param k: features generated at every block
+    :param b: number of elementary blocks in the layer
+    :param f: features generated at every block
     :param n: unique identifier of the DenseNetLayer
     :param training: passed to the batch normalization layers
     :return:
     """
     with name_scope(f"denseNet_{n}") as scope:
-        for _ in range(l):
+        for _ in range(b):
             y = BatchNormalization()(x)
             y = Activation('relu')(y)
-            y = Conv1D(filters=4 * k, kernel_size=1, padding='same', data_format='channels_last')(y)
+            y = Conv1D(filters=4 * f, kernel_size=1, padding='same', data_format='channels_last')(y)
             y = BatchNormalization()(y)
             y = Activation('relu')(y)
-            y = Conv1D(filters=k, kernel_size=32, padding='same', data_format='channels_last')(y)
+            y = Conv1D(filters=f, kernel_size=32, padding='same', data_format='channels_last')(y)
             x = Concatenate()([x, y])
     return x
 
@@ -113,7 +113,7 @@ def create_model(name, model_type, input_type, derive_root=False):
     mask = Input(shape=(None, 1), name="mask_input")
 
     if 'conv' in model_type:
-        x = DenseNetLayer(notes, 4, 5, n=1)
+        x = DenseNetLayer(notes, b=4, f=5, n=1)
         x = PoolingLayer(x, 32, 2, n=1)
         x = DenseNetLayer(x, 4, 5, n=2)
         x = PoolingLayer(x, 48, 2, n=1)

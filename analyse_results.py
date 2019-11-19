@@ -309,6 +309,14 @@ def compare_results(dataset, dezrann):
             'roman + inv': 25.69,
         }
 
+        ht_paper = {
+            'key': 78.35,
+            'quality': 74.60,
+            'inversion': 62.13,
+            'degree': 65.06,
+            'secondary': 68.15,
+        }
+
         temperley = {
             'key': 67.03,
         }
@@ -316,15 +324,18 @@ def compare_results(dataset, dezrann):
         for feat in features:
             if feat not in bps_paper.keys():
                 bps_paper[feat] = 'NA'
+            if feat not in ht_paper.keys():
+                ht_paper[feat] = 'NA'
             if feat not in temperley.keys():
                 temperley[feat] = 'NA'
 
         w.writerow(['bps-fh_paper'] + [bps_paper[feat] for feat in features])
+        w.writerow(['ht_paper'] + [ht_paper[feat] for feat in features])
         w.writerow(['temperley'] + [temperley[feat] for feat in features])
 
 
 if __name__ == '__main__':
-    dataset = 'beethoven'
-    # dataset = 'validation'
-    # compare_results(dataset=dataset, dezrann=True)
+    # dataset = 'beethoven'
+    dataset = 'validation'
+    compare_results(dataset=dataset, dezrann=True)
     analyse_results('conv_gru_pitch_bass_cut_0', dataset=dataset)

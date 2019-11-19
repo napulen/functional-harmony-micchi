@@ -144,7 +144,7 @@ def _decode_key(yk):
         lower = k // 12
         key = NOTES[k % 12]
         return key.lower() if lower else key
-    elif n == 55:
+    elif n == len(KEYS_SPELLING):
         return KEYS_SPELLING[k]
     else:
         raise ValueError('weird number of classes in the key')
