@@ -1,5 +1,6 @@
 import os
 import time
+from argparse import ArgumentParser
 from math import ceil
 
 import seaborn as sns
@@ -45,14 +46,17 @@ def setup_model_paths(exploratory, model_type, input_type):
 timeout = None
 exploratory = False
 # exploratory = True
-# model_type = 'conv_dil'
-# model_type = 'conv_gru'
-model_type = 'gru'
-input_type = 'spelling_complete_cut'
-if input_type not in INPUT_TYPES:
-    raise ValueError('Choose a valid value for input_type')
+models = ['conv_gru', 'conv_dil', 'gru']
 
 if __name__ == '__main__':
+    parser = ArgumentParser(description='Train a neural network for Roman Numeral analysis')
+    parser.add_argument('--input', dest='input_idx', action='store', type=int,
+                        help=f'index to select input type, between 0 and {len(INPUT_TYPES)}')
+    parser.add_argument('--model', dest='model_idx', action='store', type=int,
+                        help=f'index to select the model, between 0 and {len(models)}')
+    args = parser.parse_args()
+
+    model_type, input_type = models[args.input_idx], INPUT_TYPES[args.input_idx]
     model_folder, model_name = setup_model_paths(exploratory, model_type, input_type)
     model_path = os.path.join(model_folder, model_name + '.h5')
     train_path, valid_path, _ = setup_tfrecords_paths(DATA_FOLDER, input_type)

@@ -8,7 +8,7 @@ from tensorflow.python.keras.callbacks import Callback
 from tensorflow.python.keras.layers import Conv1D, Concatenate, MaxPooling1D, TimeDistributed, Dense, Lambda, \
     BatchNormalization, Masking, GRU, Bidirectional, Activation
 
-from config import INPUT_TYPE2INPUT_SHAPE
+from config import INPUT_TYPE2INPUT_SHAPE, KEYS_SPELLING
 
 
 class TimeOut(Callback):
@@ -78,7 +78,7 @@ def DilatedConvLayer(x, l, k):
 
 
 def MultiTaskLayer(x, derive_root, input_type):
-    classes_key = 55 if input_type.startswith('spelling') else 24  # Major keys: 0-11, Minor keys: 12-23
+    classes_key = 30 if input_type.startswith('spelling') else 24  # Major keys: 0-11, Minor keys: 12-23
     classes_degree = 21  # 7 degrees * 3: regular, diminished, augmented
     classes_root = 35 if input_type.startswith('spelling') else 12  # the twelve notes without enharmonic duplicates
     classes_quality = 12  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6', 'It+6', 'Fr+6']
