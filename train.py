@@ -9,7 +9,7 @@ from tensorflow import enable_eager_execution
 from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard, ModelCheckpoint
 
 from config import SHUFFLE_BUFFER, BATCH_SIZE, EPOCHS, VALID_BATCH_SIZE, VALID_STEPS, INPUT_TYPES, DATA_FOLDER
-from load_data import create_tfrecords_dataset
+from load_data import load_tfrecords_dataset
 from model import create_model, TimeOut
 from utils import setup_tfrecords_paths
 
@@ -60,8 +60,8 @@ if __name__ == '__main__':
     model_folder, model_name = setup_model_paths(exploratory, model_type, input_type)
     model_path = os.path.join(model_folder, model_name + '.h5')
     train_path, valid_path, _ = setup_tfrecords_paths(DATA_FOLDER, input_type)
-    train_data = create_tfrecords_dataset(train_path, BATCH_SIZE, SHUFFLE_BUFFER, input_type)
-    valid_data = create_tfrecords_dataset(valid_path, VALID_BATCH_SIZE, 1, input_type)
+    train_data = load_tfrecords_dataset(train_path, BATCH_SIZE, SHUFFLE_BUFFER, input_type)
+    valid_data = load_tfrecords_dataset(valid_path, VALID_BATCH_SIZE, 1, input_type)
     # visualize_data(train_data)
 
     n_train = 18_792 if input_type.startswith('pitch') else 15_252  # count_records(train_path)

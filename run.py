@@ -1,18 +1,21 @@
 import os
 import sys
+import logging
+from argparse import ArgumentParser
 from datetime import datetime
 from math import ceil
 
 import numpy as np
-
-from argparse import ArgumentParser
 from tensorflow.python.keras.models import load_model
 
 from config import DATA_FOLDER, FPQ, CHUNK_SIZE
-from preprocessing import logger
 from utils import find_input_type, create_dezrann_annotations
 from utils_music import load_score_pitch_complete, load_score_pitch_bass, load_score_pitch_class, \
     load_score_spelling_complete, load_score_spelling_bass, load_score_spelling_class
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def analyse_music(sf, model, input_type, dezrann_output_folder):

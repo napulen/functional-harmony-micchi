@@ -137,48 +137,6 @@ def _fill_level(l, i_p=None):
     return y, i_o
 
 
-def _decode_key(yk):
-    n = len(yk)
-    k = np.argmax(yk)
-    if n == 24:
-        lower = k // 12
-        key = NOTES[k % 12]
-        return key.lower() if lower else key
-    elif n == len(KEYS_SPELLING):
-        return KEYS_SPELLING[k]
-    else:
-        raise ValueError('weird number of classes in the key')
-
-
-def _decode_roman(yp, ys, yq):
-    s = np.argmax(ys)
-    p = np.argmax(yp)
-    q = np.argmax(yq)
-
-    num_alt = s // 7
-    num = _int_to_roman((s % 7) + 1)
-    if num_alt == 1:
-        num += '+'
-    elif num_alt == 2:
-        num += '-'
-
-    den_alt = p // 7
-    den = _int_to_roman((p % 7) + 1)
-    if den_alt == 1:
-        den += '+'
-    elif den_alt == 2:
-        den += '-'
-
-    quality = QUALITY[q]
-    if quality == 'M':
-        num = num.upper()
-        quality = ''
-    elif quality == 'm':
-        num = num.lower()
-        quality = ''
-    return num + quality + ('/' + den if den != 'I' else '')
-
-
 def _int_to_roman(input):
     """ Convert an integer to a Roman numeral. """
 
@@ -244,6 +202,48 @@ def degrees_dcml_to_bps(degree_num, degree_den='', key_minor=True):
 def _decode_inversion(yi):
     i = np.argmax(yi)
     return str(i)
+
+
+def _decode_key(yk):
+    n = len(yk)
+    k = np.argmax(yk)
+    if n == 24:
+        lower = k // 12
+        key = NOTES[k % 12]
+        return key.lower() if lower else key
+    elif n == len(KEYS_SPELLING):
+        return KEYS_SPELLING[k]
+    else:
+        raise ValueError('weird number of classes in the key')
+
+
+def _decode_roman(yp, ys, yq):
+    s = np.argmax(ys)
+    p = np.argmax(yp)
+    q = np.argmax(yq)
+
+    num_alt = s // 7
+    num = _int_to_roman((s % 7) + 1)
+    if num_alt == 1:
+        num += '+'
+    elif num_alt == 2:
+        num += '-'
+
+    den_alt = p // 7
+    den = _int_to_roman((p % 7) + 1)
+    if den_alt == 1:
+        den += '+'
+    elif den_alt == 2:
+        den += '-'
+
+    quality = QUALITY[q]
+    if quality == 'M':
+        num = num.upper()
+        quality = ''
+    elif quality == 'm':
+        num = num.lower()
+        quality = ''
+    return num + quality + ('/' + den if den != 'I' else '')
 
 
 def decode_results(y):

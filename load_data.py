@@ -8,6 +8,7 @@ def _parse_function(proto, n, classes_key, classes_degree, classes_quality, clas
     feature = {
         'name': tf.io.FixedLenSequenceFeature([], tf.string, allow_missing=True),
         'transposition': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
+        'start': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
         'piano_roll': tf.io.FixedLenSequenceFeature([], tf.float32, allow_missing=True),
         'label_key': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
         'label_degree_primary': tf.io.FixedLenSequenceFeature([], tf.int64, allow_missing=True),
@@ -20,6 +21,7 @@ def _parse_function(proto, n, classes_key, classes_degree, classes_quality, clas
     parsed_features = tf.io.parse_single_example(proto, feature)
     filename = parsed_features['name']
     transposition = parsed_features['transposition']
+    start = parsed_features['start']
     piano_roll = tf.transpose(tf.reshape(parsed_features['piano_roll'], (n, -1)))  # NB transpose!: final shape (-1, n)
     mask = tf.ones([tf.shape(parsed_features['label_key'])[0], 1], tf.bool)  # whatever label would work
     y_key = tf.one_hot(parsed_features['label_key'], depth=classes_key)
@@ -28,10 +30,10 @@ def _parse_function(proto, n, classes_key, classes_degree, classes_quality, clas
     y_qlt = tf.one_hot(parsed_features['label_quality'], depth=classes_quality)
     y_inv = tf.one_hot(parsed_features['label_inversion'], depth=classes_inversion)
     y_roo = tf.one_hot(parsed_features['label_root'], depth=classes_root)
-    return (piano_roll, mask, filename, transposition), tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo])
+    return (piano_roll, mask, filename, transposition, start), tuple([y_key, y_dg1, y_dg2, y_qlt, y_inv, y_roo])
 
 
-def create_tfrecords_dataset(input_path, batch_size, shuffle_buffer, input_type):
+def load_tfrecords_dataset(input_path, batch_size, shuffle_buffer, input_type, repeat=True):
     """
 
     :param input_path:
@@ -65,6 +67,7 @@ def create_tfrecords_dataset(input_path, batch_size, shuffle_buffer, input_type)
             tf.TensorShape([pad_chords, 1]),
             tf.TensorShape([None, ]),
             tf.TensorShape([None, ]),
+            tf.TensorShape([None, ]),
         ),
         (
             tf.TensorShape([pad_chords, classes_key]),
@@ -75,8 +78,8 @@ def create_tfrecords_dataset(input_path, batch_size, shuffle_buffer, input_type)
             tf.TensorShape([pad_chords, classes_root]),
         )
     )
-
+    if repeat:
+        return tf.data.TFRecordDataset(input_path).map(_parse, num_parallel_calls=16).shuffle(
+            shuffle_buffer).repeat().padded_batch(batch_size, padded_shapes).prefetch(2)
     return tf.data.TFRecordDataset(input_path).map(_parse, num_parallel_calls=16).shuffle(
-        shuffle_buffer).repeat().padded_batch(batch_size, padded_shapes).prefetch(2)
-
-
+        shuffle_buffer).padded_batch(batch_size, padded_shapes).prefetch(2)

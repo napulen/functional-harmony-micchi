@@ -85,8 +85,9 @@ def MultiTaskLayer(x, derive_root, input_type):
     classes_inversion = 4  # root position, 1st, 2nd, and 3rd inversion (the last only for seventh chords)
 
     o0 = TimeDistributed(Dense(classes_key, activation='softmax'), name='key')(x)
-    o1 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_1')(x)
-    o2 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_2')(x)
+    z = Concatenate()([x, o0])
+    o1 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_1')(z)
+    o2 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_2')(z)
     o3 = TimeDistributed(Dense(classes_quality, activation='softmax'), name='quality')(x)
     o4 = TimeDistributed(Dense(classes_inversion, activation='softmax'), name='inversion')(x)
     if derive_root and input_type.startswith('pitch'):
