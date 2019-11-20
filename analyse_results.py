@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import tensorflow as tf
+from tensorflow.python.keras.backend import clear_session
 from tensorflow.python.keras.models import load_model
 
 from config import FEATURES, NOTES, N_VALID, PITCH_FIFTHS, \
@@ -184,7 +185,9 @@ def plot_coherence(root_pred, root_der, n_classes, name):
 
 
 def analyse_results(model_name, dataset='validation', comparison=False, dezrann=True):
-    model_folder = os.path.join('models', model_name)
+    clear_session()
+    # model_folder = os.path.join('models', model_name)
+    model_folder = os.path.join('tavern_in_less_keys', model_name)
     model = load_model(os.path.join(model_folder, model_name + '.h5'))
     if not comparison:
         model.summary()
@@ -233,14 +236,12 @@ def analyse_results(model_name, dataset='validation', comparison=False, dezrann=
 
     """ Visualize data """
     if not comparison:
-        classes_root = 35 if input_type.startswith('spelling') else 12  # the twelve notes without enharmonic duplicates
+        classes_root = 35 if ps else 12  # the twelve notes without enharmonic duplicates
         for pr, y_true, y_pred, ts, fn, frame in zip(piano_rolls, test_true, test_pred, timesteps, file_names,
                                                      start_frames):
             # visualize_piano_roll(pr, fn)
-            visualize_results(y_true, y_pred, fn, frame, mode='predictions',
-                              pitch_spelling=input_type.startswith('spelling'))
-            # visualize_results(y_true, y_pred, fn, start, mode='probabilities',
-            #                   pitch_spelling=input_type.startswith('spelling'))
+            # visualize_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
+            visualize_results(y_true, y_pred, fn, frame, mode='probabilities', pitch_spelling=ps)
             # visualize_chord_changes(y_true, y_pred, fn, ts, True)
             # visualize_chord_changes(y_true, y_pred, fn, ts, False)
             # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=classes_root, name=fn)
@@ -307,7 +308,8 @@ def compare_results(dataset, dezrann):
     :param dezrann: boolean, whether to write dezrann analyses to file
     :return:
     """
-    models = sorted(os.listdir('models'))
+    # models = sorted(os.listdir('models'))
+    models = sorted(os.listdir('tavern_in_less_keys'))
     n = len(models)
     results = []
     for i, model_name in enumerate(models):
@@ -361,5 +363,5 @@ def compare_results(dataset, dezrann):
 if __name__ == '__main__':
     # dataset = 'beethoven'
     dataset = 'validation'
-    # compare_results(dataset=dataset, dezrann=True)
-    analyse_results('conv_gru_spelling_bass_cut_0', dataset=dataset)
+    compare_results(dataset=dataset, dezrann=True)
+    # analyse_results('conv_gru_spelling_bass_cut_0', dataset=dataset)
