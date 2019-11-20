@@ -36,11 +36,11 @@ def DenseNetLayer(x, b, f, n=1):
     with name_scope(f"denseNet_{n}") as scope:
         for _ in range(b):
             y = BatchNormalization()(x)
-            y = Activation('relu')(y)
             y = Conv1D(filters=4 * f, kernel_size=1, padding='same', data_format='channels_last')(y)
-            y = BatchNormalization()(y)
             y = Activation('relu')(y)
+            y = BatchNormalization()(y)
             y = Conv1D(filters=f, kernel_size=32, padding='same', data_format='channels_last')(y)
+            y = Activation('relu')(y)
             x = Concatenate()([x, y])
     return x
 
@@ -56,8 +56,9 @@ def PoolingLayer(x, k, s, n=1):
     """
     with name_scope(f"poolingLayer_{n}") as scope:
         y = BatchNormalization()(x)
-        y = Activation('relu')(y)
         y = Conv1D(filters=k, kernel_size=1, padding='same', data_format='channels_last')(y)
+        y = Activation('relu')(y)
+        y = BatchNormalization()(y)
         y = MaxPooling1D(s, s, padding='same', data_format='channels_last')(y)
     return y
 
@@ -72,8 +73,8 @@ def DilatedConvLayer(x, l, k):
     """
     with name_scope(f"dilatedConv"):
         for i in range(l):
-            x = Conv1D(filters=k, kernel_size=3, padding='same', dilation_rate=3 ** i, data_format='channels_last',
-                       activation='relu')(x)
+            x = Conv1D(filters=k, kernel_size=3, padding='same', dilation_rate=3 ** i, data_format='channels_last')(x)
+            x = Activation('relu')(x)
     return x
 
 
