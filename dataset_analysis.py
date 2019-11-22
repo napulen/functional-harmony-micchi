@@ -167,6 +167,10 @@ def calculate_distribution_of_repetitions(r):
 
 
 if __name__ == '__main__':
+    f = 'data/testvalid_bpsfh_spelling_bass_cut.tfrecords'
+    c = count_records(f)
+    print(f"{f} - {c} files")
+
     for m in INPUT_TYPES:
         tfrecords = setup_tfrecords_paths(DATA_FOLDER, m)
 

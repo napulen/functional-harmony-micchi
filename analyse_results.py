@@ -184,11 +184,9 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
-def analyse_results(model_name, dataset='validation', comparison=False, dezrann=True):
+def analyse_results(models_folder, model_name, dataset='validation', comparison=False, dezrann=True):
     clear_session()
-    # model_folder = os.path.join('models', model_name)
-    model_folder = os.path.join('tavern_in_less_keys', model_name)
-    model = load_model(os.path.join(model_folder, model_name + '.h5'))
+    model = load_model(os.path.join(models_folder, model_name, model_name + '.h5'))
     if not comparison:
         model.summary()
         print(model_name)
@@ -207,6 +205,11 @@ def analyse_results(model_name, dataset='validation', comparison=False, dezrann=
         batch_size = VALID_BATCH_SIZE
         steps = VALID_STEPS
         n_chunks = N_VALID
+    elif dataset == 'validation_bpsfh':
+        data_file = os.path.join(DATA_FOLDER, f'testvalid_bpsfh_{input_type}.tfrecords')
+        batch_size = 11
+        steps = 9
+        n_chunks = 99
     else:
         raise ValueError("dataset should be either validation or beethoven")
 
@@ -239,9 +242,11 @@ def analyse_results(model_name, dataset='validation', comparison=False, dezrann=
         classes_root = 35 if ps else 12  # the twelve notes without enharmonic duplicates
         for pr, y_true, y_pred, ts, fn, frame in zip(piano_rolls, test_true, test_pred, timesteps, file_names,
                                                      start_frames):
+            if 'Einsamkeit' not in fn:
+                continue
             # visualize_piano_roll(pr, fn)
-            # visualize_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
-            visualize_results(y_true, y_pred, fn, frame, mode='probabilities', pitch_spelling=ps)
+            visualize_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
+            # visualize_results(y_true, y_pred, fn, frame, mode='probabilities', pitch_spelling=ps)
             # visualize_chord_changes(y_true, y_pred, fn, ts, True)
             # visualize_chord_changes(y_true, y_pred, fn, ts, False)
             # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=classes_root, name=fn)
@@ -250,7 +255,7 @@ def analyse_results(model_name, dataset='validation', comparison=False, dezrann=
     """ Create Dezrann annotations """
     if dezrann:
         create_dezrann_annotations(test_pred, test_true, timesteps, file_names,
-                                   output_folder=os.path.join(model_folder, 'analyses'))
+                                   output_folder=os.path.join(models_folder, model_name, 'analyses'))
 
     """" Calculate accuracy etc. """
     roman_tp, roman_inv_tp, root_tp = 0, 0, 0
@@ -300,7 +305,7 @@ def analyse_results(model_name, dataset='validation', comparison=False, dezrann=
     return accuracies
 
 
-def compare_results(dataset, dezrann):
+def compare_results(models_folder, dataset, dezrann):
     """
     Check all the models in the log folder and derive their accuracy scores, then write a comparison table to file
 
@@ -308,15 +313,14 @@ def compare_results(dataset, dezrann):
     :param dezrann: boolean, whether to write dezrann analyses to file
     :return:
     """
-    # models = sorted(os.listdir('models'))
-    models = sorted(os.listdir('tavern_in_less_keys'))
+    models = sorted(os.listdir(models_folder))
     n = len(models)
     results = []
     for i, model_name in enumerate(models):
         # if model_name != 'conv_gru_pitch_bass_cut_1':
         #     continue
         print(f"model {i + 1} out of {n} - {model_name}")
-        accuracies = analyse_results(model_name, dataset=dataset, comparison=True, dezrann=dezrann)
+        accuracies = analyse_results(models_folder, model_name, dataset, comparison=True, dezrann=dezrann)
         results.append((model_name, accuracies))
 
     features = list(results[0][1].keys())
@@ -363,5 +367,7 @@ def compare_results(dataset, dezrann):
 if __name__ == '__main__':
     # dataset = 'beethoven'
     dataset = 'validation'
-    compare_results(dataset=dataset, dezrann=True)
-    # analyse_results('conv_gru_spelling_bass_cut_0', dataset=dataset)
+    # dataset = 'validation_bpsfh'
+    models_folder = 'models'
+    # compare_results(models_folder, dataset, dezrann=True)
+    analyse_results(models_folder, 'conv_gru_spelling_bass_cut_1', dataset=dataset)

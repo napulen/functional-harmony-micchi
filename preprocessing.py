@@ -98,8 +98,10 @@ def create_tfrecords(input_type):
         os.path.join(DATA_FOLDER, 'valid'),
         os.path.join(DATA_FOLDER, 'BPS')
     ]
-
     tfrecords = setup_tfrecords_paths(DATA_FOLDER, input_type)
+
+    # folders = [os.path.join(DATA_FOLDER, 'valid_bpsfh')]
+    # tfrecords = [os.path.join(DATA_FOLDER, f'testvalid_bpsfh_{input_type}.tfrecords')]
     tfrecords = check_existence_tfrecords(tfrecords)
 
     for folder, output_file in zip(folders, tfrecords):
@@ -196,6 +198,7 @@ def create_tfrecords(input_type):
 
 
 if __name__ == '__main__':
-    input_type = INPUT_TYPES
+    # input_type = INPUT_TYPES
+    input_type = ['spelling_bass_cut']
     for it in input_type:
         create_tfrecords(it)

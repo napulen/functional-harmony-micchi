@@ -350,6 +350,7 @@ def shift_chord_labels(chord_labels, s, mode='semitone'):
             raise ValueError('mode should be either "semitone" or "fifth"')
         return shifted_note
 
+    # onset_time, key, degree, quality, inversion, root
     new_labels = [[c[0], shift_note(c[1]), c[2], c[3], c[4], shift_note(c[5])] for c in chord_labels]
     return new_labels
 

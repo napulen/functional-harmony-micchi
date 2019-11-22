@@ -39,7 +39,7 @@ def DenseNetLayer(x, b, f, n=1):
             y = Conv1D(filters=4 * f, kernel_size=1, padding='same', data_format='channels_last')(y)
             y = Activation('relu')(y)
             y = BatchNormalization()(y)
-            y = Conv1D(filters=f, kernel_size=32, padding='same', data_format='channels_last')(y)
+            y = Conv1D(filters=f, kernel_size=8, padding='same', data_format='channels_last')(y)
             y = Activation('relu')(y)
             x = Concatenate()([x, y])
     return x
@@ -115,7 +115,7 @@ def create_model(name, model_type, input_type, derive_root=False):
     mask = Input(shape=(None, 1), name="mask_input")
 
     if 'conv' in model_type:
-        x = DenseNetLayer(notes, b=4, f=5, n=1)
+        x = DenseNetLayer(notes, b=4, f=8, n=1)
         x = PoolingLayer(x, 32, 2, n=1)
         x = DenseNetLayer(x, 4, 5, n=2)
         x = PoolingLayer(x, 48, 2, n=1)
