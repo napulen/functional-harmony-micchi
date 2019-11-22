@@ -167,32 +167,35 @@ def calculate_distribution_of_repetitions(r):
 
 
 if __name__ == '__main__':
-    f = 'data/testvalid_bpsfh_spelling_bass_cut.tfrecords'
-    c = count_records(f)
-    print(f"{f} - {c} files")
-
-    for m in INPUT_TYPES:
-        tfrecords = setup_tfrecords_paths(DATA_FOLDER, m)
-
-        for f in tfrecords:
-            c = count_records(f)
-            print(f"{f} - {c} files")
+    # f = 'data/testvalid_bpsfh_spelling_bass_cut.tfrecords'
+    # c = count_records(f)
+    # print(f"{f} - {c} files")
+    #
+    # for m in INPUT_TYPES:
+    #     tfrecords = setup_tfrecords_paths(DATA_FOLDER, m)
+    #
+    #     for f in tfrecords:
+    #         c = count_records(f)
+    #         print(f"{f} - {c} files")
 
     # pm, pM = find_pitch_extremes()
     # print(f'The pitch classes needed, including transpositions, are from {pm} to {pM}')
     # cProfile.run('visualize_transpositions()', sort='cumtime')
-    # fw, sw = calculate_transpositions()
-    #
-    # ff = np.array([x for x in fw])  # flattest note, between 0 and 34
-    # ss = np.array([35 - x for x in sw])  # sharpest, between 0 and 34 as well, because sharpwards is between 1 and 35
-    # r = ss - ff  # by constructions s >= f always, so r in [0, 34]
-    # plot_flattest_sharpest(ff, ss)
-    # plot_range_histogram(r)
-    # plot_range_individual(ff, ss, r)
-    #
-    # m1, s1, m2, s2 = calculate_distribution_of_repetitions(r)
-    # print(f"{m1} +- {s1},   {m2} +- {s2}")
+    fw, sw = calculate_transpositions()
+
+    ff = np.array([x for x in fw])  # flattest note, between 0 and 34
+    ss = np.array([35 - x for x in sw])  # sharpest, between 0 and 34 as well, because sharpwards is between 1 and 35
+    r = ss - ff  # by constructions s >= f always, so r in [0, 34]
+    plot_flattest_sharpest(ff, ss)
+    plot_range_histogram(r)
+    plot_range_individual(ff, ss, r)
+
+    m1, s1, m2, s2 = calculate_distribution_of_repetitions(r)
+    print(f"{m1} +- {s1},   {m2} +- {s2}")
     # c = count_records(TRAIN_TFRECORDS)
     # print(f'There is a total of {c} records in the train file')
     # c = count_records(VALID_TFRECORDS)
     # print(f'There is a total of {c} records in the validation file')
+
+    repeats = range(3, 16)
+    value = [3, 4, 4, 8, 13, 16, 16, 32, 25, 55, 23, 16, 10]  # coming from the analysis of the dataset as of 22/11/2019

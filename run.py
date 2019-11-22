@@ -117,7 +117,7 @@ if __name__ == '__main__':
                         help='score or folder containing the scores')
     parser.add_argument('--model', dest='model_name', action='store', type=str, help='name of the model')
     parser.set_defaults(interactive=False)
-    parser.set_defaults(music_path=os.path.join(DATA_FOLDER, 'BPS_other-movements', 'scores'))
+    parser.set_defaults(music_path=os.path.join(DATA_FOLDER, 'valid', 'scores'))
     parser.set_defaults(model_name='conv_gru_spelling_bass_cut_0')
     args = parser.parse_args()
 

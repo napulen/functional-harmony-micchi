@@ -324,7 +324,7 @@ def compare_results(models_folder, dataset, dezrann):
         results.append((model_name, accuracies))
 
     features = list(results[0][1].keys())
-    file_path = f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv'
+    file_path = os.path.join(models_folder, '..', f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv')
     with open(file_path, 'w+') as f:
         w = csv.writer(f)
         w.writerow(['model name'] + features)
@@ -368,6 +368,6 @@ if __name__ == '__main__':
     # dataset = 'beethoven'
     dataset = 'validation'
     # dataset = 'validation_bpsfh'
-    models_folder = 'models'
+    models_folder = os.path.join('models')
     # compare_results(models_folder, dataset, dezrann=True)
-    analyse_results(models_folder, 'conv_gru_spelling_bass_cut_1', dataset=dataset)
+    analyse_results(models_folder, 'conv_gru_spelling_bass_cut_0', dataset=dataset)

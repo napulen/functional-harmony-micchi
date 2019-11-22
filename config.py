@@ -16,7 +16,7 @@ TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2,
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
-CHUNK_SIZE = 160  # dimension of each chunk when cutting the sonatas
+CHUNK_SIZE = 160  # dimension of each chunk when cutting the sonatas in chord time-steps
 HSIZE = 4  # hopping size between frames in 32nd notes, equivalent to 2 frames per quarter note
 FPQ = 8  # number of frames per quarter note with 32nd note quantization (check: HSIZE * FPQ = 32)
 PITCH_LOW = 18  # lowest midi pitch used, as returned by preprocessing.find_pitch_extremes()
