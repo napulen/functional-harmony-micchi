@@ -46,7 +46,7 @@ def setup_model_paths(exploratory, model_type, input_type):
 timeout = None
 exploratory = False
 # exploratory = True
-models = ['conv_gru', 'conv_dil', 'gru']
+models = ['conv_gru', 'conv_dil', 'gru', 'conv_gru_local', 'conv_dil_local']
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Train a neural network for Roman Numeral analysis')

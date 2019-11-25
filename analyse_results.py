@@ -88,6 +88,7 @@ def visualize_results(y_true, y_pred, name, start, mode='probabilities', pitch_s
     :param y_true: shape [outputs] (timesteps, features output)
     :param y_pred: same shape as above
     :param name: the title of the piece we are analysing
+    :param start: the initial frame
     :param mode: probabilities or predictions
     :param pitch_spelling: this controls the shape and labels of the x axis in with keys
     :return:

@@ -198,7 +198,7 @@ def create_tfrecords(input_type):
 
 
 if __name__ == '__main__':
-    # input_type = INPUT_TYPES
-    input_type = ['spelling_bass_cut']
+    input_type = INPUT_TYPES
+    # input_type = ['spelling_bass_cut']
     for it in input_type:
         create_tfrecords(it)
