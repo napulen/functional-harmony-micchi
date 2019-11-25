@@ -85,17 +85,17 @@ def MultiTaskLayer(x, derive_root, input_type):
     classes_quality = 12  # ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6', 'It+6', 'Fr+6']
     classes_inversion = 4  # root position, 1st, 2nd, and 3rd inversion (the last only for seventh chords)
 
-    o0 = TimeDistributed(Dense(classes_key, activation='softmax'), name='key')(x)
-    z = Concatenate()([x, o0])
-    o1 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_1')(z)
-    o2 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_2')(z)
-    o3 = TimeDistributed(Dense(classes_quality, activation='softmax'), name='quality')(x)
-    o4 = TimeDistributed(Dense(classes_inversion, activation='softmax'), name='inversion')(x)
+    o_key = TimeDistributed(Dense(classes_key, activation='softmax'), name='key')(x)
+    z = Concatenate()([x, o_key])
+    o_dg1 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_1')(z)
+    o_dg2 = TimeDistributed(Dense(classes_degree, activation='softmax'), name='degree_2')(z)
+    o_qlt = TimeDistributed(Dense(classes_quality, activation='softmax'), name='quality')(x)
+    o_inv = TimeDistributed(Dense(classes_inversion, activation='softmax'), name='inversion')(x)
     if derive_root and input_type.startswith('pitch'):
-        o5 = Lambda(find_root_pitch, name='root')([o0, o1, o2])
+        o_roo = Lambda(find_root_pitch, name='root')([o_key, o_dg1, o_dg2])
     else:
-        o5 = TimeDistributed(Dense(classes_root, activation='softmax'), name='root')(x)
-    return [o0, o1, o2, o3, o4, o5]
+        o_roo = TimeDistributed(Dense(classes_root, activation='softmax'), name='root')(x)
+    return [o_key, o_dg1, o_dg2, o_qlt, o_inv, o_roo]
 
 
 def LocalMultiTaskLayer(x, input_type):
@@ -145,7 +145,7 @@ def create_model(name, model_type, input_type, derive_root=False):
         x = DenseNetLayer(x, 4, 5, n=2)
         x = PoolingLayer(x, 48, 2, n=1)
         if 'local' in model_type:
-            y1 = LocalMultiTaskLayer(x, input_type)
+            y_loc = LocalMultiTaskLayer(x, input_type)
     else:
         x = MaxPooling1D(4, 4, padding='same', data_format='channels_last')(notes)
 
@@ -162,9 +162,10 @@ def create_model(name, model_type, input_type, derive_root=False):
     x = TimeDistributed(Dense(64, activation='tanh'))(x)
 
     if 'local' in model_type:
-        x = Concatenate()([x, y1])
-        y2 = ProgressionMultiTaskLayer(x, input_type)
-        y = y1 + y2
+        o0, o1, o2 = y_loc
+        x = Concatenate()([x, o0, o1, o2])
+        y_pro = ProgressionMultiTaskLayer(x, input_type)
+        y = y_pro + y_loc
     else:
         y = MultiTaskLayer(x, derive_root, input_type)
 
