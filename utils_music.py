@@ -529,9 +529,10 @@ def find_chord_root(chord, pitch_spelling):
     # Translate chords
     key = chord['key']
     degree_str = chord['degree']
+    ps = 'spelling' if pitch_spelling else 'class'
 
     try:  # check if we have already seen the same chord (F2S = features to symbol)
-        return F2S[','.join([key, degree_str])]
+        return F2S[','.join([key, degree_str, ps])]
     except KeyError:
         pass
 
@@ -563,7 +564,7 @@ def find_chord_root(chord, pitch_spelling):
     if not pitch_spelling:
         root = find_enharmonic_equivalent(root)
 
-    F2S[','.join([key, degree_str])] = root
+    F2S[','.join([key, degree_str, ps])] = root
     return root
 
 
