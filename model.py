@@ -33,7 +33,7 @@ def DenseNetLayer(x, b, f, n=1):
     :param training: passed to the batch normalization layers
     :return:
     """
-    with name_scope(f"denseNet_{n}") as scope:
+    with tf.name_scope(f"denseNet_{n}"):
         for _ in range(b):
             y = BatchNormalization()(x)
             y = Conv1D(filters=4 * f, kernel_size=1, padding='same', data_format='channels_last')(y)
@@ -54,7 +54,7 @@ def PoolingLayer(x, k, s, n=1):
     :param n: unique identifier of the Layer
     :return:
     """
-    with name_scope(f"poolingLayer_{n}") as scope:
+    with tf.name_scope(f"poolingLayer_{n}"):
         y = BatchNormalization()(x)
         y = Conv1D(filters=k, kernel_size=1, padding='same', data_format='channels_last')(y)
         y = Activation('relu')(y)
@@ -71,7 +71,7 @@ def DilatedConvLayer(x, l, k):
     :param k: number of filters
     :return:
     """
-    with name_scope(f"dilatedConv"):
+    with tf.name_scope(f"dilatedConv"):
         for i in range(l):
             x = Conv1D(filters=k, kernel_size=3, padding='same', dilation_rate=3 ** i, data_format='channels_last')(x)
             x = Activation('relu')(x)

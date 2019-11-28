@@ -6,7 +6,7 @@ from collections import Counter
 import numpy as np
 import xlrd
 
-from utils_music import _load_score
+from utils_music import _load_score, load_chord_labels
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,19 +54,33 @@ if __name__ == '__main__':
     # create_training_validation_set_songs()
     # create_training_validation_set_bsq()
 
-    folders = [os.path.join('data', 'BPS_other-movements')]
+    # folders = [os.path.join('data', 'BPS'), os.path.join('data', 'Beethoven_4tets')]
+    folders = [os.path.join('data', 'Tavern', 'Mozart'), os.path.join('data', 'Tavern', 'Beethoven'),
+               os.path.join('data', '19th_Century_Songs'), os.path.join('data', 'Bach_WTC_1_Preludes')]
     for folder in folders:
-        # chords_folder = os.path.join(folder, 'chords')
+        total_ql, total_measures, total_rn = 0, 0, 0
+        chords_folder = os.path.join(folder, 'chords')
         scores_folder = os.path.join(folder, 'scores')
         file_names = sorted([fn[:-4] for fn in os.listdir(scores_folder)])
         for fn in file_names:
-            _, n, mov = fn.split("_")
+            # _, n, mov = fn.split("_")
             # if fn not in ['ncs_Chausson_Ernest_-_7_Melodies_Op.2_No.7_-_Le_Colibri']:
             #     continue
             print(fn)
-            # cf = os.path.join(chords_folder, f"{fn}.csv")
+            if 'Tavern' in folder:
+                cf1 = os.path.join(chords_folder, f"{fn}_A.csv")
+                cf2 = os.path.join(chords_folder, f"{fn}_B.csv")
+                cfs = [cf1, cf2]
+                for cf in cfs:
+                    chord_labels = load_chord_labels(cf)
+                    total_rn += len(chord_labels)
+            else:
+                cf = os.path.join(chords_folder, f"{fn}.csv")
+                chord_labels = load_chord_labels(cf)
+                total_rn += len(chord_labels)
+
             sf = os.path.join(scores_folder, f"{fn}.mxl")
-            # chord_labels = load_chord_labels(cf)
+
             # for c in chord_labels:
             #     if c['quality'] == 'D7':
             #         print(c)
@@ -78,15 +92,18 @@ if __name__ == '__main__':
             #             f'left {nl_pitches, nl_keys}; '
             #             f'right {nr_pitches - 1, nr_keys - 1}.')
 
-            if int(n) < 32:
-                continue
+            # if int(n) < 32:
+            #     continue
             score, n_frames = _load_score(sf, 8)
             measure_offset = list(score.measureOffsetMap().keys()) + [score.duration.quarterLength]
             measure_length = np.diff(measure_offset)
-            print(Counter(measure_length))
+
+            total_ql += score.duration.quarterLength
+            total_measures += len(measure_length)
+            # print(Counter(measure_length))
 
             # PROBLEMS IN TOTAL LENGTH IN THE FOLLOWING CASES
-            npad = (- n_frames) % 4
+            # npad = (- n_frames) % 4
             # print(f'{fn} - padding length {npad}')
             # n_frames_analysis = (n_frames + npad) // 4
             # # Verify that the two lengths match
@@ -106,3 +123,4 @@ if __name__ == '__main__':
             #     cl_full = attach_chord_root(cl_shifted, pitch_spelling=True)
             #     cl_segmented = segment_chord_labels(cl_full, n_frames_chords, hsize=4, fpq=8)
             #     cl_encoded = encode_chords(cl_segmented, 'fifth')
+        print(f"{folder}: ql = {total_ql}, measures = {total_measures}, RN = {total_rn}")

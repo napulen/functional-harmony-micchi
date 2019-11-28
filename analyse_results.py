@@ -11,6 +11,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import tensorflow as tf
 from tensorflow.python.keras.backend import clear_session
@@ -243,7 +244,9 @@ def analyse_results(models_folder, model_name, dataset='validation', comparison=
         classes_root = 35 if ps else 12  # the twelve notes without enharmonic duplicates
         for pr, y_true, y_pred, ts, fn, frame in zip(piano_rolls, test_true, test_pred, timesteps, file_names,
                                                      start_frames):
-            if 'Einsamkeit' not in fn:
+            if 'bps_01' not in fn:
+            # if 'Einsamkeit' not in fn:
+            # if 'wtc_i_prelude_01' not in fn:
                 continue
             # visualize_piano_roll(pr, fn)
             visualize_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
@@ -365,10 +368,33 @@ def compare_results(models_folder, dataset, dezrann):
         w.writerow(['temperley'] + [temperley[feat] for feat in features])
 
 
+def average_results(fp):
+    """
+
+    :param fp: The file path to the comparison file we want to average
+    """
+    data = pd.read_csv(fp, header=0, index_col=0)
+    res = pd.DataFrame()
+    res['c1_local'] = data.loc[data.index.str.contains('_local_')].mean()
+    res['c1_global'] = data.loc[data.index.str.contains('conv_') & ~data.index.str.contains('_local_')].mean()
+    res['c2_conv_dil'] = data.loc[data.index.str.contains('conv_dil')].mean()
+    res['c2_conv_gru'] = data.loc[data.index.str.contains('conv_gru')].mean()
+    res['c2_gru'] = data.loc[data.index.str.contains('gru_') & ~data.index.str.contains('conv_')].mean()
+    res['c3_spelling'] = data.loc[data.index.str.contains('_spelling_')].mean()
+    res['c3_pitch'] = data.loc[data.index.str.contains('_pitch_')].mean()
+    res['c4_complete'] = data.loc[data.index.str.contains('_complete_')].mean()
+    res['c4_bass'] = data.loc[data.index.str.contains('_bass_')].mean()
+    res['c4_class'] = data.loc[data.index.str.contains('_class_')].mean()
+    res = res.transpose()
+    columns = ['key', 'degree', 'quality', 'inversion', 'roman + inv', 'secondary', 'd7 no inv']
+    (res - res.loc['c3_spelling']).loc[res.index.str.contains('c3'), columns]
+    return
+
+
 if __name__ == '__main__':
     # dataset = 'beethoven'
     dataset = 'validation'
     # dataset = 'validation_bpsfh'
-    models_folder = os.path.join('models')
+    models_folder = os.path.join('runs', 'run_06', 'models')
     # compare_results(models_folder, dataset, dezrann=True)
-    analyse_results(models_folder, 'conv_gru_spelling_bass_cut_0', dataset=dataset)
+    analyse_results(models_folder, 'conv_gru_spelling_bass_cut_3', dataset=dataset)
