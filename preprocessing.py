@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def check_existence_tfrecords(tfrecords):
+def validate_tfrecords_paths(tfrecords):
     existent = [f for f in tfrecords if os.path.isfile(f)]
     if len(existent) > 0:
         answer = input(
@@ -93,23 +93,23 @@ def create_tfrecords(input_type):
           f"You are currently working in the {input_type} mode.\n"
           f"Thank you for choosing algomus productions and have a nice day!\n")
 
-    folders = [
-        os.path.join(DATA_FOLDER, 'train'),
-        os.path.join(DATA_FOLDER, 'valid'),
-        os.path.join(DATA_FOLDER, 'BPS')
+    datasets = [
+        'train',
+        'valid',
+        'BPS',
+        # 'valid_bpsfh',
     ]
-    tfrecords = setup_tfrecords_paths(DATA_FOLDER, input_type)
+    tfrecords = setup_tfrecords_paths(DATA_FOLDER, datasets, input_type)
 
-    # folders = [os.path.join(DATA_FOLDER, 'valid_bpsfh')]
-    # tfrecords = [os.path.join(DATA_FOLDER, f'testvalid_bpsfh_{input_type}.tfrecords')]
-    tfrecords = check_existence_tfrecords(tfrecords)
+    tfrecords = validate_tfrecords_paths(tfrecords)
 
-    for folder, output_file in zip(folders, tfrecords):
+    for ds, output_file in zip(datasets, tfrecords):
+        folder = os.path.join(DATA_FOLDER, ds)
         with tf.io.TFRecordWriter(output_file) as writer:
             logger.info(f'Working on {os.path.basename(output_file)}.')
             chords_folder = os.path.join(folder, 'chords')
             scores_folder = os.path.join(folder, 'scores')
-            file_names = ['.'.join(fn.split('.')[:-1]) for fn in os.listdir(chords_folder)]
+            file_names = ['.'.join(fn.split('.')[:-1]) for fn in os.listdir(chords_folder) if not fn.startswith('.')]
             for fn in file_names:
                 # if fn not in ['bsq_op127_no12_mov2']:
                 #     continue
@@ -140,7 +140,7 @@ def create_tfrecords(input_type):
                     else:
                         raise NotImplementedError("verify the input_type")
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
-                    nl = min(nl_keys, nl_pitches)
+                    nl = min(nl_keys, nl_pitches)  # notice that they can be negative!
                     nr = min(nr_keys, nr_pitches)
                 else:
                     raise NotImplementedError("verify the input_type")
@@ -152,10 +152,13 @@ def create_tfrecords(input_type):
 
                 # Pre-process the chords
                 cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
-
-                logger.info(f"Transposing {nl} times to the left and {nr - 1} to the right")
+                if ds == 'train':
+                    logger.info(f"Transposing {nl} times to the left and {nr - 1} to the right")
+                if nl < 0 or nr < 0:
+                    logger.warning(
+                        f"The original score doesn't satisfy the pitch and key constraints! nl={nl}, nr={nr}")
                 for s in range(-nl, nr):
-                    if folder != folders[0] and s != 0:  # transpose only for training data
+                    if ds != 'train' and s != 0:  # transpose only for training data
                         continue
                     if input_type.startswith('pitch'):
                         if 'complete' in input_type:
@@ -198,7 +201,7 @@ def create_tfrecords(input_type):
 
 
 if __name__ == '__main__':
-    input_type = INPUT_TYPES
-    # input_type = ['spelling_bass_cut']
+    # input_type = INPUT_TYPES
+    input_type = ['pitch_class_cut', 'spelling_class_cut']
     for it in input_type:
         create_tfrecords(it)

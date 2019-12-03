@@ -194,7 +194,8 @@ def analyse_results(models_folder, model_name, dataset='validation', comparison=
         print(model_name)
 
     input_type = find_input_type(model_name)
-    train, valid, test_bps = setup_tfrecords_paths(DATA_FOLDER, input_type)
+    datasets = ['valid', 'BPS', 'valid_bpsfh']
+    valid, test_bps, valid_bpsfh = setup_tfrecords_paths(DATA_FOLDER, datasets, input_type)
     ps = input_type.startswith('spelling')
 
     if dataset == 'beethoven':
@@ -208,7 +209,7 @@ def analyse_results(models_folder, model_name, dataset='validation', comparison=
         steps = VALID_STEPS
         n_chunks = N_VALID
     elif dataset == 'validation_bpsfh':
-        data_file = os.path.join(DATA_FOLDER, f'testvalid_bpsfh_{input_type}.tfrecords')
+        data_file = valid_bpsfh
         batch_size = 11
         steps = 9
         n_chunks = 99
@@ -245,11 +246,11 @@ def analyse_results(models_folder, model_name, dataset='validation', comparison=
         for pr, y_true, y_pred, ts, fn, frame in zip(piano_rolls, test_true, test_pred, timesteps, file_names,
                                                      start_frames):
             if 'bps_01' not in fn:
-            # if 'Einsamkeit' not in fn:
-            # if 'wtc_i_prelude_01' not in fn:
+                # if 'Einsamkeit' not in fn:
+                # if 'wtc_i_prelude_01' not in fn:
                 continue
             # visualize_piano_roll(pr, fn)
-            # visualize_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
+            visualize_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
             # visualize_results(y_true, y_pred, fn, frame, mode='probabilities', pitch_spelling=ps)
             # visualize_chord_changes(y_true, y_pred, fn, ts, True)
             # visualize_chord_changes(y_true, y_pred, fn, ts, False)
@@ -325,7 +326,8 @@ def compare_results(models_folder, dataset, export_annotations):
         # if model_name != 'conv_gru_pitch_bass_cut_1':
         #     continue
         print(f"model {i + 1} out of {n} - {model_name}")
-        accuracies = analyse_results(models_folder, model_name, dataset, comparison=True, export_annotations=export_annotations)
+        accuracies = analyse_results(models_folder, model_name, dataset, comparison=True,
+                                     export_annotations=export_annotations)
         results.append((model_name, accuracies))
 
     features = list(results[0][1].keys())
@@ -389,13 +391,13 @@ def average_results(fp):
     res = res.transpose()
     columns = ['key', 'degree', 'quality', 'inversion', 'roman + inv', 'secondary', 'd7 no inv']
     (res - res.loc['c3_spelling']).loc[res.index.str.contains('c3'), columns]
-    return
+    return data, res
 
 
 if __name__ == '__main__':
     # dataset = 'beethoven'
     dataset = 'validation'
     # dataset = 'validation_bpsfh'
-    models_folder = os.path.join('runs', 'run_06', 'models')
+    models_folder = os.path.join('runs', 'run_07', 'models')
     compare_results(models_folder, dataset, export_annotations=True)
-    analyse_results(models_folder, 'conv_gru_spelling_bass_cut_3', dataset=dataset)
+    # analyse_results(models_folder, 'conv_gru_spelling_bass_cut_3', dataset=dataset)

@@ -59,7 +59,7 @@ if __name__ == '__main__':
     model_type, input_type = models[args.model_idx], INPUT_TYPES[args.input_idx]
     model_folder, model_name = setup_model_paths(exploratory, model_type, input_type)
     model_path = os.path.join(model_folder, model_name + '.h5')
-    train_path, valid_path, _ = setup_tfrecords_paths(DATA_FOLDER, input_type)
+    train_path, valid_path = setup_tfrecords_paths(DATA_FOLDER, ['train', 'valid'], input_type)
     train_data = load_tfrecords_dataset(train_path, BATCH_SIZE, SHUFFLE_BUFFER, input_type)
     valid_data = load_tfrecords_dataset(valid_path, VALID_BATCH_SIZE, 1, input_type)
     # visualize_data(train_data)

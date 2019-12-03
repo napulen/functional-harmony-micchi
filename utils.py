@@ -9,11 +9,8 @@ import pandas as pd
 from config import NOTES, QUALITY, KEYS_SPELLING, INPUT_TYPES
 
 
-def setup_tfrecords_paths(data_folder, mode):
-    train = os.path.join(data_folder, f'train_{mode}.tfrecords')
-    valid = os.path.join(data_folder, f'valid_{mode}.tfrecords')
-    test_bps = os.path.join(data_folder, f'test-bps_{mode}.tfrecords')
-    return train, valid, test_bps
+def setup_tfrecords_paths(tfrecords_folder, tfrecords_basename, mode):
+    return [os.path.join(tfrecords_folder, f'{bn}_{mode}.tfrecords') for bn in tfrecords_basename]
 
 
 def create_dezrann_annotations(model_output, annotations, timesteps, file_names, output_folder):
@@ -37,7 +34,7 @@ def create_dezrann_annotations(model_output, annotations, timesteps, file_names,
 
     offsets = _set_chunk_offset(file_names, timesteps)
     annotation, labels, current_file = dict(), [], None
-    features = ['Tonality', 'Harmony']  # add a third element "Inversion" if needed
+    features = ['Tonality', 'Harmony', "Inversion"]
     lines = [('top.3', 'bot.2'), ('top.2', 'bot.1'), ('top.1', 'bot.3')]
 
     for y_true, y_pred, ts, name, t0 in zip(annotations, model_output, timesteps, file_names, offsets):
@@ -119,28 +116,26 @@ def create_tabular_annotations(model_output, timesteps, file_names, output_folde
         # Save previous analysis if a new one starts
         if name != current_file:  # a new sonata started
             if current_file is not None:  # save previous file, if it exists
-                key, deg, qlt, inv = current_label
-                data.append([start, end, key, deg, qlt, inv])
+                data.append([start, end, *current_label])
                 _save_csv(current_file, data)
 
             data, current_file, current_label, start, end = [], name, None, 0, None
 
         labels = decode_results_tabular(y)
         for t in range(ts):
+            new_label = labels[t]
             if current_label is None:
-                current_label = labels[t]
-            if np.any(labels[t] != current_label):
+                current_label = new_label
+            if np.any(new_label != current_label):
                 end = (t + t0) / 2  # divided by two because we have one label every 8th note
-                key, deg, qlt, inv = current_label
-                data.append([start, end, key, deg, qlt, inv])
+                data.append([start, end, *current_label])
                 start = end
-                current_label = labels[t]
+                current_label = new_label
             if t == ts - 1:
                 end = (t + t0 + 1) / 2  # used only at the beginning of the next chunk if a new piece starts
 
     # last file
-    key, deg, qlt, inv = current_label
-    data.append([start, end, key, deg, qlt, inv])
+    data.append([start, end, *current_label])
     _save_csv(current_file, data)
     return
 
