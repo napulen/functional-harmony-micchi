@@ -13,89 +13,109 @@ Should now be sorted:
 """
 
 import os
-import unittest
+import csv
 
 import numpy as np
-from music21 import converter, roman
+from music21 import converter, roman, pitch
 
 
 # ------------------------------------------------------------------------------
 
 def roman2bps(analysis, score, test):
-    inData = analysis.recurse().getElementsByClass('RomanNumeral')
+    in_data = analysis.recurse().getElementsByClass('RomanNumeral')
 
-    outData = []
+    out_data = []
 
-    initialBeatLength = score.recurse().stream().getTimeSignatures()[0].beatDuration.quarterLength  # Is this always 1?
-    # scoreMeasureOffset = list(score.measureOffsetMap().keys())
-    scoreMOM = score.measureOffsetMap()
-    scoreMeasureOffset = [k for k in scoreMOM.keys() if
-                          scoreMOM[k][0].numberSuffix is None]  # the [0] because there are two parts
-    scoreMeasureOffset.append(score.duration.quarterLength)
+    initial_beat_length = score.recurse().stream().getTimeSignatures()[0].beatDuration.quarterLength
+
+    score_mom = score.measureOffsetMap()
+    # consider only measures that have not been marked as "excluded" in the musicxml (for example using Musescore)
+    score_measure_offset = [k for k in score_mom.keys() if
+                            score_mom[k][0].numberSuffix is None]  # the [0] because there are two parts
+    score_measure_offset.append(score.duration.quarterLength)
 
     if test:
-        scoreMeasureLength = np.diff(scoreMeasureOffset)
-        nScoreMeasures = len(scoreMeasureLength)
+        test_time_signatures(analysis, score, score_measure_offset)
 
-        measureOffset = list(analysis.measureOffsetMap().keys())
-        measureLength = np.diff(measureOffset)
-        measureLength = np.append(measureLength, score.duration.quarterLength - measureOffset[-1])
-        nMeasures = len(measureLength)
-
-        scoreTimeChange = []
-        timeChange = []
-        for i in range(len(measureLength) - 2):  # remove the last measure, which often has weird length.
-            if measureLength[i + 1] != measureLength[i]:
-                timeChange.append(i + 1)  # +1 for indexing
-        for i in range(len(scoreMeasureLength) - 2):
-            if scoreMeasureLength[i + 1] != scoreMeasureLength[i]:
-                scoreTimeChange.append(i + 1)  # +1 for indexing
-        for ctc in timeChange:
-            if ctc not in scoreTimeChange:
-                print(f'time signature in chords changes after measure {ctc} (1-indexed), but not in the score')
-        for stc in scoreTimeChange:
-            if stc not in timeChange:
-                print(f'time signature in score changes after measure {stc} (1-indexed), but not in the chords')
-
-    flag = False
-    measureZero = False
-    for x in inData:
-        if x.measureNumber == 0:
-            measureZero = True
-        measure = x.measureNumber if measureZero else x.measureNumber - 1  # 0-indexed
-        offsetInMeasure = x.offset
-        if measure == 0:
-            offsetInMeasure -= - scoreMeasureOffset[1] % initialBeatLength
-        startOffset = float(scoreMeasureOffset[measure] + offsetInMeasure)
-        duration = float(x.quarterLength)
-
-        endOffset = min(startOffset + duration, float(scoreMeasureOffset[measure + 1]))
-
+    measure_zero = (in_data[0].measureNumber == 0)
+    current_label = None
+    start_offset = 0
+    N = len(in_data)
+    for n, x in enumerate(in_data):
         key = x.key.tonicPitchNameWithCase
-
-        degree = getDegree(x)
-
-        quality = getQuality(x)
-
+        degree = get_degree(x)
+        quality = get_quality(x)
         inversion = x.inversion()
+        new_label = [key, degree, quality, inversion]
 
-        outData.append([round(startOffset, 3), round(endOffset, 3), key, degree, quality, inversion])
-
-        if flag:
-            if outData[-2][1] > outData[-1][0]:
-                print(f'Hey, we got a problem here: {outData[-2], outData[-1]}')
-        flag = True
+        if current_label is None:
+            current_label = new_label
+        if np.any(new_label != current_label):
+            _, end_offset = find_offset(in_data[n - 1], score_measure_offset, initial_beat_length, measure_zero)
+            out_data.append([round(start_offset, 3), round(end_offset, 3), *current_label])
+            start_offset = end_offset
+            current_label = new_label
+        if n == N - 1:
+            _, end_offset = find_offset(in_data[n], score_measure_offset, initial_beat_length, measure_zero)
+            out_data.append([round(start_offset, 3), round(end_offset, 3), *current_label])
 
     # Check end of piece. NB AFTER adjusting start
-    endOfAnalysis = outData[-1][1]
-    endOfPiece = score.duration.quarterLength
+    end_of_analysis = out_data[-1][1]
+    end_of_piece = score.duration.quarterLength
 
-    if endOfAnalysis != endOfPiece:
-        print(f'Reamining gap: {endOfPiece - endOfAnalysis}\n'
+    if end_of_analysis != end_of_piece:
+        print(f'Reamining gap: {end_of_piece - end_of_analysis}\n'
               f'if > 0, the score is longer than the analysis, which could be due to the final chord lasting several measures')
-        outData[-1][1] = endOfPiece
+        out_data[-1][1] = end_of_piece
 
-    return outData
+    return out_data
+
+
+def test_time_signatures(analysis, score, score_measure_offset):
+    """
+    Test script that checks if the measure length in the score aligns with the time signature changes in the rntxt file.
+    """
+    score_measure_length = np.diff(score_measure_offset)
+    n_score_measures = len(score_measure_length)
+    rn_measure_offset = list(analysis.measureOffsetMap().keys())
+    rn_measure_length = np.diff(rn_measure_offset)
+    rn_measure_length = np.append(rn_measure_length, score.duration.quarterLength - rn_measure_offset[-1])
+    n_measures = len(rn_measure_length)
+    score_time_change = []
+    rn_time_change = []
+    for i in range(len(rn_measure_length) - 2):  # remove the last measure, which often has weird length.
+        if rn_measure_length[i + 1] != rn_measure_length[i]:
+            rn_time_change.append(i + 1)  # +1 for indexing
+    for i in range(len(score_measure_length) - 2):
+        if score_measure_length[i + 1] != score_measure_length[i]:
+            score_time_change.append(i + 1)  # +1 for indexing
+    for ctc in rn_time_change:
+        if ctc not in score_time_change:
+            print(f'time signature in chords changes after measure {ctc} (1-indexed), but not in the score')
+    for stc in score_time_change:
+        if stc not in rn_time_change:
+            print(f'time signature in score changes after measure {stc} (1-indexed), but not in the chords')
+    return
+
+
+def find_offset(rn, score_measure_offset, initial_beat_length, measure_zero):
+    """
+    Given a roman numeral element from an analysis parsed by music21, find its offset in quarter notes length.
+    It automatically adapts to the presence of pickup measures thanks to the Boolean measure_zero.
+
+    :param rn: a Roman Numeral chord, one element of an analysis rntxt file parsed by music21
+    :param score_measure_offset: a list where element n gives the offset of measure n in quarter length
+    :param initial_beat_length: Beat length in the first measure; e.g. if the piece starts in 4/4, ibl=1; if it starts in 12/8, ibl=1.5
+    :param measure_zero: Boolean, True if there's a measure counted as zero (pickup measure)
+    """
+    measure = rn.measureNumber if measure_zero else rn.measureNumber - 1  # 0-indexed
+    offset_in_measure = rn.offset
+    if measure == 0:
+        offset_in_measure -= - score_measure_offset[1] % initial_beat_length
+    start_offset = float(score_measure_offset[measure] + offset_in_measure)
+    duration = float(rn.quarterLength)
+    end_offset = min(start_offset + duration, float(score_measure_offset[measure + 1]))
+    return start_offset, end_offset
 
 
 # ------------------------------------------------------------------------------
@@ -109,40 +129,59 @@ accidentalDict = {
 }
 
 
-def getDegree(x):
+def get_degree(x):
     # Whether there's secondary or otherwise
     degree = str(x.scaleDegreeWithAlteration[0])
     accidental = x.scaleDegreeWithAlteration[1]
-    if accidental:
+
+    # TODO: This is a temporary hack because of a bug in music21 that assigns no accidental to the degree of aug6 chords
+    augmented_sixths = ['German augmented sixth chord', 'French augmented sixth chord', 'Italian augmented sixth chord']
+    if x.commonName in augmented_sixths:
+        accidental = pitch.Accidental('sharp')
+    # end of hack
+
+    if accidental is not None:
         degree = accidentalDict[accidental.fullName] + degree
 
-    # TODO: better solution to this
-    if degree == '+7':
-        degree = '7'
-    # if '6' in degree:
-    #     print("hi")
-    if '++6' in degree:
-        print("+6 in numerator")
+    # TODO: The hack for degree 7 is correct only if we assume that the leading tone is always there (safe assumption?)
+    # Use harmonic scale for minor keys - case no secondary key
+    if x.secondaryRomanNumeral is None:
+        if x.key.mode == 'minor' and '7' in degree:
+            degree = _lower_degree(degree)  # music21 uses natural scale, so that the leading tone is +7 instead of 7
+    else:
+        secondary_degree = str(x.secondaryRomanNumeral.scaleDegreeWithAlteration[0])
+        secondary_accidental = x.secondaryRomanNumeral.scaleDegreeWithAlteration[1]
+        if secondary_accidental is not None:
+            secondary_degree = accidentalDict[secondary_accidental.fullName] + str(secondary_degree)
 
-    # With secondary
-    if x.secondaryRomanNumeral:  # NB do not use if '/' in x.figure:
-        secondaryDegree = str(x.secondaryRomanNumeral.scaleDegreeWithAlteration[0])
-        secondaryAccidental = x.secondaryRomanNumeral.scaleDegreeWithAlteration[1]
-        if secondaryAccidental:
-            secondaryDegree = accidentalDict[secondaryAccidental.fullName] + str(secondaryDegree)
+        if x.key.mode == 'minor' and '7' in secondary_degree:
+            secondary_degree = _lower_degree(secondary_degree)
 
-        # TODO: better solution to this
-        if secondaryDegree == '+7':
-            secondaryDegree = '7'
+        if x.secondaryRomanNumeral.figure.islower() and '7' in degree:  # use the harmonic scale of the tonicised key
+            degree = _lower_degree(degree)
+        # # TODO: better solution to this
+        # if secondary_degree == '+7':
+        #     secondary_degree = '7'
 
         # if '6' in degree:
         #     print("hi")
-        if '++6' in secondaryDegree:
-            print('+6 in denominator')
+        # if '++6' in secondary_degree:
+        #     print('+6 in denominator')
 
-        degree = degree + '/' + secondaryDegree
+        # Notice that music21 uses the more logical denomination of degree1 / degree2.
+        degree = degree + '/' + secondary_degree
 
     return degree
+
+
+def _raise_degree(deg):
+    """ deg needs to be in a format where alterations precede the actual degree, and they are stored as - and + """
+    return deg[1:] if deg[0] == '-' else '+' + deg
+
+
+def _lower_degree(deg):
+    """ deg needs to be in a format where alterations precede the actual degree, and they are stored as - and + """
+    return deg[1:] if deg[0] == '+' else '-' + deg
 
 
 # ------------------------------------------------------------------------------
@@ -159,16 +198,16 @@ qualityDict = {'major triad': 'M',
                'diminished seventh chord': 'd7',
                'half-diminished seventh chord': 'h7',
 
-               'augmented sixth': 'a6',
+               'augmented sixth': 'a6',  # TODO: This should never happen!!
                'German augmented sixth chord': 'Gr+6',
                'French augmented sixth chord': 'Fr+6',
                'Italian augmented sixth chord': 'It+6',
-               'minor-augmented tetrachord': 'm',  # I know, but we have to stay consisten with BPS-FH ...
-               # 'Neapolitan chord': 'N6'  # N/A: major triad
+               'minor-augmented tetrachord': 'm',  # I know, but we have to stay consistent with BPS-FH ...
+               # 'Neapolitan chord': 'N6'  # N/A: major triad  TODO: Add support to Neapolitan chords?
                }
 
 
-def getQuality(x):
+def get_quality(x):
     if x.commonName in [x for x in qualityDict.keys()]:
         quality = qualityDict[x.commonName]
 
@@ -177,7 +216,7 @@ def getQuality(x):
         fig = str(x.figure)
         fig = fig.split('[')[0]
         rn = roman.RomanNumeral(fig, x.key)
-        quality = getQuality(rn)
+        quality = get_quality(rn)
         # quality = qualityDict[rn.commonName]
 
     elif 'Fr' in x.figure:
@@ -193,7 +232,7 @@ def getQuality(x):
         fig = str(x.figure)[:-1]
         # print(x.figure, fig, x.measureNumber)
         rn = roman.RomanNumeral(fig, x.key)
-        quality = getQuality(rn)
+        quality = get_quality(rn)
         # quality = qualityDict[rn.commonName]
 
     else:
@@ -203,64 +242,46 @@ def getQuality(x):
     return quality
 
 
-def writeCSV(data, outPath, file):
-    # Make the csv
-    csv = open(os.path.join(outPath, f'{file}.csv'), "w")
-    for entry in data:
-        line = [str(x) for x in entry]
-        line = ','.join(line) + '\n'
-        csv.write(line)
-    csv.close()
+def write_csv(data, out_path):
+    with open(out_path, 'w') as fp:
+        w = csv.writer(fp)
+        w.writerows(data)
+    return
 
 
 # ------------------------------------------------------------------------------
 
-class Test(unittest.TestCase):
-    """
-    Test two cases: full and partial analyses.
-    """
+def convert_file(score_path, txt_path, csv_path, test=False):
+    score = converter.parse(score_path)
+    analysis = converter.parse(txt_path, format='romanText')
+    data = roman2bps(analysis, score, test)
+    write_csv(data, csv_path)
+    return
 
-    def testCorpus(self, score=True):
 
-        base = os.path.join('..', 'data')
+def convert_corpus(base_folder, corpus):
+    txt_folder = os.path.join(base_folder, corpus, 'txt')
+    score_folder = os.path.join(base_folder, corpus, 'scores')
+    csv_folder = os.path.join(base_folder, corpus, 'chords')
+    os.makedirs(csv_folder, exist_ok=True)
 
-        # corpus = os.path.join('Tavern', 'Beethoven')
-        # corpus = os.path.join('Tavern', 'Mozart')
-        corpus = 'Bach_WTC_1_Preludes'
-        # corpus = '19th_Century_Songs'
-        # corpus = 'Beethoven_4tets/'
+    file_list = []
+    for txt_file in os.listdir(txt_folder):
+        if txt_file.endswith('.txt'):
+            file_list.append(txt_file)
 
-        # txtPath = f'{base}{corpus}/temp/'
-        txtPath = os.path.join(base, corpus, 'txt')
-        scorePath = os.path.join(base, corpus, 'scores')
-        csvPath = os.path.join(base, corpus, 'chords')
-        os.makedirs(csvPath, exist_ok=True)
-
-        fileList = []
-        for file in os.listdir(txtPath):
-            if file.endswith('.txt'):
-                fileList.append(file)
-
-        fileList = sorted(fileList)
-        test = True
-        for file in fileList:  # [0:2]:
-            # op = file.split('_')[0][2:]
-            # no = file.split('_')[1][2:]
-            # mv = file.split('_')[2][3]
-            # if op != '18' or no != '6' or mv != '4':
-            #     test = True
-            #     continue
-            # if 'K398' not in file:
-            #     continue
-            # print(f'====== Op. {op} No. {no} mov {mv} ======')
-            # sf = f'op. {op} No. {no}'
-            # score = converter.parse(os.path.join(scorePath, sf, f'{file[:-4]}.mxl'))
-            print(file)
-            sf = f'{file.split("_")[0]}.mxl' if 'Tavern' in corpus else f'{file[:-4]}.mxl'
-            score = converter.parse(os.path.join(scorePath, sf))
-            analysis = converter.parse(os.path.join(txtPath, file), format='romanText')
-            data = roman2bps(analysis, score, test)
-            writeCSV(data, csvPath, file[:-4])
+    file_list = sorted(file_list)
+    test = True
+    for txt_file in file_list:
+        if 'op18_no6_mov4' not in txt_file:
+            continue
+        print(txt_file)
+        score_file = f'{txt_file.split("_")[0]}.mxl' if 'Tavern' in corpus else f'{txt_file[:-4]}.mxl'
+        csv_file = f'{txt_file[:-4]}.csv'
+        convert_file(os.path.join(score_folder, score_file),
+                     os.path.join(txt_folder, txt_file),
+                     os.path.join(csv_folder, csv_file),
+                     test)
 
 
 # ------------------------------------------------------------------------------
@@ -276,4 +297,14 @@ class Test(unittest.TestCase):
 # ------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    unittest.main()
+    base_folder = os.path.join('..', 'data')
+
+    corpora = [
+        os.path.join('Tavern', 'Beethoven'),
+        os.path.join('Tavern', 'Mozart'),
+        'Bach_WTC_1_Preludes',
+        '19th_Century_Songs',
+        'Beethoven_4tets',
+    ]
+
+    convert_corpus(base_folder, corpora[4])

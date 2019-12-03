@@ -1,9 +1,12 @@
 import csv
+import os
 
 import xlrd
 
+from config import DATA_FOLDER
 
-def transform_bps_chord_files_to_csv(chords_file, output_file):
+
+def transform_bps_chords_file_to_csv(chords_file, output_file):
     workbook = xlrd.open_workbook(chords_file)
     sheet = workbook.sheet_by_index(0)
     chords = []
@@ -27,3 +30,10 @@ def transform_bps_chord_files_to_csv(chords_file, output_file):
         writer = csv.writer(f)
         writer.writerows(chords)
     return
+
+
+if __name__ == '__main__':
+    source_files = [os.path.join(DATA_FOLDER, 'BPS_FH_original', f'{i:02d}', 'chords.xlsx') for i in range(1, 33)]
+    output_files = [os.path.join(DATA_FOLDER, 'BPS', 'chords', f'chords_{i}.csv') for i in range(1, 33)]
+    for sf, of in zip(source_files, output_files):
+        transform_bps_chords_file_to_csv(sf, of)
