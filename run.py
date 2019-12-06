@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def analyse_music(sf, model, input_type, dezrann_output_folder):
+def analyse_music(sf, model, model_name, input_type, dezrann_output_folder):
     score, mask = prepare_input_from_xml(sf, input_type)
     y_pred = model.predict((score, mask))
 
@@ -26,7 +26,7 @@ def analyse_music(sf, model, input_type, dezrann_output_folder):
     n_chunks = len(ts)
     test_pred = [[d[e, :ts[e]] for d in y_pred] for e in range(n_chunks)]
     file_names = [os.path.basename(sf).split('.')[0]] * n_chunks
-    create_dezrann_annotations(model_output=test_pred, annotations=None, timesteps=ts,
+    create_dezrann_annotations(model_output=test_pred, model_name=model_name, annotations=None, timesteps=ts,
                                file_names=file_names, output_folder=dezrann_output_folder)
 
     return
@@ -140,4 +140,4 @@ if __name__ == '__main__':
     model = load_model(os.path.join(model_folder, args.model_name + '.h5'))
     input_type = find_input_type(args.model_name)
     for sf in files:
-        analyse_music(sf, model, input_type, dezrann_folder)
+        analyse_music(sf, model, args.model_name, input_type, dezrann_folder)

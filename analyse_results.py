@@ -111,6 +111,8 @@ def visualize_results(y_true, y_pred, name, start, mode='probabilities', pitch_s
     ylabels = FEATURES.copy()
     ylabels.append("root_der")
     for j in range(7):
+        # if j > 0:  # temporary analysis tool, remove if not needed
+        #     continue
         if j == 0:
             if pitch_spelling:
                 ordering = [i + j for i in range(15) for j in [0, 15]]
@@ -186,9 +188,12 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
-def analyse_results(models_folder, model_name, dataset='validation', comparison=False, export_annotations=True):
+def analyse_results(models_folder, model_name, dataset='validation', comparison=False, visualize=True,
+                    export_annotations=True):
     clear_session()
     model = load_model(os.path.join(models_folder, model_name, model_name + '.h5'))
+    if comparison:  # force no visualization when comparing models
+        visualize = False
     if not comparison:
         model.summary()
         print(model_name)
@@ -241,14 +246,16 @@ def analyse_results(models_folder, model_name, dataset='validation', comparison=
     test_pred = [[d[e, :timesteps[e]] for d in temp] for e in range(n_chunks)]
 
     """ Visualize data """
-    if not comparison:
+    if visualize:
         classes_root = 35 if ps else 12  # the twelve notes without enharmonic duplicates
         for pr, y_true, y_pred, ts, fn, frame in zip(piano_rolls, test_true, test_pred, timesteps, file_names,
                                                      start_frames):
-            if 'bps_01' not in fn:
-                # if 'Einsamkeit' not in fn:
-                # if 'wtc_i_prelude_01' not in fn:
+            if 'bps_06' not in fn:
                 continue
+            # if 'Einsamkeit' not in fn:
+            #     continue
+            # if 'wtc_i_prelude_01' not in fn:
+            #     continue
             # visualize_piano_roll(pr, fn)
             visualize_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
             # visualize_results(y_true, y_pred, fn, frame, mode='probabilities', pitch_spelling=ps)
@@ -260,7 +267,7 @@ def analyse_results(models_folder, model_name, dataset='validation', comparison=
     """ Create Dezrann annotations """
     if export_annotations:
         output_folder = os.path.join(models_folder, model_name, 'analyses')
-        create_dezrann_annotations(test_pred, test_true, timesteps, file_names, output_folder=output_folder)
+        create_dezrann_annotations(test_pred, model_name, test_true, timesteps, file_names, output_folder=output_folder)
         create_tabular_annotations(test_pred, timesteps, file_names, output_folder=output_folder)
 
     """" Calculate accuracy etc. """
@@ -398,6 +405,6 @@ if __name__ == '__main__':
     # dataset = 'beethoven'
     dataset = 'validation'
     # dataset = 'validation_bpsfh'
-    models_folder = os.path.join('runs', 'run_07', 'models')
-    compare_results(models_folder, dataset, export_annotations=True)
-    # analyse_results(models_folder, 'conv_gru_spelling_bass_cut_3', dataset=dataset)
+    models_folder = os.path.join('runs', 'run_06', 'models')
+    # compare_results(models_folder, dataset, export_annotations=True)
+    analyse_results(models_folder, 'conv_gru_spelling_bass_cut_3', dataset=dataset, visualize=False)

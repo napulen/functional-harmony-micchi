@@ -71,6 +71,31 @@ SCALES = {
 }
 QUALITY = ['M', 'm', 'd', 'a', 'M7', 'm7', 'D7', 'd7', 'h7', 'Gr+6', 'It+6', 'Fr+6']
 
+I2RN = {
+    'triad0': '',
+    'triad1': '6',
+    'triad2': '64',
+    'triad3': 'wi',
+    'seventh0': '7',
+    'seventh1': '65',
+    'seventh2': '43',
+    'seventh3': '42',
+}
+Q2RN = {  # (True=uppercase degree, 'triad' or 'seventh', quality)
+    'M': (True, 'triad', ''),
+    'm': (False, 'triad', ''),
+    'd': (False, 'triad', '-'),
+    'a': (True, 'triad', '+'),
+    'M7': (True, 'seventh', 'M'),
+    'm7': (False, 'seventh', 'm'),
+    'D7': (True, 'seventh', ''),
+    'd7': (False, 'seventh', 'o'),
+    'h7': (False, 'seventh', 'ø'),
+    'Gr+6': (True, 'seventh', 'Gr'),
+    'It+6': (True, 'seventh', 'It'),
+    'Fr+6': (True, 'seventh', 'Fr'),
+}
+
 # including START, excluding END
 START_MAJ, END_MAJ, START_MIN, END_MIN = [
     PITCH_FIFTHS.index(p) for p in ['C-', 'G#', 'a-'.upper(), 'e#'.upper()]

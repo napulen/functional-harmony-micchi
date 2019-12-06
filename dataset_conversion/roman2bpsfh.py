@@ -307,4 +307,5 @@ if __name__ == '__main__':
         'Beethoven_4tets',
     ]
 
-    convert_corpus(base_folder, corpora[4])
+    for c in corpora:
+        convert_corpus(base_folder, corpora[4])

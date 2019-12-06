@@ -6,18 +6,19 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from config import NOTES, QUALITY, KEYS_SPELLING, INPUT_TYPES
+from config import NOTES, QUALITY, KEYS_SPELLING, INPUT_TYPES, Q2RN, I2RN
 
 
 def setup_tfrecords_paths(tfrecords_folder, tfrecords_basename, mode):
     return [os.path.join(tfrecords_folder, f'{bn}_{mode}.tfrecords') for bn in tfrecords_basename]
 
 
-def create_dezrann_annotations(model_output, annotations, timesteps, file_names, output_folder):
+def create_dezrann_annotations(model_output, model_name, annotations, timesteps, file_names, output_folder):
     """
     Create a JSON file for a single aspect of the analysis that is compatible with dezrann, www.dezrann.net
     This allows for a nice visualization of the analysis on top of the partition.
     :param model_output: The output of the machine learning model, shape [n_chunks][labels](ts, classes)
+    :param model_name: The name of the model
     :param annotations: The annotated labels coming from our data, same shape as the model_output, put None if no annotated data
     :param timesteps: number of timesteps per each data point
     :param file_names: the name of the datafile where the chunk comes from
@@ -34,9 +35,7 @@ def create_dezrann_annotations(model_output, annotations, timesteps, file_names,
 
     offsets = _set_chunk_offset(file_names, timesteps)
     annotation, labels, current_file = dict(), [], None
-    features = ['Tonality', 'Harmony', "Inversion"]
-    lines = [('top.3', 'bot.2'), ('top.2', 'bot.1'), ('top.1', 'bot.3')]
-
+    features = ['Tonality', 'Harmony']
     for y_true, y_pred, ts, name, t0 in zip(annotations, model_output, timesteps, file_names, offsets):
         if name != current_file:  # a new sonata started
             if current_file is not None:  # save previous file, if it exists
@@ -49,7 +48,24 @@ def create_dezrann_annotations(model_output, annotations, timesteps, file_names,
                     'name': name,
                     'date': str(datetime.now()),
                     'producer': 'Algomus team',
-                    'ioi': False,
+                    'layout': [
+                        {
+                            "filter": {"type": "Harmony", "layers": ['reference']},
+                            "style": {"line": "top.1"}
+                        },
+                        {
+                            "filter": {"type": "Harmony", "layers": ['prediction', model_name]},
+                            "style": {"line": "top.2"}
+                        },
+                        {
+                            "filter": {"type": "Tonality", "layers": ['reference']},
+                            "style": {"line": "bot.1"}
+                        },
+                        {
+                            "filter": {"type": "Tonality", "layers": ['prediction', model_name]},
+                            "style": {"line": "bot.2"}
+                        },
+                    ]
                 }
             }
             current_file = name
@@ -58,7 +74,7 @@ def create_dezrann_annotations(model_output, annotations, timesteps, file_names,
         label_true_list = decode_results_dezrann(y_true)
         label_pred_list = decode_results_dezrann(y_pred)
 
-        for feature, line, label_true, label_pred in zip(features, lines, label_true_list, label_pred_list):
+        for feature, label_true, label_pred in zip(features, label_true_list, label_pred_list):
             assert len(label_pred) == len(label_true)
             start_true, start_pred = t0 / 2, t0 / 2  # divided by two because we have one label every 8th note
             for t in range(ts):
@@ -67,28 +83,26 @@ def create_dezrann_annotations(model_output, annotations, timesteps, file_names,
                         duration_true = (t + t0) / 2 - start_true
                         labels.append({
                             "type": feature,
+                            "layers": ['reference'],
                             "start": start_true,
-                            "duration": duration_true,
-                            "line": line[0],
+                            "actual-duration": duration_true,
                             "tag": label_true[t - 1],
-                            "comment": "target",
                         })
                         start_true = (t + t0) / 2
                     if label_pred[t] != label_pred[t - 1] or t == ts - 1:
                         duration_pred = (t + t0) / 2 - start_pred
                         labels.append({
                             "type": feature,
-                            "start": start_pred,
-                            "duration": duration_pred,
-                            "line": line[1],
                             "tag": label_pred[t - 1],
-                            "comment": "prediction",
+                            "start": start_pred,
+                            "actual-duration": duration_pred,
+                            "layers": ['prediction', model_name],
                         })
                         start_pred = (t + t0) / 2
 
     annotation['labels'] = labels
     with open(os.path.join(output_folder, f'{current_file}.dez'), 'w+') as fp:
-        json.dump(annotation, fp)
+        json.dump(annotation, fp, indent=4)
     return
 
 
@@ -287,17 +301,11 @@ def _decode_quality(yq):
     return quality
 
 
-def _decode_roman(yp, ys, yq):
-    num, den = _decode_degree(yp, ys)
-
-    quality = _decode_quality(yq)
-    if quality == 'M':
-        num = num.upper()
-        quality = ''
-    elif quality == 'm':
-        num = num.lower()
-        quality = ''
-    return num + quality + ('/' + den if den != 'I' else '')
+def _decode_roman(num, den, quality, inversion):
+    upper, triad, qlt = Q2RN[quality]
+    inv = I2RN[triad + inversion]
+    num = num.upper() if upper else num.lower()
+    return num + qlt + inv + ('/' + den if den != 'I' else '')
 
 
 def decode_results_dezrann(y):
@@ -307,10 +315,13 @@ def decode_results_dezrann(y):
     :param y: it should have shape [features, timesteps], and every element should be an integer indicating the class
     :return: keys, chords, inversions
     """
-    key = [_decode_key(i) for i in y[0]]
-    chord = [_decode_roman(i[0], i[1], i[2]) for i in zip(y[1], y[2], y[3])]
+
+    key = [_decode_key(k) for k in y[0]]
+    num, den = zip(*[_decode_degree(*i) for i in zip(y[1], y[2])])
+    quality = [_decode_quality(q) for q in y[3]]
     inversion = [_decode_inversion(i) for i in y[4]]
-    return key, chord, inversion
+    roman_numeral = [_decode_roman(n, d, q, i) for n, d, q, i in zip(num, den, quality, inversion)]
+    return key, roman_numeral
 
 
 def decode_results_tabular(y):
