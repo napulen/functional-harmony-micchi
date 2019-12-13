@@ -9,7 +9,7 @@ import numpy as np
 from tensorflow.python.keras.models import load_model
 
 from config import DATA_FOLDER, FPQ, CHUNK_SIZE
-from utils import find_input_type, create_dezrann_annotations
+from utils import find_input_type, create_dezrann_annotations, create_tabular_annotations
 from utils_music import load_score_pitch_complete, load_score_pitch_bass, load_score_pitch_class, \
     load_score_spelling_complete, load_score_spelling_bass, load_score_spelling_class
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def analyse_music(sf, model, model_name, input_type, dezrann_output_folder):
+def analyse_music(sf, model, model_name, input_type, analyses_folder):
     score, mask = prepare_input_from_xml(sf, input_type)
     y_pred = model.predict((score, mask))
 
@@ -27,8 +27,9 @@ def analyse_music(sf, model, model_name, input_type, dezrann_output_folder):
     test_pred = [[d[e, :ts[e]] for d in y_pred] for e in range(n_chunks)]
     file_names = [os.path.basename(sf).split('.')[0]] * n_chunks
     create_dezrann_annotations(model_output=test_pred, model_name=model_name, annotations=None, timesteps=ts,
-                               file_names=file_names, output_folder=dezrann_output_folder)
-
+                               file_names=file_names, output_folder=analyses_folder)
+    create_tabular_annotations(model_output=test_pred, timesteps=ts,
+                               file_names=file_names, output_folder=analyses_folder)
     return
 
 
@@ -118,7 +119,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', dest='model_name', action='store', type=str, help='name of the model')
     parser.set_defaults(interactive=False)
     parser.set_defaults(music_path=os.path.join(DATA_FOLDER, 'valid', 'scores'))
-    parser.set_defaults(model_name='conv_gru_spelling_bass_cut_0')
+    parser.set_defaults(model_name='conv_gru_spelling_bass_cut')
     args = parser.parse_args()
 
     if args.interactive:
@@ -135,9 +136,9 @@ if __name__ == '__main__':
     except NotADirectoryError:
         files = [args.music_path]
 
-    dezrann_folder = os.path.join('analyses', '_'.join([args.model_name, datetime.now().strftime("%Y-%m-%d_%H-%M")]))
+    analyses_folder = os.path.join('analyses', '_'.join([args.model_name, datetime.now().strftime("%Y-%m-%d_%H-%M")]))
     model_folder = os.path.join('models', args.model_name)
     model = load_model(os.path.join(model_folder, args.model_name + '.h5'))
     input_type = find_input_type(args.model_name)
     for sf in files:
-        analyse_music(sf, model, args.model_name, input_type, dezrann_folder)
+        analyse_music(sf, model, args.model_name, input_type, analyses_folder)

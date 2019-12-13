@@ -155,7 +155,7 @@ def load_score_spelling_bass(score_file, fpq):
 
     :param score_file:
     :param fpq:
-    :return:
+    :return: piano_roll, number of transposition flatwards, nof sharpwards
     """
     # Encode with an ordering that is comfortable for finding out the bass
     pr_complete, num_flatwards, num_sharpwards = load_score_spelling_complete(score_file, fpq, mode='semitone')
@@ -315,7 +315,7 @@ def load_chord_labels(chords_file):
     """
     Load chords of each piece and add chord symbols into the labels.
     :param chords_file: the path to the file with the harmonic analysis
-    :return: chord_labels
+    :return: chord_labels, (start, end, key, degree, quality, inversion)
     """
 
     chords = []

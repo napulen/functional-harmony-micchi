@@ -2,10 +2,12 @@ import logging
 import os
 
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-from config import DATA_FOLDER, HSIZE, FPQ
+from config import DATA_FOLDER, HSIZE, FPQ, PITCH_FIFTHS
 from utils_music import _load_score, load_chord_labels, attach_chord_root, segment_chord_labels, shift_chord_labels, \
-    encode_chords
+    encode_chords, load_score_pitch_complete, load_score_spelling_bass
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,8 +28,8 @@ if __name__ == '__main__':
         file_names = sorted([fn[:-4] for fn in os.listdir(scores_folder)])
         for fn in file_names:
             # _, n, mov = fn.split("_")
-            # if fn not in ['ncs_Chausson_Ernest_-_7_Melodies_Op.2_No.7_-_Le_Colibri']:
-            #     continue
+            if fn not in ['wtc_i_prelude_01']:
+                continue
             print(fn)
             input_type = 'pitch'
             pp = 'fifth' if input_type.startswith(
@@ -67,12 +69,37 @@ if __name__ == '__main__':
 
             # if int(n) < 32:
             #     continue
-            score, n_frames = _load_score(sf, 8)
-            measure_offset = list(score.measureOffsetMap().keys()) + [score.duration.quarterLength]
-            measure_length = np.diff(measure_offset)
 
-            total_ql += score.duration.quarterLength
-            total_measures += len(measure_length)
+            # pr, _, _ = load_score_spelling_bass(sf, 8)
+            # sns.set(rc={'figure.figsize': (10., 8.), 'axes.labelsize': 18, 'axes.titlesize': 26})
+            # p = sns.heatmap(pr[:, :640])
+            # yticks = [i + 7*j + 0.5 for j in range(10) for i in [1, 3, 5]]
+            # yticklabels = [PITCH_FIFTHS[int(i) % 35] for i in yticks]
+            # p.set(
+            #     xticks=range(0, 641, 64), xticklabels=range(0, 641, 64), xlabel='frame',
+            #     yticks=yticks, yticklabels=yticklabels, ylabel='bass pitch  global pitch',
+            #     title='Bach WTC I Prelude #01 in C'
+            # )
+            # plt.show()
+
+            pr = load_score_pitch_complete(sf, 8)
+            sns.set(rc={'figure.figsize': (10., 8.), 'axes.labelsize': 18, 'axes.titlesize': 26})
+            p = sns.heatmap(pr[:, :640])
+            p.invert_yaxis()
+            yticks = [i + 0.5 for i in range(0, 84, 4)]
+            yticklabels = [int(i) + 24 for i in yticks]
+            p.set(
+                xticks=range(0, 641, 64), xticklabels=range(0, 641, 64), xlabel='frame',
+                yticks=yticks, yticklabels=yticklabels, ylabel='midi numbers',
+                title='Bach WTC I Prelude #01 in C'
+            )
+            plt.show()
+            # score, n_frames = _load_score(sf, 8)
+            # measure_offset = list(score.measureOffsetMap().keys()) + [score.duration.quarterLength]
+            # measure_length = np.diff(measure_offset)
+            #
+            # total_ql += score.duration.quarterLength
+            # total_measures += len(measure_length)
             # print(Counter(measure_length))
 
             # PROBLEMS IN TOTAL LENGTH IN THE FOLLOWING CASES

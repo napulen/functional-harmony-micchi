@@ -301,7 +301,15 @@ def _decode_quality(yq):
     return quality
 
 
-def _decode_roman(num, den, quality, inversion):
+def decode_roman(num, den, quality, inversion):
+    """
+    Given degree (numerator and denominator), quality of the chord, and inversion, return a properly written RN.
+
+    :param num: String with the numerator of the degree in arab numerals, e.g. '1', or '+4'
+    :param den: Same as num, but for the denominator
+    :param quality: Quality of the chord (major, minor, dominant seventh, etc.)
+    :param inversion: Inversion as a string
+    """
     upper, triad, qlt = Q2RN[quality]
     inv = I2RN[triad + inversion]
     num = num.upper() if upper else num.lower()
@@ -320,7 +328,7 @@ def decode_results_dezrann(y):
     num, den = zip(*[_decode_degree(*i) for i in zip(y[1], y[2])])
     quality = [_decode_quality(q) for q in y[3]]
     inversion = [_decode_inversion(i) for i in y[4]]
-    roman_numeral = [_decode_roman(n, d, q, i) for n, d, q, i in zip(num, den, quality, inversion)]
+    roman_numeral = [decode_roman(n, d, q, i) for n, d, q, i in zip(num, den, quality, inversion)]
     return key, roman_numeral
 
 
