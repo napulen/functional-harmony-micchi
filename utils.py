@@ -193,7 +193,7 @@ def _fill_level(l, i_p=None):
     return y, i_o
 
 
-def _int_to_roman(input):
+def int_to_roman(input):
     """ Convert an integer to a Roman numeral. """
 
     if not 0 < input < 8:
@@ -208,7 +208,7 @@ def _int_to_roman(input):
     return ''.join(result)
 
 
-def _roman_to_int(roman):
+def roman_to_int(roman):
     r2i = {
         'I': 1,
         'II': 2,
@@ -223,7 +223,7 @@ def _roman_to_int(roman):
 
 def find_scale_and_alteration(degree_str, minor_key):
     nr = ''.join(filter(lambda x: x.upper() in ['V', 'I'], degree_str))
-    ni = _roman_to_int(nr)
+    ni = roman_to_int(nr)
 
     a = ''.join(filter(lambda x: x.upper() not in ['V', 'I'], degree_str))
     a = a.replace('#', '+')
@@ -279,7 +279,7 @@ def _decode_degree(yp, ys, roman=True):
 
     num_alt = s // 7
     num_temp = (s % 7) + 1
-    num = _int_to_roman(num_temp) if roman else str(num_temp)
+    num = int_to_roman(num_temp) if roman else str(num_temp)
     if num_alt == 1:
         num += '+'
     elif num_alt == 2:
@@ -287,7 +287,7 @@ def _decode_degree(yp, ys, roman=True):
 
     den_alt = p // 7
     den_temp = (p % 7) + 1
-    den = _int_to_roman(den_temp) if roman else str(den_temp)
+    den = int_to_roman(den_temp) if roman else str(den_temp)
     if den_alt == 1:
         den += '+'
     elif den_alt == 2:

@@ -21,7 +21,7 @@ from music21 import converter, roman, pitch
 
 # ------------------------------------------------------------------------------
 
-def roman2bps(analysis, score, test):
+def roman2tabular(analysis, score, test):
     in_data = analysis.recurse().getElementsByClass('RomanNumeral')
 
     out_data = []
@@ -45,7 +45,8 @@ def roman2bps(analysis, score, test):
         key = x.key.tonicPitchNameWithCase
         degree = get_degree(x)
         quality = get_quality(x)
-        inversion = x.inversion()
+        inversion = min(x.inversion(), 3)  # fourth inversions on ninths (not considered) are sent to 3 arbitrarily
+        # TODO: Document our behavior with ninths
         new_label = [key, degree, quality, inversion]
 
         if current_label is None:
@@ -227,6 +228,7 @@ def get_quality(x):
         quality = 'It+6'
     elif '9' in x.figure:
         quality = 'D7'  # Setting all 9ths as dominants. Not including 9ths in this dataset
+    # TODO Document well the behavior on ninths
 
     elif len(str(x.figure)) > 0:  # TODO this is especially dodgy and risky ****
         fig = str(x.figure)[:-1]
@@ -254,7 +256,7 @@ def write_csv(data, out_path):
 def convert_file(score_path, txt_path, csv_path, test=False):
     score = converter.parse(score_path)
     analysis = converter.parse(txt_path, format='romanText')
-    data = roman2bps(analysis, score, test)
+    data = roman2tabular(analysis, score, test)
     write_csv(data, csv_path)
     return
 
@@ -262,7 +264,7 @@ def convert_file(score_path, txt_path, csv_path, test=False):
 def convert_corpus(base_folder, corpus):
     txt_folder = os.path.join(base_folder, corpus, 'txt')
     score_folder = os.path.join(base_folder, corpus, 'scores')
-    csv_folder = os.path.join(base_folder, corpus, 'chords')
+    csv_folder = os.path.join(base_folder, corpus, 'chords_generated')
     os.makedirs(csv_folder, exist_ok=True)
 
     file_list = []
@@ -273,8 +275,8 @@ def convert_corpus(base_folder, corpus):
     file_list = sorted(file_list)
     test = True
     for txt_file in file_list:
-        if 'op18_no6_mov4' not in txt_file:
-            continue
+        # if 'op18_no6_mov4' not in txt_file:
+        #     continue
         print(txt_file)
         score_file = f'{txt_file.split("_")[0]}.mxl' if 'Tavern' in corpus else f'{txt_file[:-4]}.mxl'
         csv_file = f'{txt_file[:-4]}.csv'
@@ -305,7 +307,8 @@ if __name__ == '__main__':
         'Bach_WTC_1_Preludes',
         '19th_Century_Songs',
         'Beethoven_4tets',
+        'BPS',
     ]
 
-    for c in corpora:
-        convert_corpus(base_folder, corpora[4])
+    for c in corpora[-1:]:
+        convert_corpus(base_folder, c)
