@@ -64,7 +64,7 @@ from utils import decode_roman, int_to_roman
 from utils_music import load_chord_labels
 
 
-def rn_row(datum, in_row=None):
+def get_rn_row(datum, in_row=None):
     """
     Write the start of a line of RNTXT.
     To start a new line (one per measure with measure, beat, chord), set inString = None.
@@ -79,9 +79,7 @@ def rn_row(datum, in_row=None):
     return ' '.join([in_row, f'b{datum[1]}', datum[2]] if datum[1] != 1 else [in_row, datum[2]])
 
 
-def retrieve_measure_and_beat(offset, measure_offsets, beat_durations, beat_zero):
-    ts_keys = sorted(beat_durations.keys())
-
+def retrieve_measure_and_beat(offset, measure_offsets, beat_durations, ts_measures, beat_zero):
     measure = np.searchsorted(measure_offsets, offset, side='right') - 1
 
     if measure == 0:
@@ -90,7 +88,7 @@ def retrieve_measure_and_beat(offset, measure_offsets, beat_durations, beat_zero
     else:
         offset_in_measure = offset - measure_offsets[measure]
         measure_with_pickup = measure + (0 if beat_zero > 1 else 1)
-        beat_idx = ts_keys[np.searchsorted(ts_keys, measure_with_pickup, side='right') - 1]
+        beat_idx = ts_measures[np.searchsorted(ts_measures, measure_with_pickup, side='right') - 1]
         beat = (offset_in_measure / beat_durations[beat_idx]) + 1
         beat = int(beat) if int(beat) == beat else round(float(beat), 2)
 
@@ -126,7 +124,11 @@ def tabular2roman(tabular, score):
                             score_mom[k][0].numberSuffix is None]  # the [0] because there are two parts
     score_measure_offset.append(score.duration.quarterLength)
     beat_durations = dict([(ts.measureNumber, ts.beatDuration.quarterLength) for ts in score.flat.getTimeSignatures()])
-    previous_measure, previous_end, previous_key = -1, 0, None
+    time_signatures = dict([(ts.measureNumber, ts.ratioString) for ts in score.flat.getTimeSignatures()])
+    ts_measures = sorted(time_signatures.keys())
+    ts_offsets = [score_measure_offset[m if (starting_beat_measure_zero > 1) else m - 1] for m in ts_measures]
+    previous_measure, previous_end, previous_key, j = -1, 0, None, 0
+
     for row in tabular:
         start, end, key, degree, quality, inversion = row
         num, den = interpret_degree(degree)
@@ -134,20 +136,29 @@ def tabular2roman(tabular, score):
         key = key.replace('-', 'b')
         annotation = f'{key}: {chord}' if key != previous_key else chord
 
+        # Time signature change
+        while j < len(ts_offsets) and start >= ts_offsets[j]:
+            rn.append('')
+            rn.append(f"Time Signature : {time_signatures[ts_measures[j]]}")
+            rn.append('')
+            j += 1
+
         # No chords passage
         if start != previous_end:
-            m, b = retrieve_measure_and_beat(end, score_measure_offset, beat_durations, starting_beat_measure_zero)
+            m, b = retrieve_measure_and_beat(end, score_measure_offset, beat_durations, ts_measures,
+                                             starting_beat_measure_zero)
             if m == previous_measure:
-                rn[-1] = rn_row([m, b, ''], in_row=rn[-1])
+                rn[-1] = get_rn_row([m, b, ''], in_row=rn[-1])
             else:
-                rn.append(rn_row([m, b, '']))
+                rn.append(get_rn_row([m, b, '']))
             previous_measure = m
 
-        m, b = retrieve_measure_and_beat(start, score_measure_offset, beat_durations, starting_beat_measure_zero)
+        m, b = retrieve_measure_and_beat(start, score_measure_offset, beat_durations, ts_measures,
+                                         starting_beat_measure_zero)
         if m == previous_measure:
-            rn[-1] = rn_row([m, b, annotation], in_row=rn[-1])
+            rn[-1] = get_rn_row([m, b, annotation], in_row=rn[-1])
         else:
-            rn.append(rn_row([m, b, annotation]))
+            rn.append(get_rn_row([m, b, annotation]))
         previous_measure, previous_end, previous_key = m, end, key
 
     return rn
@@ -185,6 +196,8 @@ def convert_corpus(base_folder, corpus):
         # number = int(csv_file.split('_')[1])
         # if number < 15:
         #     continue
+        # if '066' not in csv_file:
+        #     continue
         print(csv_file)
         score_file = f'{csv_file.split("_")[0]}.mxl' if 'Tavern' in corpus else f'{csv_file[:-4]}.mxl'
         txt_file = f'{csv_file[:-4]}.txt'
@@ -205,5 +218,5 @@ if __name__ == '__main__':
         'BPS',
     ]
 
-    for c in corpora[-1:]:
+    for c in corpora[2:3]:
         convert_corpus(base_folder, c)

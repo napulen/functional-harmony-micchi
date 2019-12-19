@@ -83,7 +83,7 @@ I2RN = {
 Q2RN = {  # (True=uppercase degree, 'triad' or 'seventh', quality)
     'M': (True, 'triad', ''),
     'm': (False, 'triad', ''),
-    'd': (False, 'triad', '-'),
+    'd': (False, 'triad', 'o'),
     'a': (True, 'triad', '+'),
     'M7': (True, 'seventh', 'M'),
     'm7': (False, 'seventh', ''),

@@ -138,6 +138,7 @@ def get_degree(x):
     # TODO: This is a temporary hack because of a bug in music21 that assigns no accidental to the degree of aug6 chords
     augmented_sixths = ['German augmented sixth chord', 'French augmented sixth chord', 'Italian augmented sixth chord']
     if x.commonName in augmented_sixths:
+        degree = '4'
         accidental = pitch.Accidental('sharp')
     # end of hack
 
@@ -145,7 +146,7 @@ def get_degree(x):
         degree = accidentalDict[accidental.fullName] + degree
 
     # TODO: The hack for degree 7 is correct only if we assume that the leading tone is always there (safe assumption?)
-    # Use harmonic scale for minor keys - case no secondary key
+    # music21 uses natural scales while we want to use harmonic scale for minor keys - case no secondary key
     if x.secondaryRomanNumeral is None:
         if x.key.mode == 'minor' and '7' in degree:
             degree = _lower_degree(degree)  # music21 uses natural scale, so that the leading tone is +7 instead of 7
@@ -275,7 +276,7 @@ def convert_corpus(base_folder, corpus):
     file_list = sorted(file_list)
     test = True
     for txt_file in file_list:
-        # if 'op18_no6_mov4' not in txt_file:
+        # if '04' not in txt_file:
         #     continue
         print(txt_file)
         score_file = f'{txt_file.split("_")[0]}.mxl' if 'Tavern' in corpus else f'{txt_file[:-4]}.mxl'
@@ -285,18 +286,6 @@ def convert_corpus(base_folder, corpus):
                      os.path.join(csv_folder, csv_file),
                      test)
 
-
-# ------------------------------------------------------------------------------
-
-# One file
-
-# file = 'op18_no3_mov3.txt'
-# analysis = converter.parse(txtPath + file, format='romanText')
-# # thisScore = converter.parse(f'{scorePath}{file[:-4]}.mxl')
-# data = roman2bps(analysis)#, scoreForComparison=thisScore)
-# writeCSV(data, csvPath, file[:-4])
-
-# ------------------------------------------------------------------------------
 
 if __name__ == '__main__':
     base_folder = os.path.join('..', 'data')

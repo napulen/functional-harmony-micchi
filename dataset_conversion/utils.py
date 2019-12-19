@@ -18,6 +18,8 @@ def decode_roman(num, den, quality, inversion):
     upper, triad, qlt = Q2RN[quality]
     inv = I2RN[triad + inversion]
     num = num.upper() if upper else num.lower()
+    if num == 'IV' and qlt == 'M':  # the fourth degree is by default major 7th
+        qlt = ''
     return num + qlt + inv + ('/' + den if den != 'I' else '')
 
 
