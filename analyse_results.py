@@ -188,7 +188,7 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
-def analyse_results(models_folder, model_name, dataset='validation', comparison=False, visualize=True,
+def analyse_results(data_folder, models_folder, model_name, dataset='validation', comparison=False, visualize=True,
                     export_annotations=True):
     clear_session()
     model = load_model(os.path.join(models_folder, model_name, model_name + '.h5'))
@@ -200,7 +200,7 @@ def analyse_results(models_folder, model_name, dataset='validation', comparison=
 
     input_type = find_input_type(model_name)
     datasets = ['valid', 'BPS', 'valid_bpsfh']
-    valid, test_bps, valid_bpsfh = setup_tfrecords_paths(DATA_FOLDER, datasets, input_type)
+    valid, test_bps, valid_bpsfh = setup_tfrecords_paths(data_folder, datasets, input_type)
     ps = input_type.startswith('spelling')
 
     if dataset == 'beethoven':
@@ -218,6 +218,11 @@ def analyse_results(models_folder, model_name, dataset='validation', comparison=
         batch_size = 11
         steps = 9
         n_chunks = 99
+    elif dataset == 'test':
+        data_file = os.path.join(data_folder, f'test_{input_type}.tfrecords')
+        batch_size = 1
+        steps = 103
+        n_chunks = 103
     else:
         raise ValueError("dataset should be either validation or beethoven")
 
@@ -318,10 +323,11 @@ def analyse_results(models_folder, model_name, dataset='validation', comparison=
     return accuracies
 
 
-def compare_results(models_folder, dataset, export_annotations):
+def compare_results(data_folder, models_folder, dataset, export_annotations):
     """
     Check all the models in the log folder and derive their accuracy scores, then write a comparison table to file
 
+    :param data_folder:
     :param dataset: either beethoven (all 32 sonatas) or validation (7 sonatas not in training set)
     :param export_annotations: boolean, whether to write analyses to file
     :return:
@@ -333,7 +339,7 @@ def compare_results(models_folder, dataset, export_annotations):
         # if model_name != 'conv_gru_pitch_bass_cut_1':
         #     continue
         print(f"model {i + 1} out of {n} - {model_name}")
-        accuracies = analyse_results(models_folder, model_name, dataset, comparison=True,
+        accuracies = analyse_results(data_folder, models_folder, model_name, dataset, comparison=True,
                                      export_annotations=export_annotations)
         results.append((model_name, accuracies))
 
@@ -403,8 +409,11 @@ def average_results(fp):
 
 if __name__ == '__main__':
     # dataset = 'beethoven'
-    dataset = 'validation'
+    # dataset = 'validation'
+    dataset = 'test'
     # dataset = 'validation_bpsfh'
-    models_folder = os.path.join('runs', 'run_06', 'models')
-    # compare_results(models_folder, dataset, export_annotations=True)
-    analyse_results(models_folder, 'conv_gru_spelling_bass_cut_3', dataset=dataset, visualize=False)
+    models_folder = os.path.join('runs', 'run_bps', 'models')
+    data_folder = 'data_small'
+    # data_folder = DATA_FOLDER
+    compare_results(data_folder, models_folder, dataset, export_annotations=True)
+    # analyse_results(data_folder, models_folder, 'conv_gru_spelling_bass_cut_0', dataset=dataset, visualize=False)

@@ -87,4 +87,4 @@ if __name__ == '__main__':
     model.fit(train_data, epochs=EPOCHS, steps_per_epoch=train_steps, validation_data=valid_data,
               validation_steps=VALID_STEPS, callbacks=callbacks)
 
-    # model.save(model_path)
+    model.save(model_path)

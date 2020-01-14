@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def validate_tfrecords_paths(tfrecords):
+def validate_tfrecords_paths(tfrecords, data_folder):
     existent = [f for f in tfrecords if os.path.isfile(f)]
     if len(existent) > 0:
         answer = input(
@@ -42,7 +42,7 @@ def validate_tfrecords_paths(tfrecords):
             for fb in tfrecords_backup:
                 fb[0] += f'_backup_{i}'
             tfrecords_backup = ['.'.join(fb) for fb in tfrecords_backup]
-            while any([d in os.listdir(DATA_FOLDER) for d in tfrecords_backup]):
+            while any([d in os.listdir(data_folder) for d in tfrecords_backup]):
                 i += 1
                 tfrecords_backup = [f.split(".") for f in tfrecords]
                 for fb in tfrecords_backup:
@@ -85,7 +85,7 @@ def create_feature_dictionary(piano_roll, chords, name, s=None, start=None, end=
     return feature
 
 
-def create_tfrecords(input_type):
+def create_tfrecords(input_type, data_folder):
     if input_type not in INPUT_TYPES:
         raise ValueError('Choose a valid value for input_type')
 
@@ -96,15 +96,16 @@ def create_tfrecords(input_type):
     datasets = [
         'train',
         'valid',
-        'BPS',
+        'test',
+        # 'BPS',
         # 'valid_bpsfh',
     ]
-    tfrecords = setup_tfrecords_paths(DATA_FOLDER, datasets, input_type)
+    tfrecords = setup_tfrecords_paths(data_folder, datasets, input_type)
 
-    tfrecords = validate_tfrecords_paths(tfrecords)
+    tfrecords = validate_tfrecords_paths(tfrecords, data_folder)
 
     for ds, output_file in zip(datasets, tfrecords):
-        folder = os.path.join(DATA_FOLDER, ds)
+        folder = os.path.join(data_folder, ds)
         with tf.io.TFRecordWriter(output_file) as writer:
             logger.info(f'Working on {os.path.basename(output_file)}.')
             chords_folder = os.path.join(folder, 'chords')
@@ -202,6 +203,8 @@ def create_tfrecords(input_type):
 
 if __name__ == '__main__':
     # input_type = INPUT_TYPES
-    input_type = ['pitch_class_cut', 'spelling_class_cut']
+    input_type = ['spelling_bass_cut']
+    # data_folder = DATA_FOLDER
+    data_folder = 'data_small'
     for it in input_type:
-        create_tfrecords(it)
+        create_tfrecords(it, data_folder)

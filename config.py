@@ -12,8 +12,10 @@ INPUT_TYPES = [
     'spelling_class_cut',
 ]
 
-TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3, 1, 14, 23, 15, 10, 25, 7]
+TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3]
 VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
+TEST_INDICES = [1, 14, 23, 15, 10, 25, 7]
+
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
 CHUNK_SIZE = 160  # dimension of each chunk when cutting the sonatas in chord time-steps
