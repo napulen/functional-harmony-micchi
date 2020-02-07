@@ -5,7 +5,7 @@ NB:
 
 
 ===============================
-BPSFH to ROMANTEXT (tabular2roman.py)
+BPSFH to ROMANTEXT (converter_tabular2roman.py)
 ===============================
 
 Mark Gotham, 2019
@@ -60,6 +60,7 @@ import numpy as np
 from music21 import converter
 from music21.repeat import ExpanderException
 
+from config import DATA_FOLDER
 from utils import decode_roman, int_to_roman
 from utils_music import load_chord_labels
 
@@ -82,15 +83,11 @@ def get_rn_row(datum, in_row=None):
 def retrieve_measure_and_beat(offset, measure_offsets, beat_durations, ts_measures, beat_zero):
     measure = np.searchsorted(measure_offsets, offset, side='right') - 1
 
-    if measure == 0:
-        measure_with_pickup = measure + (0 if beat_zero > 1 else 1)
-        beat = beat_zero
-    else:
-        offset_in_measure = offset - measure_offsets[measure]
-        measure_with_pickup = measure + (0 if beat_zero > 1 else 1)
-        beat_idx = ts_measures[np.searchsorted(ts_measures, measure_with_pickup, side='right') - 1]
-        beat = (offset_in_measure / beat_durations[beat_idx]) + 1
-        beat = int(beat) if int(beat) == beat else round(float(beat), 2)
+    offset_in_measure = offset - measure_offsets[measure]
+    measure_with_pickup = measure + (0 if beat_zero > 1 else 1)
+    beat_idx = ts_measures[np.searchsorted(ts_measures, measure_with_pickup, side='right') - 1]
+    beat = (offset_in_measure / beat_durations[beat_idx]) + (beat_zero if measure_with_pickup == 0 else 1)
+    beat = int(beat) if int(beat) == beat else round(float(beat), 2)
 
     return measure_with_pickup, beat
 
@@ -101,15 +98,19 @@ def interpret_degree(degree):
     else:
         num, den = degree, '1'
 
-    if num[0] in ['+', '-']:
-        num = num[0] + int_to_roman(int(num[1]))
-    else:
-        num = int_to_roman(int(num[0]))
+    num_prefix = ''
+    while num[0] in ['+', '-']:
+        num_prefix += 'b' if num[0] == '-' else '#'
+        num = num[1:]
+    if num == '1+':
+        print("Degree 1+, ignoring the +")
+    num = num_prefix + int_to_roman(int(num[0]))
 
-    if den[0] in ['+', '-']:
-        den = den[0] + int_to_roman(int(den[1]))
-    else:
-        den = int_to_roman(int(den[0]))
+    den_prefix = ''
+    while den[0] in ['+', '-']:
+        den_prefix += 'b' if num[0] == '-' else '#'
+        den = den[1:]
+    den = den_prefix + int_to_roman(int(den[0]))
 
     return num, den
 
@@ -166,6 +167,7 @@ def tabular2roman(tabular, score):
 
 def convert_file(score_path, csv_path, txt_path):
     tabular = load_chord_labels(csv_path)
+    # score = converter.parse(score_path)
     if 'bps' in score_path:
         try:
             score = converter.parse(score_path).expandRepeats()
@@ -193,8 +195,9 @@ def convert_corpus(base_folder, corpus):
     file_list = sorted(file_list)
 
     for csv_file in file_list:
-        # number = int(csv_file.split('_')[1])
-        # if number < 15:
+        # number = int(csv_file.split('.')[0][-2:])  # bach
+        number = int(csv_file.split('_')[1])  # bps
+        # if number != 1:
         #     continue
         # if '066' not in csv_file:
         #     continue
@@ -207,7 +210,7 @@ def convert_corpus(base_folder, corpus):
 
 
 if __name__ == '__main__':
-    base_folder = os.path.join('..', 'data')
+    base_folder = DATA_FOLDER
 
     corpora = [
         os.path.join('Tavern', 'Beethoven'),
@@ -218,5 +221,5 @@ if __name__ == '__main__':
         'BPS',
     ]
 
-    for c in corpora[2:3]:
+    for c in corpora[5:]:
         convert_corpus(base_folder, c)

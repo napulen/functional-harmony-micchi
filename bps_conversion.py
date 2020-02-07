@@ -3,39 +3,7 @@ import os
 
 import xlrd
 
-from config import DATA_FOLDER, Q2RN, I2RN
-
-
-def decode_roman(num, den, quality, inversion):
-    """
-    Given degree (numerator and denominator), quality of the chord, and inversion, return a properly written RN.
-
-    :param num: String with the numerator of the degree in arab numerals, e.g. '1', or '+4'
-    :param den: Same as num, but for the denominator
-    :param quality: Quality of the chord (major, minor, dominant seventh, etc.)
-    :param inversion: Inversion as a string
-    """
-    upper, triad, qlt = Q2RN[quality]
-    inv = I2RN[triad + inversion]
-    num = num.upper() if upper else num.lower()
-    if num == 'IV' and qlt == 'M':  # the fourth degree is by default major 7th
-        qlt = ''
-    return num + qlt + inv + ('/' + den if den != 'I' else '')
-
-
-def int_to_roman(input):
-    """ Convert an integer to a Roman numeral. """
-
-    if not 0 < input < 8:
-        raise ValueError("Argument must be between 1 and 7")
-    ints = (5, 4, 1)
-    nums = ('V', 'IV', 'I')
-    result = []
-    for i in range(len(ints)):
-        count = int(input / ints[i])
-        result.append(nums[i] * count)
-        input -= ints[i] * count
-    return ''.join(result)
+from config import DATA_FOLDER
 
 
 def transform_bps_chords_file_to_csv(chords_file, output_file):

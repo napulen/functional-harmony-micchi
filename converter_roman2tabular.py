@@ -288,7 +288,7 @@ def convert_corpus(base_folder, corpus):
 
 
 if __name__ == '__main__':
-    base_folder = os.path.join('..', 'data')
+    base_folder = os.path.join('', 'data')
 
     corpora = [
         os.path.join('Tavern', 'Beethoven'),
@@ -299,5 +299,5 @@ if __name__ == '__main__':
         'BPS',
     ]
 
-    for c in corpora[-1:]:
+    for c in corpora[2:3]:
         convert_corpus(base_folder, c)

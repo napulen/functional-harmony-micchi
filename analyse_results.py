@@ -403,8 +403,35 @@ def average_results(fp):
     res['c4_class'] = data.loc[data.index.str.contains('_class_')].mean()
     res = res.transpose()
     columns = ['key', 'degree', 'quality', 'inversion', 'roman + inv', 'secondary', 'd7 no inv']
-    (res - res.loc['c3_spelling']).loc[res.index.str.contains('c3'), columns]
+    # (res - res.loc['c3_spelling']).loc[res.index.str.contains('c3'), columns]
     return data, res
+
+
+def t_test_results(fp, column='roman + inv'):
+    """
+
+    :param fp: The file path to the comparison file we want to average
+    """
+    data = pd.read_csv(fp, header=0, index_col=0)
+    from scipy.stats import ttest_ind
+
+    c1_local = data.loc[data.index.str.contains('_local_'), column].to_numpy()
+    c1_global = data.loc[data.index.str.contains('conv_') & ~data.index.str.contains('_local_'), column].to_numpy()
+    c2_conv_dil = data.loc[data.index.str.contains('conv_dil'), column].to_numpy()
+    c2_conv_gru = data.loc[data.index.str.contains('conv_gru'), column].to_numpy()
+    c2_gru = data.loc[data.index.str.contains('gru_') & ~data.index.str.contains('conv_'), column].to_numpy()
+    c3_spelling = data.loc[data.index.str.contains('_spelling_'), column].to_numpy()
+    c3_pitch = data.loc[data.index.str.contains('_pitch_'), column].to_numpy()
+    c4_complete = data.loc[data.index.str.contains('_complete_'), column].to_numpy()
+    c4_bass = data.loc[data.index.str.contains('_bass_'), column].to_numpy()
+    c4_class = data.loc[data.index.str.contains('_class_'), column].to_numpy()
+
+    A = [c1_global, c2_gru, c2_gru, c3_pitch, c4_complete, c4_complete]
+    B = [c1_local, c2_conv_dil, c2_conv_gru, c3_spelling, c4_class, c4_bass]
+    title = ['global vs. local', 'gru vs. conv_dil', 'gru vs. conv_gru', 'pitch vs. spelling', 'complete vs. class', 'complete vs. bass']
+    for a, b, t in zip(A, B, title):
+        print(f'{t}: {ttest_ind(a, b)}')
+    return
 
 
 if __name__ == '__main__':
@@ -412,8 +439,9 @@ if __name__ == '__main__':
     # dataset = 'validation'
     dataset = 'test'
     # dataset = 'validation_bpsfh'
-    models_folder = os.path.join('runs', 'run_bps', 'models')
+    # models_folder = os.path.join('runs', 'run_bps', 'models')
+    models_folder = os.path.join('runs', 'run_06', 'models')
     data_folder = 'data_small'
     # data_folder = DATA_FOLDER
-    compare_results(data_folder, models_folder, dataset, export_annotations=True)
-    # analyse_results(data_folder, models_folder, 'conv_gru_spelling_bass_cut_0', dataset=dataset, visualize=False)
+    # compare_results(data_folder, models_folder, dataset, export_annotations=True)
+    analyse_results(data_folder, models_folder, 'conv_dil_spelling_bass_cut_2', dataset=dataset, visualize=False)

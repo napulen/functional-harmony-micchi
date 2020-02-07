@@ -312,7 +312,14 @@ def decode_roman(num, den, quality, inversion):
     """
     upper, triad, qlt = Q2RN[quality]
     inv = I2RN[triad + inversion]
-    num = num.upper() if upper else num.lower()
+    if upper:
+        num_prefix = ''
+        while num[0] == 'b':
+            num_prefix += num[0]
+            num = num[1:]
+        num = num_prefix + num.upper()
+    else:
+        num = num.lower()
     if num == 'IV' and qlt == 'M':  # the fourth degree is by default major seventh
         qlt = ''
     return num + qlt + inv + ('/' + den if den != 'I' else '')

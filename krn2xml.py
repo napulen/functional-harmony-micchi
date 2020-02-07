@@ -4,7 +4,7 @@ import os
 from music21 import converter
 from music21.humdrum.spineParser import HumdrumException
 
-folder = os.path.join('..', 'data', 'Tavern', 'scores')
+folder = os.path.join('', 'data', 'Tavern', 'scores')
 krn_names = [f for f in os.listdir(folder) if f.endswith('krn')]
 xml_names = [".".join([kn.split(".")[0], "xml"]) for kn in krn_names]
 mxl_names = [".".join([kn.split(".")[0], "mxl"]) for kn in krn_names]

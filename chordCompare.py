@@ -40,6 +40,7 @@ from music21 import roman
 import unittest
 from copy import deepcopy
 
+
 # ------------------------------------------------------------------------------
 
 class Slice:
@@ -48,13 +49,13 @@ class Slice:
     '''
 
     def __init__(self):
-
         self.startUniqueOffsetID = None
         self.pitches = []
         self.quarterLength = None
         self.measure = None
         self.beat = None
         self.beatStrength = None
+
 
 # ------------------------------------------------------------------------------
 
@@ -64,7 +65,6 @@ class Comparison:
     '''
 
     def __init__(self):
-
         self.measure = None
         self.beat = None
         self.startUniqueOffsetID = None
@@ -77,6 +77,7 @@ class Comparison:
         self.pitches = []
         self.slices = []
 
+
 # ------------------------------------------------------------------------------
 
 class Feedback:
@@ -87,10 +88,10 @@ class Feedback:
     '''
 
     def __init__(self):
-
         self.message = None  # for all cases
         self.matchStrength = None  # for pitch comparison only
         self.suggestions = []  # where possible
+
 
 # ------------------------------------------------------------------------------
 
@@ -128,7 +129,6 @@ class ScoreAndAnalysis:
 
         self.retrieveSlices()
         self.rnSliceMatchUp()
-
 
     def retrieveSlices(self):
         '''
@@ -173,8 +173,8 @@ class ScoreAndAnalysis:
                     else:
                         thisEntry.pitches = []
                         self.errorLog.append(
-                        'It looks like there\'s a Roman numeral allocated before the start of any notes.\n' +
-                        'Please check and correct if so.'
+                            'It looks like there\'s a Roman numeral allocated before the start of any notes.\n' +
+                            'Please check and correct if so.'
                         )
 
                 self.lastBeat = thisEntry.beat
@@ -236,7 +236,8 @@ class ScoreAndAnalysis:
                     thisComparison.pitches = [p.name for p in rn.pitches]
                     thisComparison.bassPitch = rn.bass().name
                 except:
-                    self.errorLog.append(f'Error retrieving a Roman numeral from the lyric {x.lyric} in measure {x.measureNumber} with the prevailing key of {self.prevailingKey}.')
+                    self.errorLog.append(
+                        f'Error retrieving a Roman numeral from the lyric {x.lyric} in measure {x.measureNumber} with the prevailing key of {self.prevailingKey}.')
 
                 self.comparisons.append(thisComparison)
 
@@ -255,10 +256,10 @@ class ScoreAndAnalysis:
             figure = lyric
 
         asRoman = roman.RomanNumeral(figure,
-                                    self.prevailingKey,
-                                    sixthMinor=roman.Minor67Default.CAUTIONARY,
-                                    seventhMinor=roman.Minor67Default.CAUTIONARY,
-                                    )
+                                     self.prevailingKey,
+                                     sixthMinor=roman.Minor67Default.CAUTIONARY,
+                                     seventhMinor=roman.Minor67Default.CAUTIONARY,
+                                     )
 
         return asRoman
 
@@ -276,12 +277,12 @@ class ScoreAndAnalysis:
         analysisMeasures = len(self.analysis.parts[0].getElementsByClass('Measure'))
         if scoreMeasures != analysisMeasures:
             self.errorLog.append(
-            f'WARNING: There are {scoreMeasures} measures in the score but {analysisMeasures} in your analysis. '+
-            'This is usually a question of either the beginning or end: either\n'+
-            '1) The piece reaches its final chord before the final measure (in which case fine), or\n'+
-            '2) There\'s an anacrusis in the score without accompanying harmony (i.e. the analysis is missing measure 0). '+
-            'In that latter case, the score and analysis will be misaligned, and the comparisons will not work properly. '+
-            'Best to put in a chord of some kind for the anacrusis.\n'
+                f'WARNING: There are {scoreMeasures} measures in the score but {analysisMeasures} in your analysis. ' +
+                'This is usually a question of either the beginning or end: either\n' +
+                '1) The piece reaches its final chord before the final measure (in which case fine), or\n' +
+                '2) There\'s an anacrusis in the score without accompanying harmony (i.e. the analysis is missing measure 0). ' +
+                'In that latter case, the score and analysis will be misaligned, and the comparisons will not work properly. ' +
+                'Best to put in a chord of some kind for the anacrusis.\n'
             )
 
         for x in self.analysis.recurse().getElementsByClass('RomanNumeral'):
@@ -301,7 +302,7 @@ class ScoreAndAnalysis:
             thisComparison.bassPitch = x.bass().name
             self.comparisons.append(thisComparison)
 
-# ------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
 
     def rnSliceMatchUp(self):
         '''
@@ -312,7 +313,6 @@ class ScoreAndAnalysis:
         self.indexCount = 0
 
         for index in range(len(self.comparisons) - 1):
-
             self.comparisons[index].endUniqueOffsetID = self.comparisons[index + 1].startUniqueOffsetID
             self.singleMatchUp(self.comparisons[index])
 
@@ -337,9 +337,9 @@ class ScoreAndAnalysis:
             else:
                 break
 
-# ------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
 
-# Assesments:
+    # Assesments:
 
     def metricalPositions(self):
         '''
@@ -431,7 +431,7 @@ class ScoreAndAnalysis:
                 for bassPitch in bassPitchesNoOctave:
                     if bassPitch in comp.pitches:  # already retrieved
                         suggestedPitches = comp.pitches
-                        suggestedPitches.append(bassPitch+'0')  # To ensure it is lowest
+                        suggestedPitches.append(bassPitch + '0')  # To ensure it is lowest
                         suggestedChord = chord.Chord(suggestedPitches)
                         rn = roman.romanNumeralFromChord(suggestedChord, comp.key)
                         inversionSuggestions.append(f'm{comp.measure} b{comp.beat} {rn.figure}')
@@ -442,7 +442,7 @@ class ScoreAndAnalysis:
                 fb.suggestions = []
 
                 if len(inversionSuggestions) > 0:
-                    fb.suggestions = list(set(inversionSuggestions)) # Just once per distinct suggestion
+                    fb.suggestions = list(set(inversionSuggestions))  # Just once per distinct suggestion
 
                 self.bassFeedback.append(fb)
 
@@ -467,18 +467,18 @@ class ScoreAndAnalysis:
 
         if len(query) == 0:
             self.errorLog.append(
-                f'Roman numeral {comp.figure} in {comp.key}, m.{comp.measure}: '+
+                f'Roman numeral {comp.figure} in {comp.key}, m.{comp.measure}: ' +
                 'No pitches in one of the slices.'
-                )
+            )
             return 0
 
         intersection = [x for x in query if x in comp.pitches]
         proportion = len(intersection) / len(query)
         return proportion
 
-# ------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------
 
-# Feedback:
+    # Feedback:
 
     def printFeedback(self, pitches=True, metre=True, bass=True, constructiveOnly=False):
         '''
@@ -491,16 +491,19 @@ class ScoreAndAnalysis:
         allToPrint = []
 
         if (pitches == False) and (metre == False) and (bass == False):
-            allToPrint.append('Please select at least one of pitches, metre, or bass to receive feedback on that / those aspect(s).')
+            allToPrint.append(
+                'Please select at least one of pitches, metre, or bass to receive feedback on that / those aspect(s).')
             return
 
-        allToPrint.append('Here are my thoughts. Remember, Roman numeral analysis is highly subjective, and I\'m just a bot so these are suggestions only.\n')
+        allToPrint.append(
+            'Here are my thoughts. Remember, Roman numeral analysis is highly subjective, and I\'m just a bot so these are suggestions only.\n')
 
         if pitches == True:
             self.comparePitches()
             allToPrint.append('PITCH COVERAGE =====================\n')  # Whether there's feedback or not
             if len(self.pitchFeedback) == 0:
-                allToPrint.append('The pitch coverage looks good: your choice of chords match the corresponding sections of the score well.\n')
+                allToPrint.append(
+                    'The pitch coverage looks good: your choice of chords match the corresponding sections of the score well.\n')
             else:  # if len(self.pitchFeedback) > 0:
                 allToPrint.append(f'I rate the pitch coverage at about {self.pitchScore}%.\n')
                 allToPrint.append('In these cases, the chord indicated does not seem to capture everything going on:\n')
@@ -522,7 +525,8 @@ class ScoreAndAnalysis:
             self.metricalPositions()
             allToPrint.append('HARMONIC RHYTHM =====================\n')
             if len(self.metricalPositionFeedback) == 0:
-                allToPrint.append('The harmonic rhythm looks good: all the chord changes take place on strong metrical positions.\n')
+                allToPrint.append(
+                    'The harmonic rhythm looks good: all the chord changes take place on strong metrical positions.\n')
             else:  # if len(self.metricalPositionFeedback) > 0:
                 allToPrint.append('In these cases, the chord change is at an unusually weak metrical position:\n')
                 [allToPrint.append(fb.message) for fb in self.metricalPositionFeedback]
@@ -532,10 +536,12 @@ class ScoreAndAnalysis:
             self.compareBass()
             allToPrint.append('BASS / INVERSION =====================\n')
             if len(self.bassFeedback) == 0:
-                allToPrint.append('The inversions look good: the bass notes indicated by your Roman numerals do indeed appears at least once in the lowest part during the relevant span.\n')
+                allToPrint.append(
+                    'The inversions look good: the bass notes indicated by your Roman numerals do indeed appears at least once in the lowest part during the relevant span.\n')
             else:  # len(self.bassFeedback) > 0:
                 allToPrint.append(f'I rate the bass notes at about {round(self.bassScore * 100, 2)}%.\n')
-                allToPrint.append('The following chords look ok, except for the bass note / inversion. (NB: pedals are not currently supported):\n')
+                allToPrint.append(
+                    'The following chords look ok, except for the bass note / inversion. (NB: pedals are not currently supported):\n')
                 for fb in self.bassFeedback:
                     if len(fb.suggestions) > 0:
                         allToPrint.append(fb.message)
@@ -545,7 +551,8 @@ class ScoreAndAnalysis:
                     else:  # no suggestions
                         if constructiveOnly == False:
                             allToPrint.append(fb.message)
-                            allToPrint.append(f'Sorry, no inversion suggestions - none of the bass note(s) are in the chord.\n')
+                            allToPrint.append(
+                                f'Sorry, no inversion suggestions - none of the bass note(s) are in the chord.\n')
                         # if constructiveOnly == True, print nothing
 
         if len(self.errorLog) > 0:
@@ -553,6 +560,7 @@ class ScoreAndAnalysis:
             [allToPrint.append(x) for x in self.errorLog]
 
         [print(x) for x in allToPrint]
+
 
 # ------------------------------------------------------------------------------
 
@@ -564,6 +572,7 @@ def intBeat(beat):
         return int(beat)
     else:
         return round(float(beat), 2)
+
 
 # ------------------------------------------------------------------------------
 
@@ -616,7 +625,7 @@ def intBeat(beat):
 
 if __name__ == '__main__':
     # unittest.main()
-    base = os.path.join('..', 'data')
+    base = os.path.join('', 'data')
 
     corpus = os.path.join('Tavern', 'Beethoven')
     # corpus = os.path.join('Tavern', 'Mozart')
