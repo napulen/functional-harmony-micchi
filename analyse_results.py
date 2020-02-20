@@ -426,11 +426,20 @@ def t_test_results(fp, column='roman + inv'):
     c4_bass = data.loc[data.index.str.contains('_bass_'), column].to_numpy()
     c4_class = data.loc[data.index.str.contains('_class_'), column].to_numpy()
 
-    A = [c1_global, c2_gru, c2_gru, c3_pitch, c4_complete, c4_complete]
-    B = [c1_local, c2_conv_dil, c2_conv_gru, c3_spelling, c4_class, c4_bass]
-    title = ['global vs. local', 'gru vs. conv_dil', 'gru vs. conv_gru', 'pitch vs. spelling', 'complete vs. class', 'complete vs. bass']
-    for a, b, t in zip(A, B, title):
-        print(f'{t}: {ttest_ind(a, b)}')
+    comparisons = [
+        (c1_global, c1_local, 'global vs. local'),
+        (c2_gru, c2_conv_dil, 'gru vs conv_dil'),
+        (c2_gru, c2_conv_gru, 'gru vs conv_gru'),
+        (c2_conv_dil, c2_conv_gru, 'conv_dil vs conv_gru'),
+        (c3_pitch, c3_spelling, 'pitch vs. spelling'),
+        (c4_complete, c4_class, 'complete vs. class'),
+        (c4_complete, c4_bass, 'complete vs. bass'),
+        (c4_class, c4_bass, 'class vs. bass'),
+    ]
+
+    for c in comparisons:
+        a, b, t = c
+        print(f'{t:<21}: p-value {ttest_ind(a, b).pvalue:.1e}')
     return
 
 
@@ -439,9 +448,10 @@ if __name__ == '__main__':
     # dataset = 'validation'
     dataset = 'test'
     # dataset = 'validation_bpsfh'
-    # models_folder = os.path.join('runs', 'run_bps', 'models')
-    models_folder = os.path.join('runs', 'run_06', 'models')
+    runs_folder = os.path.join('runs', 'run_06_(paper)')
+    models_folder = os.path.join(runs_folder, 'models')
     data_folder = 'data_small'
     # data_folder = DATA_FOLDER
     # compare_results(data_folder, models_folder, dataset, export_annotations=True)
-    analyse_results(data_folder, models_folder, 'conv_dil_spelling_bass_cut_2', dataset=dataset, visualize=False)
+    # analyse_results(data_folder, models_folder, 'conv_dil_spelling_bass_cut_2', dataset=dataset, visualize=False)
+    t_test_results(os.path.join(runs_folder, 'comparison_2019-11-25_18-56.csv'))

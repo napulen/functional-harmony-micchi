@@ -93,9 +93,7 @@ def load_score_beat_strength(score_file, fpq):
     return beat_strength
 
 
-####################
 # Load the score for the pitch spelling representation
-####################
 
 def load_score_spelling_complete(score_file, fpq, mode='fifth'):
     if mode not in ['fifth', 'semitone']:
@@ -124,34 +122,8 @@ def load_score_spelling_complete(score_file, fpq, mode='fifth'):
     return piano_roll, num_flatwards, num_sharpwards
 
 
-@deprecated(reason="Use the version without chordify, this one is here just for testing")
-def load_score_spelling_bass_chordify(score_file, fpq):
-    score, n_frames = _load_score(score_file, fpq)
-    score = score.chordify()  # this is very comfy but super slow (several seconds on long pieces)
-    piano_roll = np.zeros(shape=(35 * 2, n_frames), dtype=np.int32)
-    flattest, sharpest = 35, 0
-    for chord in score.flat.notes:
-        start = int(round(chord.offset * fpq))
-        end = start + max(int(round(chord.duration.quarterLength * fpq)), 1)
-        time = np.arange(start, end)
-        for i, note in enumerate(chord):
-            nn = note.pitch.name
-            idx = PF2I[nn]
-            flattest = min(flattest, idx)
-            sharpest = max(sharpest, idx)
-            piano_roll[idx, time] = 1
-            if i == 0:  # chords always start from the bass
-                piano_roll[idx + 35, time] = 1
-
-    numFlatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
-    numSharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
-    return piano_roll, numFlatwards, numSharpwards
-
-
 def load_score_spelling_bass(score_file, fpq):
     """
-     NOTE: DO NOT USE THIS!! IT DOESN"T WORK YET
-     An attempt at getting rid of the very slow chordify, still not working because the bass is not properly done
 
     :param score_file:
     :param fpq:
@@ -196,9 +168,7 @@ def load_score_spelling_class(score_file, fpq):
     return piano_roll, num_flatwards, num_sharpwards
 
 
-####################
 # Load the score for the midi pitch representation
-####################
 
 
 def load_score_pitch_complete(score_file, fpq):
@@ -218,28 +188,6 @@ def load_score_pitch_complete(score_file, fpq):
         for p in pitches:  # add notes to piano_roll
             piano_roll[p, time] = 1
     return piano_roll[24:108]  # from C1 to B7 included
-
-
-@deprecated(reason="Use the version without chordify, this one is here just for testing")
-def load_score_pitch_bass_chordify(score_file, fpq):
-    """
-    Load a score and create a piano roll with 12 pitch class + 12 bass
-    :param score_file:
-    :param fpq:
-    :return:
-    """
-    score, n_frames = _load_score(score_file, fpq)
-    score = score.chordify()  # super slow!
-    piano_roll = np.zeros(shape=(24, n_frames), dtype=np.int32)
-    for n in score.flat.notes:
-        pitches = np.array(n.pitchClasses)
-        start = int(round(n.offset * fpq))
-        end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
-        time = np.arange(start, end)
-        for p in pitches:  # add notes to piano_roll
-            piano_roll[p, time] = 1
-        piano_roll[pitches[0] + 12, time] = 1  # add the bass
-    return piano_roll
 
 
 def load_score_pitch_bass(score_file, fpq):
@@ -266,27 +214,6 @@ def load_score_pitch_bass(score_file, fpq):
     return piano_roll
 
 
-@deprecated(reason="Use the version without chordify, this one is here just for testing")
-def load_score_pitch_class_chordify(score_file, fpq):
-    """
-    Load a score and create a piano roll with 12 pitch class
-    :param score_file:
-    :param fpq:
-    :return:
-    """
-    score, n_frames = _load_score(score_file, fpq)
-    score = score.chordify()
-    piano_roll = np.zeros(shape=(12, n_frames), dtype=np.int32)
-    for n in score.flat.notes:
-        pitches = np.array(n.pitchClasses)
-        start = int(round(n.offset * fpq))
-        end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
-        time = np.arange(start, end)
-        for p in pitches:  # add notes to piano_roll
-            piano_roll[p, time] = 1
-    return piano_roll
-
-
 def load_score_pitch_class(score_file, fpq):
     """
     Load a score and create a piano roll with 12 pitch class
@@ -306,9 +233,7 @@ def load_score_pitch_class(score_file, fpq):
     return piano_roll
 
 
-####################
 # Load the chord labels
-####################
 
 
 def load_chord_labels(chords_file):

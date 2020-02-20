@@ -276,8 +276,8 @@ def convert_corpus(base_folder, corpus):
     file_list = sorted(file_list)
     test = True
     for txt_file in file_list:
-        # if '04' not in txt_file:
-        #     continue
+        if '06' not in txt_file:
+            continue
         print(txt_file)
         score_file = f'{txt_file.split("_")[0]}.mxl' if 'Tavern' in corpus else f'{txt_file[:-4]}.mxl'
         csv_file = f'{txt_file[:-4]}.csv'
