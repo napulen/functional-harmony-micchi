@@ -9,6 +9,7 @@ import numpy as np
 from tensorflow.python.keras.models import load_model
 
 from config import DATA_FOLDER, FPQ, CHUNK_SIZE
+from converter_tabular2roman import convert_file
 from utils import find_input_type, create_dezrann_annotations, create_tabular_annotations
 from utils_music import load_score_pitch_complete, load_score_pitch_bass, load_score_pitch_class, \
     load_score_spelling_complete, load_score_spelling_bass, load_score_spelling_class
@@ -25,11 +26,19 @@ def analyse_music(sf, model, model_name, input_type, analyses_folder):
     ts = np.squeeze(np.sum(mask, axis=1), axis=1)
     n_chunks = len(ts)
     test_pred = [[d[e, :ts[e]] for d in y_pred] for e in range(n_chunks)]
-    file_names = [os.path.basename(sf).split('.')[0]] * n_chunks
+    # song_name = os.path.basename(sf).split('.')[0]
+    song_name = 'automatic'  # this effectively calls all analyses files 'automatic', use with care
+    file_names = [song_name] * n_chunks
     create_dezrann_annotations(model_output=test_pred, model_name=model_name, annotations=None, timesteps=ts,
                                file_names=file_names, output_folder=analyses_folder)
     create_tabular_annotations(model_output=test_pred, timesteps=ts,
                                file_names=file_names, output_folder=analyses_folder)
+    try:
+        convert_file(sf, os.path.join(analyses_folder, song_name + '.csv'),
+                     os.path.join(analyses_folder, song_name + '.txt'))
+    except:
+        print(f"Couldn't create the rntxt version of {os.path.basename(sf).split('.')[0]}")
+
     return
 
 
@@ -111,34 +120,32 @@ def get_args():
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description='Do a roman numeral analysis of the scores you provide.')
-    parser.add_argument('-i', dest='interactive', action='store_true',
-                        help='activate interactive mode for setting parameters')
-    parser.add_argument('--score', dest='music_path', action='store', type=str,
-                        help='score or folder containing the scores')
-    parser.add_argument('--model', dest='model_name', action='store', type=str, help='name of the model')
-    parser.set_defaults(interactive=False)
-    parser.set_defaults(music_path=os.path.join(DATA_FOLDER, 'valid', 'scores'))
-    parser.set_defaults(model_name='conv_gru_spelling_bass_cut')
-    args = parser.parse_args()
+    model_name = 'conv_gru_spelling_bass_cut_3'
+    input_type = find_input_type(model_name)
 
-    if args.interactive:
-        args.music_path, args.model_name = get_args()
-    else:
-        print(f"Selected scores: {args.music_path}\n"
-              f"Selected model: {args.model_name}\n"
-              f"If that's not what you wanted, try to run the script with the option -i (interactive mode)")
-        ans = input('press Enter to continue or type q to quit...\n')
-        if ans == 'q':
-            sys.exit()
-    try:
-        files = sorted([os.path.join(args.music_path, m) for m in os.listdir(args.music_path)])
-    except NotADirectoryError:
-        files = [args.music_path]
+    music_path = os.path.join('data', 'OpenScore-LiederCorpus')
+    # try:
+    #     files = sorted([os.path.join(music_path, m) for m in os.listdir(music_path)])
+    # except NotADirectoryError:
+    #     files = [music_path]
+    # analyses_folder = os.path.join('analyses', '_'.join([model_name, datetime.now().strftime("%Y-%m-%d_%H-%M")]))
+    w = os.walk(music_path, topdown=False)
 
-    analyses_folder = os.path.join('analyses', '_'.join([args.model_name, datetime.now().strftime("%Y-%m-%d_%H-%M")]))
-    model_folder = os.path.join('models', args.model_name)
-    model = load_model(os.path.join(model_folder, args.model_name + '.h5'))
-    input_type = find_input_type(args.model_name)
-    for sf in files:
-        analyse_music(sf, model, args.model_name, input_type, analyses_folder)
+    # for i in w:
+    #     analyses_folder = i[0]
+    #     fn = [f for f in i[2] if f.startswith('automated')]
+    #     for f in fn:
+    #         print(f'removing {f}')
+    #         os.remove(os.path.join(analyses_folder, f))
+
+    model_folder = os.path.join('runs', 'run_06_(paper)', 'models', model_name)
+    model = load_model(os.path.join(model_folder, model_name + '.h5'))
+    for i in w:
+        fn = [f for f in i[2] if f.endswith('mxl')]
+        try:
+            fn = fn[0]
+        except IndexError:
+            continue
+        analyses_folder = i[0]
+        sf = os.path.join(analyses_folder, fn)
+        analyse_music(sf, model, model_name, input_type, analyses_folder)
