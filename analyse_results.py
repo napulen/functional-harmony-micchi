@@ -18,33 +18,22 @@ from tensorflow.python.keras.backend import clear_session
 from tensorflow.python.keras.models import load_model
 
 from config import FEATURES, NOTES, N_VALID, PITCH_FIFTHS, \
-    VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, N_TEST_BPS, DATA_FOLDER, KEYS_PITCH, \
-    KEYS_SPELLING, QUALITY
+    VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, N_TEST_BPS, KEYS_PITCH, \
+    KEYS_SPELLING, QUALITY, DATA_FOLDER
 from load_data import load_tfrecords_dataset
 from utils import create_dezrann_annotations, setup_tfrecords_paths, find_input_type, create_tabular_annotations
 from utils_music import Q2I, find_root_full_output
 
 
-def check_predictions(y_true, y_pred, index):
+# PLOTS
+def plot_chord_changes(y_true, y_pred, name, ts, inversions=True):
     """
-    Check if the predictions are correct for each timestep.
 
-    :param y_true:
+    :param y_true: shape [outputs] (timesteps, output_features)
     :param y_pred:
-    :param index:
-    :return: a boolean vector of dimension [samples]
-    """
-    return np.argmax(y_true[index], axis=-1) == np.argmax(y_pred[index], axis=-1)
-
-
-def visualize_chord_changes(y_true, y_pred, name, ts, inversions=True):
-    """
-    
-    :param y_true: shape [outputs] (timesteps, output_features) 
-    :param y_pred: 
     :param ts: the total number of timesteps in this prediction
-    :param inversions: 
-    :return: 
+    :param inversions:
+    :return:
     """
     if inversions:
         yt = [np.argmax(y, axis=-1) for y in y_true]
@@ -77,13 +66,7 @@ def visualize_chord_changes(y_true, y_pred, name, ts, inversions=True):
     return
 
 
-def indices_to_one_hot(data, nb_classes):
-    """Convert an iterable of indices to one-hot encoded labels."""
-    targets = np.array(data).reshape(-1)
-    return np.eye(nb_classes)[targets]
-
-
-def visualize_results(y_true, y_pred, name, start, mode='probabilities', pitch_spelling=True):
+def plot_results(y_true, y_pred, name, start, mode='probabilities', pitch_spelling=True):
     """
 
     :param y_true: shape [outputs] (timesteps, features output)
@@ -128,7 +111,7 @@ def visualize_results(y_true, y_pred, name, start, mode='probabilities', pitch_s
         else:
             if j == 6:
                 a = find_root_full_output(y_pred, pitch_spelling=pitch_spelling)
-                a = indices_to_one_hot(a, 35 if pitch_spelling else 12)
+                a = _indices_to_one_hot(a, 35 if pitch_spelling else 12)
                 b = y_true[5]
             else:
                 a = y_pred[j]
@@ -160,7 +143,7 @@ def visualize_results(y_true, y_pred, name, start, mode='probabilities', pitch_s
     return
 
 
-def visualize_piano_roll(pr, name):
+def plot_piano_roll(pr, name):
     """
     
     :param pr: 
@@ -188,9 +171,39 @@ def plot_coherence(root_pred, root_der, n_classes, name):
     return
 
 
+# ANALYSIS OF SINGLE MODEL
+def _check_predictions(y_true, y_pred, index):
+    """
+    Check if the predictions are correct for each timestep.
+
+    :param y_true:
+    :param y_pred:
+    :param index:
+    :return: a boolean vector of dimension [samples]
+    """
+    return np.argmax(y_true[index], axis=-1) == np.argmax(y_pred[index], axis=-1)
+
+
+def _indices_to_one_hot(data, nb_classes):
+    """Convert an iterable of indices to one-hot encoded labels."""
+    targets = np.array(data).reshape(-1)
+    return np.eye(nb_classes)[targets]
+
+
 def analyse_results(data_folder, models_folder, model_name, dataset='validation', comparison=False, visualize=True,
                     export_annotations=True):
-    clear_session()
+    """
+    The main function of this file. It applies the model to a given annotated dataset and calculates the accuracy.
+    :param data_folder:
+    :param models_folder:
+    :param model_name:
+    :param dataset: One of the available annotated ones. Every dataset must be manually added as a switch in the code.
+    :param comparison: True if this is called by the comparison routine. It removes some plotting and printing.
+    :param visualize: True if you want to plot some things
+    :param export_annotations: True if you want to write annotations to file
+    :return: a dictionary in which keys are the name of a feature we analyse and the value is its accuracy
+    """
+    clear_session()  # Very important to avoid memory problems
     model = load_model(os.path.join(models_folder, model_name, model_name + '.h5'))
     if comparison:  # force no visualization when comparing models
         visualize = False
@@ -224,7 +237,7 @@ def analyse_results(data_folder, models_folder, model_name, dataset='validation'
         steps = 103
         n_chunks = 103
     else:
-        raise ValueError("dataset should be either validation or beethoven")
+        raise ValueError("dataset handle not recognized")
 
     test_data = load_tfrecords_dataset(data_file, batch_size, shuffle_buffer=1, input_type=input_type)
 
@@ -261,15 +274,15 @@ def analyse_results(data_folder, models_folder, model_name, dataset='validation'
             #     continue
             # if 'wtc_i_prelude_01' not in fn:
             #     continue
-            # visualize_piano_roll(pr, fn)
-            visualize_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
-            # visualize_results(y_true, y_pred, fn, frame, mode='probabilities', pitch_spelling=ps)
-            # visualize_chord_changes(y_true, y_pred, fn, ts, True)
-            # visualize_chord_changes(y_true, y_pred, fn, ts, False)
+            # plot_piano_roll(pr, fn)
+            plot_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
+            # plot_results(y_true, y_pred, fn, frame, mode='probabilities', pitch_spelling=ps)
+            # plot_chord_changes(y_true, y_pred, fn, ts, True)
+            # plot_chord_changes(y_true, y_pred, fn, ts, False)
             # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=classes_root, name=fn)
             pass
 
-    """ Create Dezrann annotations """
+    """ Create annotations """
     if export_annotations:
         output_folder = os.path.join(models_folder, model_name, 'analyses')
         create_dezrann_annotations(test_pred, model_name, test_true, timesteps, file_names, output_folder=output_folder)
@@ -284,7 +297,7 @@ def analyse_results(data_folder, models_folder, model_name, dataset='validation'
     true_positives = np.zeros(6)  # true positives for each separate feature
     for step in range(n_chunks):
         y_true, y_pred = test_true[step], test_pred[step]  # shape: [outputs], (timestep, output features)
-        correct = np.array([check_predictions(y_true, y_pred, j) for j in range(6)])  # shape: (output, timestep)
+        correct = np.array([_check_predictions(y_true, y_pred, j) for j in range(6)])  # shape: (output, timestep)
         true_positives += np.sum(correct, axis=-1)  # true positives per every output
         roman_tp += np.sum(np.prod(correct[:4], axis=0), axis=-1)
         roman_inv_tp += np.sum(np.prod(correct[:5], axis=0), axis=-1)
@@ -323,32 +336,23 @@ def analyse_results(data_folder, models_folder, model_name, dataset='validation'
     return accuracies
 
 
-def compare_results(data_folder, models_folder, dataset, export_annotations):
+# MODELS COMPARISON
+def _write_comparison_file(model_outputs, fp_out):
     """
-    Check all the models in the log folder and derive their accuracy scores, then write a comparison table to file
+    Take the output from several models and writes them to a general comparison file.
+    The outputs need to be stored in tuples. The first element is the model name, the second is a dictionary
+    containing the name of a feature as key and the accuracy as value
 
-    :param data_folder:
-    :param dataset: either beethoven (all 32 sonatas) or validation (7 sonatas not in training set)
-    :param export_annotations: boolean, whether to write analyses to file
+    :param model_outputs:
+    :param fp_out:
     :return:
     """
-    models = sorted(os.listdir(models_folder))
-    n = len(models)
-    results = []
-    for i, model_name in enumerate(models):
-        # if model_name != 'conv_gru_pitch_bass_cut_1':
-        #     continue
-        print(f"model {i + 1} out of {n} - {model_name}")
-        accuracies = analyse_results(data_folder, models_folder, model_name, dataset, comparison=True,
-                                     export_annotations=export_annotations)
-        results.append((model_name, accuracies))
+    features = list(model_outputs[0][1].keys())
 
-    features = list(results[0][1].keys())
-    file_path = os.path.join(models_folder, '..', f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv')
-    with open(file_path, 'w+') as f:
+    with open(fp_out, 'w+') as f:
         w = csv.writer(f)
         w.writerow(['model name'] + features)
-        for model_name, accuracies in results:
+        for model_name, accuracies in model_outputs:
             w.writerow([model_name] + [round(accuracies[feat], 2) for feat in features])
         bps_paper = {
             'key': 66.65,
@@ -382,14 +386,15 @@ def compare_results(data_folder, models_folder, dataset, export_annotations):
         w.writerow(['bps-fh_paper'] + [bps_paper[feat] for feat in features])
         w.writerow(['ht_paper'] + [ht_paper[feat] for feat in features])
         w.writerow(['temperley'] + [temperley[feat] for feat in features])
+    return
 
 
-def average_results(fp):
+def _average_results(fp_in, fp_out):
     """
-
-    :param fp: The file path to the comparison file we want to average
+    Write to fp_out the results in fp_in marginalized over one feature at a time
+    :param fp_in: The file path to the comparison file we want to average
     """
-    data = pd.read_csv(fp, header=0, index_col=0)
+    data = pd.read_csv(fp_in, header=0, index_col=0)
     res = pd.DataFrame()
     res['c1_local'] = data.loc[data.index.str.contains('_local_')].mean()
     res['c1_global'] = data.loc[data.index.str.contains('conv_') & ~data.index.str.contains('_local_')].mean()
@@ -404,42 +409,78 @@ def average_results(fp):
     res = res.transpose()
     columns = ['key', 'degree', 'quality', 'inversion', 'roman + inv', 'secondary', 'd7 no inv']
     # (res - res.loc['c3_spelling']).loc[res.index.str.contains('c3'), columns]
-    return data, res
+    # return data, res
+    res[columns].to_csv(fp_out)
+    return
 
 
-def t_test_results(fp, column='roman + inv'):
+def _t_test_results(fp_in, columns=None):
     """
+    Print to screen the results of the t-test on the importance of architecture choices.
 
-    :param fp: The file path to the comparison file we want to average
+    :param fp_in: The file path to the comparison file
     """
-    data = pd.read_csv(fp, header=0, index_col=0)
+    data = pd.read_csv(fp_in, header=0, index_col=0)
     from scipy.stats import ttest_ind
 
-    c1_local = data.loc[data.index.str.contains('_local_'), column].to_numpy()
-    c1_global = data.loc[data.index.str.contains('conv_') & ~data.index.str.contains('_local_'), column].to_numpy()
-    c2_conv_dil = data.loc[data.index.str.contains('conv_dil'), column].to_numpy()
-    c2_conv_gru = data.loc[data.index.str.contains('conv_gru'), column].to_numpy()
-    c2_gru = data.loc[data.index.str.contains('gru_') & ~data.index.str.contains('conv_'), column].to_numpy()
-    c3_spelling = data.loc[data.index.str.contains('_spelling_'), column].to_numpy()
-    c3_pitch = data.loc[data.index.str.contains('_pitch_'), column].to_numpy()
-    c4_complete = data.loc[data.index.str.contains('_complete_'), column].to_numpy()
-    c4_bass = data.loc[data.index.str.contains('_bass_'), column].to_numpy()
-    c4_class = data.loc[data.index.str.contains('_class_'), column].to_numpy()
+    if columns is None:
+        columns = data.columns
+    for col in columns:
+        c1_local = data.loc[data.index.str.contains('_local_'), col].to_numpy()
+        c1_global = data.loc[data.index.str.contains('conv_') & ~data.index.str.contains('_local_'), col].to_numpy()
+        c2_conv_dil = data.loc[data.index.str.contains('conv_dil'), col].to_numpy()
+        c2_conv_gru = data.loc[data.index.str.contains('conv_gru'), col].to_numpy()
+        c2_gru = data.loc[data.index.str.contains('gru_') & ~data.index.str.contains('conv_'), col].to_numpy()
+        c3_spelling = data.loc[data.index.str.contains('_spelling_'), col].to_numpy()
+        c3_pitch = data.loc[data.index.str.contains('_pitch_'), col].to_numpy()
+        c4_complete = data.loc[data.index.str.contains('_complete_'), col].to_numpy()
+        c4_bass = data.loc[data.index.str.contains('_bass_'), col].to_numpy()
+        c4_class = data.loc[data.index.str.contains('_class_'), col].to_numpy()
 
-    comparisons = [
-        (c1_global, c1_local, 'global vs. local'),
-        (c2_gru, c2_conv_dil, 'gru vs conv_dil'),
-        (c2_gru, c2_conv_gru, 'gru vs conv_gru'),
-        (c2_conv_dil, c2_conv_gru, 'conv_dil vs conv_gru'),
-        (c3_pitch, c3_spelling, 'pitch vs. spelling'),
-        (c4_complete, c4_class, 'complete vs. class'),
-        (c4_complete, c4_bass, 'complete vs. bass'),
-        (c4_class, c4_bass, 'class vs. bass'),
-    ]
+        comparisons = [
+            (c1_global, c1_local, 'global vs. local'),
+            (c2_gru, c2_conv_dil, 'gru vs conv_dil'),
+            (c2_gru, c2_conv_gru, 'gru vs conv_gru'),
+            (c2_conv_dil, c2_conv_gru, 'conv_dil vs conv_gru'),
+            (c3_pitch, c3_spelling, 'pitch vs. spelling'),
+            (c4_complete, c4_class, 'complete vs. class'),
+            (c4_complete, c4_bass, 'complete vs. bass'),
+            (c4_class, c4_bass, 'class vs. bass'),
+        ]
 
-    for c in comparisons:
-        a, b, t = c
-        print(f'{t:<21}: p-value {ttest_ind(a, b).pvalue:.1e}')
+        print(col)
+        for c in comparisons:
+            a, b, t = c
+            print(f'{t:<21}: p-value {ttest_ind(a, b).pvalue:.1e}')
+        print("")
+    return
+
+
+def compare_results(data_folder, models_folder, dataset, export_annotations):
+    """
+    Check all the models in the log folder and calculate their accuracy scores, then write a comparison table to file
+
+    :param data_folder:
+    :param dataset: either beethoven (all 32 sonatas) or validation (7 sonatas not in training set)
+    :param export_annotations: boolean, whether to write analyses to file
+    :return:
+    """
+    models = sorted(os.listdir(models_folder))
+    n = len(models)
+    results = []
+    for i, model_name in enumerate(models):
+        # if model_name != 'conv_gru_pitch_bass_cut_1':
+        #     continue
+        print(f"model {i + 1} out of {n} - {model_name}")
+        accuracies = analyse_results(data_folder, models_folder, model_name, dataset, comparison=True,
+                                     export_annotations=export_annotations)
+        results.append((model_name, accuracies))
+
+    comparison_fp = os.path.join(models_folder, '..', f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv')
+    _write_comparison_file(results, comparison_fp)
+    average_fp = comparison_fp.replace("comparison", "average")
+    _average_results(comparison_fp, average_fp)
+    _t_test_results(comparison_fp)
     return
 
 
@@ -450,8 +491,6 @@ if __name__ == '__main__':
     # dataset = 'validation_bpsfh'
     runs_folder = os.path.join('runs', 'run_06_(paper)')
     models_folder = os.path.join(runs_folder, 'models')
-    data_folder = 'data_small'
-    # data_folder = DATA_FOLDER
-    # compare_results(data_folder, models_folder, dataset, export_annotations=True)
-    # analyse_results(data_folder, models_folder, 'conv_dil_spelling_bass_cut_2', dataset=dataset, visualize=False)
-    t_test_results(os.path.join(runs_folder, 'comparison_2019-11-25_18-56.csv'))
+    data_folder = DATA_FOLDER
+    compare_results(data_folder, models_folder, dataset, export_annotations=True)
+    analyse_results(data_folder, models_folder, 'conv_dil_spelling_bass_cut_2', dataset=dataset, visualize=False)

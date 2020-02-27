@@ -15,13 +15,12 @@ ATTENTION: despite the name, the secondary_degree is actually "more important" t
 since the latter is almost always equal to 1.
 """
 import csv
+import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from deprecated import deprecated
-from music21 import converter, note
-from music21.repeat import ExpanderException
+import music21
 from numpy.lib.recfunctions import append_fields
 
 from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH, START_MAJ, END_MAJ, \
@@ -49,13 +48,13 @@ class HarmonicAnalysisError(Exception):
 def _load_score(score_file, fpq):
     if 'bps' in score_file:
         try:
-            score = converter.parse(score_file).expandRepeats()
-        except ExpanderException:
-            score = converter.parse(score_file)
+            score = music21.converter.parse(score_file).expandRepeats()
+        except music21.repeat.ExpanderException:
+            score = music21.converter.parse(score_file)
             print(
                 "Tried to expand repeats but didn't manage to. Maybe there are no repeats in the piece? Please check.")
     else:
-        score = converter.parse(score_file)
+        score = music21.converter.parse(score_file)
     n_frames = int(score.duration.quarterLength * fpq)
     return score, n_frames
 
@@ -71,7 +70,7 @@ def load_score_beat_strength(score_file, fpq):
     # Throw away all notes in the score, we shouldn't use this score for anything except finding beat strength structure
     score = score.template()
     # Insert fake notes and use them to derive the beat strength through music21
-    n = note.Note('C')
+    n = music21.note.Note('C')
     n.duration.quarterLength = 1. / fpq
     offsets = np.arange(n_frames) / fpq
     score.repeatInsert(n, offsets)
@@ -96,6 +95,7 @@ def load_score_beat_strength(score_file, fpq):
 # Load the score for the pitch spelling representation
 
 def load_score_spelling_complete(score_file, fpq, mode='fifth'):
+    logger = logging.getLogger('load_score')
     if mode not in ['fifth', 'semitone']:
         raise NotImplementedError("Only modes fifth and semitone are accepted")
     score, n_frames = _load_score(score_file, fpq)
@@ -110,7 +110,7 @@ def load_score_spelling_complete(score_file, fpq, mode='fifth'):
             pitch_name = note.pitch.name
             octave = note.pitch.octave - 1
             if octave < 0 or octave >= 7:  # we keep just 7 octaves in total
-                print("skipped a note")
+                logger.warning("Score outside the octave boundaries. Skipped a note.")
                 continue
             idx = PF2I[pitch_name] if mode == 'fifth' else PS2I[pitch_name]
             flattest = min(flattest, idx if mode == 'fifth' else PS2PF[idx])

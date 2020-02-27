@@ -94,7 +94,7 @@ def plot_flattest_sharpest(ff, ss):
     plt.yticks(np.linspace(0, max_ytick, n_yticks) / len(ff),
                [str(x) for x in np.linspace(0, max_ytick, n_yticks, dtype=int)])
     plt.legend()
-    plt.savefig(os.path.join('images', 'flattest_sharpest.png'), bbox_inches='tight')
+    plt.savefig(os.path.join('../images', 'flattest_sharpest.png'), bbox_inches='tight')
     plt.show()
     return
 
@@ -107,7 +107,7 @@ def plot_range_histogram(r):
     plt.xticks(np.arange(35), np.arange(35), rotation=90)
     plt.yticks(np.linspace(0, max_ytick, n_yticks) / len(ff), [str(x) for x in np.linspace(0, max_ytick, n_yticks)])
     plt.legend()
-    plt.savefig(os.path.join('images', 'range_histogram.png'), bbox_inches='tight')
+    plt.savefig(os.path.join('../images', 'range_histogram.png'), bbox_inches='tight')
     plt.show()
     return
 
@@ -136,7 +136,7 @@ def plot_range_individual(ff, ss, r):
     plt.scatter(ff[order], np.arange(len(order)))
     plt.scatter(ss[order], np.arange(len(order)))
     # plt.scatter([(s, y) for s, y in zip(ss[order], np.arange(len(order)))])
-    plt.savefig(os.path.join('images', 'range_individual.png'), bbox_inches='tight')
+    plt.savefig(os.path.join('../images', 'range_individual.png'), bbox_inches='tight')
     plt.show()
     return
 
