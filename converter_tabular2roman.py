@@ -65,31 +65,40 @@ from utils import decode_roman, int_to_roman
 from utils_music import load_chord_labels
 
 
-def get_rn_row(datum, in_row=None):
+def _get_rn_row(datum, in_row=None):
     """
     Write the start of a line of RNTXT.
-    To start a new line (one per measure with measure, beat, chord), set inString = None.
-    To extend an existing line (measure already given), set inString to that existing list.
+    To start a new line (one per measure with measure, beat, chord), set in_row = None.
+    To extend an existing line (measure already given), set in_row to that existing list.
 
-    :param datum: measure, beat, chord
+    :param datum: measure, beat, annotation
+    :param in_row: if None, this is a new measure
     """
 
+    measure, beat, annotation = datum
+
     if in_row is None:  # New line
-        in_row = 'm' + str(datum[0])
+        in_row = 'm' + str(measure)
 
-    return ' '.join([in_row, f'b{datum[1]}', datum[2]] if datum[1] != 1 else [in_row, datum[2]])
+    beat = int(beat) if int(beat) == beat else round(float(beat), 2)  # just reformat it prettier
+
+    return ' '.join([in_row, f'b{beat}', annotation] if beat != 1 else [in_row, annotation])
 
 
-def retrieve_measure_and_beat(offset, measure_offsets, beat_durations, ts_measures, beat_zero):
+def _retrieve_measure_and_beat(offset, measure_offsets, time_signatures, ts_measures, beat_zero):
+    # find what measure we are by looking at all offsets
     measure = np.searchsorted(measure_offsets, offset, side='right') - 1
+    rntxt_measure_number = measure + (0 if beat_zero else 1)  # the measure number we will write in the output
 
     offset_in_measure = offset - measure_offsets[measure]
-    measure_with_pickup = measure + (0 if beat_zero > 1 else 1)
-    beat_idx = ts_measures[np.searchsorted(ts_measures, measure_with_pickup, side='right') - 1]
-    beat = (offset_in_measure / beat_durations[beat_idx]) + (beat_zero if measure_with_pickup == 0 else 1)
-    beat = int(beat) if int(beat) == beat else round(float(beat), 2)
+    beat_idx = ts_measures[np.searchsorted(ts_measures, measure, side='right') - 1]
+    beat_duration = time_signatures[beat_idx].beatDuration.quarterLength
 
-    return measure_with_pickup, beat
+    beat = (offset_in_measure / beat_duration) + 1  # rntxt format has beats starting at 1
+    if rntxt_measure_number == 0:  # add back the anacrusis to measure 0
+        beat += beat_zero
+
+    return rntxt_measure_number, beat
 
 
 def interpret_degree(degree):
@@ -115,20 +124,53 @@ def interpret_degree(degree):
     return num, den
 
 
-def tabular2roman(tabular, score):
-    rn = []
-    starting_beat_measure_zero = score.flat.getTimeSignatures()[0].beat
+def _get_measure_offsets(score):
+    """
+    The measure_offsets are zero-indexed: the first measure in the score will be at index zero, regardless of anacrusis.
 
+    :param score:
+    :return: a list where at index m there is the offset in quarter length of measure m
+    """
     score_mom = score.measureOffsetMap()
     # consider only measures that have not been marked as "excluded" in the musicxml (for example using Musescore)
-    score_measure_offset = [k for k in score_mom.keys() if
-                            score_mom[k][0].numberSuffix is None]  # the [0] because there are two parts
-    score_measure_offset.append(score.duration.quarterLength)
-    beat_durations = dict([(ts.measureNumber, ts.beatDuration.quarterLength) for ts in score.flat.getTimeSignatures()])
-    time_signatures = dict([(ts.measureNumber, ts.ratioString) for ts in score.flat.getTimeSignatures()])
+    measure_offsets = [k for k in score_mom.keys() if
+                       score_mom[k][0].numberSuffix is None]  # the [0] because there are more than one parts
+    measure_offsets.append(score.duration.quarterLength)
+    return measure_offsets
+
+
+def tabular2roman(tabular, score):
+    """
+    Convert from tabular format to rntxt format.
+    Pay attention to the measure numbers because there are three conventions at play:
+      - for python, every list or array is 0-indexed
+      - for music21, measures in a score are always 1-indexed
+      - for rntxt, measures are 0-indexed if there is anacrusis and 1-indexed if there is not
+    We solve by moving everything to 0-indexed and adjusting the rntxt output in the retrieve_measure_and_beat function
+
+    Similarly we do for the beat, which is 1-indexed in music21 and in rntxt but which is mathematically
+    more comfortable if 0-indexed. We convert to 0-indexed and then back at the end.
+
+    :param tabular:
+    :param score:
+    :return:
+    """
+    rn = []  # store the final result
+
+    # (starting beat == 0) <=> no anacrusis
+    starting_beat = score.flat.getTimeSignatures()[0].beat - 1  # Convert beats to zero index
+    measure_offsets = _get_measure_offsets(score)
+
+    # Convert measure numbers given by music21 from 1-indexed to 0-indexed
+    ts_list = list(score.flat.getTimeSignatures())
+    time_signatures = dict([(ts.measureNumber - 1, ts) for ts in ts_list])
     ts_measures = sorted(time_signatures.keys())
-    ts_offsets = [score_measure_offset[m if (starting_beat_measure_zero > 1) else m - 1] for m in ts_measures]
-    previous_measure, previous_end, previous_key, j = -1, 0, None, 0
+
+    # ts_offsets = _get_ts_offsets(measure_offsets, ts_measures, starting_beat > 1)
+    ts_offsets = [measure_offsets[m] for m in ts_measures]
+
+    previous_measure, previous_end, previous_key = -1, 0, None
+    j = 0
 
     for row in tabular:
         start, end, key, degree, quality, inversion = row
@@ -140,26 +182,24 @@ def tabular2roman(tabular, score):
         # Time signature change
         while j < len(ts_offsets) and start >= ts_offsets[j]:
             rn.append('')
-            rn.append(f"Time Signature : {time_signatures[ts_measures[j]]}")
+            rn.append(f"Time Signature : {time_signatures[ts_measures[j]].ratioString}")
             rn.append('')
             j += 1
 
         # No chords passage
         if start != previous_end:
-            m, b = retrieve_measure_and_beat(end, score_measure_offset, beat_durations, ts_measures,
-                                             starting_beat_measure_zero)
+            m, b = _retrieve_measure_and_beat(end, measure_offsets, time_signatures, ts_measures, starting_beat)
             if m == previous_measure:
-                rn[-1] = get_rn_row([m, b, ''], in_row=rn[-1])
+                rn[-1] = _get_rn_row([m, b, ''], in_row=rn[-1])
             else:
-                rn.append(get_rn_row([m, b, '']))
+                rn.append(_get_rn_row([m, b, '']))
             previous_measure = m
 
-        m, b = retrieve_measure_and_beat(start, score_measure_offset, beat_durations, ts_measures,
-                                         starting_beat_measure_zero)
+        m, b = _retrieve_measure_and_beat(start, measure_offsets, time_signatures, ts_measures, starting_beat)
         if m == previous_measure:
-            rn[-1] = get_rn_row([m, b, annotation], in_row=rn[-1])
+            rn[-1] = _get_rn_row([m, b, annotation], in_row=rn[-1])
         else:
-            rn.append(get_rn_row([m, b, annotation]))
+            rn.append(_get_rn_row([m, b, annotation]))
         previous_measure, previous_end, previous_key = m, end, key
 
     return rn
@@ -210,8 +250,18 @@ def convert_corpus(base_folder, corpus):
 
 
 if __name__ == '__main__':
-    base_folder = DATA_FOLDER
+    folder = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/"
+    convert_file(folder + 'lc4999304.mxl', folder + 'automatic.csv', folder + 'test.txt')
+    #
+    # folder = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amoroso/"
+    # convert_file(folder + 'lc4999292.mxl', folder+'automatic.csv', folder+'test.txt')
+    #
 
+    folder = '/home/gianluca/PycharmProjects/functional-harmony/data/BPS/'
+    convert_file(folder + 'scores/bps_08_01.mxl', folder + 'chords/bps_08_01.csv',
+                 folder + 'txt_generated/bps_08_01_test.txt')
+
+    base_folder = DATA_FOLDER
     corpora = [
         os.path.join('Tavern', 'Beethoven'),
         os.path.join('Tavern', 'Mozart'),
@@ -222,4 +272,5 @@ if __name__ == '__main__':
     ]
 
     for c in corpora[5:]:
-        convert_corpus(base_folder, c)
+        # convert_corpus(base_folder, c)
+        pass
