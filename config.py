@@ -1,8 +1,6 @@
 import os
 from math import ceil
 
-import tensorflow as tf
-
 INPUT_TYPES = [
     'pitch_complete_cut',
     'pitch_bass_cut',
@@ -11,10 +9,6 @@ INPUT_TYPES = [
     'spelling_bass_cut',
     'spelling_class_cut',
 ]
-
-TRAIN_INDICES = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3]
-VALID_INDICES = [8, 19, 29, 16, 26, 6, 20]
-TEST_INDICES = [1, 14, 23, 15, 10, 25, 7]
 
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 
@@ -98,23 +92,12 @@ Q2RN = {  # (True=uppercase degree, 'triad' or 'seventh', quality)
 }
 
 # including START, excluding END
-START_MAJ, END_MAJ, START_MIN, END_MIN = [
+KEY_START_MAJ, KEY_END_MAJ, KEY_START_MIN, KEY_END_MIN = [
     PITCH_FIFTHS.index(p) for p in ['C-', 'G#', 'a-'.upper(), 'e#'.upper()]
-]  # [C-, G#) and [a-, e#) when using 30 keys
-# START_MAJ, END_MAJ, START_MIN, END_MIN = [
-#     PITCH_FIFTHS.index(p) for p in ['C--', 'G##', 'a--'.upper(), 'g##'.upper()]
-# ]  # [C--, G##) and [a--, g##) when using 55 keys
-KEYS_SPELLING = PITCH_FIFTHS[START_MAJ:END_MAJ] + [p.lower() for p in PITCH_FIFTHS[START_MIN:END_MIN]]
+]
+KEYS_SPELLING = PITCH_FIFTHS[KEY_START_MAJ:KEY_END_MAJ] + [p.lower() for p in PITCH_FIFTHS[KEY_START_MIN:KEY_END_MIN]]
 
 KEYS_PITCH = (NOTES + [n.lower() for n in NOTES])
-
-
-def count_records(tfrecord):
-    """ Count the number of lines in a tfrecord file. This is useful to establish 'steps_per_epoch' when training """
-    c = 0
-    for _ in tf.io.tf_record_iterator(tfrecord):
-        c += 1
-    return c
 
 
 def find_best_batch_size(n, bs):

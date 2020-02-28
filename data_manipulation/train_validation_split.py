@@ -1,13 +1,64 @@
+"""
+Split the data into training and validation set for every corpora that we have separately.
+"""
+
 import os
 from shutil import copyfile
+
 import numpy as np
 
+from config import DATA_FOLDER
 
-from config import DATA_FOLDER, VALID_INDICES, TRAIN_INDICES, TEST_INDICES
+
+# TODO: Implement test set everywhere
+
+def split_like_chen_su():
+    """
+    Create the same dataset as Chen and Su for comparison.
+    :return:
+    """
+    data_folder = 'data_chen-su'
+    os.makedirs(os.path.join(data_folder, 'train', 'scores'))
+    os.makedirs(os.path.join(data_folder, 'train', 'chords'))
+    os.makedirs(os.path.join(data_folder, 'valid', 'scores'))
+    os.makedirs(os.path.join(data_folder, 'valid', 'chords'))
+    os.makedirs(os.path.join(data_folder, 'test', 'scores'))
+    os.makedirs(os.path.join(data_folder, 'test', 'chords'))
+
+    # The training, validation, and test sonatas used by Chen and Su in their paper, for comparison
+    i_trn = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3]
+    i_vld = [8, 19, 29, 16, 26, 6, 20]
+    i_tst = [1, 14, 23, 15, 10, 25, 7]
+
+    for i in i_trn:
+        score_file = os.path.join(data_folder, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
+        output_score_file = os.path.join(data_folder, 'train', 'scores', f'bps_{i:02d}_01.mxl')
+        copyfile(score_file, output_score_file)
+
+        chords_file = os.path.join(data_folder, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
+        output_chords_file = os.path.join(data_folder, 'train', 'chords', f'bps_{i:02d}_01.csv')
+        copyfile(chords_file, output_chords_file)
+    for i in i_vld:
+        score_file = os.path.join(data_folder, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
+        output_score_file = os.path.join(data_folder, 'valid', 'scores', f'bps_{i:02d}_01.mxl')
+        copyfile(score_file, output_score_file)
+
+        chords_file = os.path.join(data_folder, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
+        output_chords_file = os.path.join(data_folder, 'valid', 'chords', f'bps_{i:02d}_01.csv')
+        copyfile(chords_file, output_chords_file)
+    for i in i_tst:
+        score_file = os.path.join(data_folder, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
+        output_score_file = os.path.join(data_folder, 'test', 'scores', f'bps_{i:02d}_01.mxl')
+        copyfile(score_file, output_score_file)
+
+        chords_file = os.path.join(data_folder, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
+        output_chords_file = os.path.join(data_folder, 'test', 'chords', f'bps_{i:02d}_01.csv')
+        copyfile(chords_file, output_chords_file)
 
 
-def create_training_validation_set_bps(data_folder, i_trn=None, i_vld=None, i_tst=None):
-    i_trn = set(np.random.choice(range(1, 33), size=round(0.9*32), replace=False)) if i_trn is None else set(i_trn)
+def create_training_validation_set_bps(data_folder, i_trn=None, i_vld=None, i_tst=None, s=18):
+    np.random.seed(s)
+    i_trn = set(np.random.choice(range(1, 33), size=round(0.9 * 32), replace=False)) if i_trn is None else set(i_trn)
     if i_vld is None:
         i_vld = set(range(1, 33)).difference(i_trn)
         if 1 not in i_vld:  # add sonata 1 to the validation set
@@ -52,9 +103,9 @@ def create_training_validation_set_bps(data_folder, i_trn=None, i_vld=None, i_ts
 
 def create_training_validation_set_wtc(data_folder, s=18):
     np.random.seed(s)
-    i_trn = set(np.random.choice(range(1, 25), size=round(0.9*24), replace=False))
+    i_trn = set(np.random.choice(range(1, 25), size=round(0.9 * 24), replace=False))
     i_vld = set(range(1, 25)).difference(i_trn)
-    if 1 not in i_vld:  # add sonata 1 to the validation set
+    if 1 not in i_vld:  # add prelude 1 to the validation set
         j = np.random.choice(list(i_vld))
         i_vld.remove(j)
         i_trn.add(j)
@@ -86,7 +137,7 @@ def create_training_validation_set_tavern(data_folder, s=18):
                       if fn.split("_")[1].startswith('A')]
         n = len(file_names)
         np.random.seed(s)
-        fn_trn = set(np.random.choice(file_names, size=round(0.9*n), replace=False))
+        fn_trn = set(np.random.choice(file_names, size=round(0.9 * n), replace=False))
         fn_vld = set(file_names).difference(fn_trn)
         for fn in fn_trn:
             for ext in ["A", "B"]:
@@ -112,7 +163,7 @@ def create_training_validation_set_songs(data_folder, s=18):
     file_names = [fn[:-4] for fn in os.listdir(os.path.join(data_folder, '19th_Century_Songs', 'chords'))]
     n = len(file_names)
     np.random.seed(s)
-    fn_trn = set(np.random.choice(file_names, size=round(0.9*n), replace=False))
+    fn_trn = set(np.random.choice(file_names, size=round(0.9 * n), replace=False))
     fn_vld = set(file_names).difference(fn_trn)
     example = 'Schubert_Franz_-_Winterreise_D.911_No.12_-_Einsamkeit'  # this we want to keep for validation
     if example not in fn_vld:  # add sonata 1 to the validation set
@@ -145,7 +196,7 @@ def create_training_validation_set_bsq(data_folder, s=18):
     file_names = [fn[:-4] for fn in os.listdir(os.path.join(data_folder, 'Beethoven_4tets', 'chords'))]
     n = len(file_names)
     np.random.seed(s)
-    fn_trn = set(np.random.choice(file_names, size=round(0.9*n), replace=False))
+    fn_trn = set(np.random.choice(file_names, size=round(0.9 * n), replace=False))
     fn_vld = set(file_names).difference(fn_trn)
     for fn in fn_trn:
         score_file = os.path.join(data_folder, 'Beethoven_4tets', 'scores', f"{fn}.mxl")
@@ -167,15 +218,11 @@ def create_training_validation_set_bsq(data_folder, s=18):
 
 
 if __name__ == '__main__':
-    data_folder = 'data_small'
-    # data_folder = DATA_FOLDER
-
+    data_folder = DATA_FOLDER
     os.makedirs(os.path.join(data_folder, 'train', 'scores'))
     os.makedirs(os.path.join(data_folder, 'train', 'chords'))
     os.makedirs(os.path.join(data_folder, 'valid', 'scores'))
     os.makedirs(os.path.join(data_folder, 'valid', 'chords'))
-
-    create_training_validation_set_bps(data_folder, TRAIN_INDICES, VALID_INDICES, TEST_INDICES)
 
     # create_training_validation_set_bps(data_folder)
     # create_training_validation_set_wtc(data_folder)

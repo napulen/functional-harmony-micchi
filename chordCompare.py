@@ -1,4 +1,4 @@
-'''
+"""
 ===============================
 CHORD COMPARE (chordCompare.py)
 ===============================
@@ -28,7 +28,7 @@ Currently, the comparisons involve simple metrics for the:
 Feedback is available in any or all of those areas, and can be set to flag up either
 - all areas that the code finds questionable, or
 - only those for which it offers 'constructive' suggestions for replacement.
-'''
+"""
 import os
 
 from music21 import converter
@@ -44,9 +44,9 @@ from copy import deepcopy
 # ------------------------------------------------------------------------------
 
 class Slice:
-    '''
+    """
     A reduction object corresponding to one 'vertical' slice.
-    '''
+    """
 
     def __init__(self):
         self.startUniqueOffsetID = None
@@ -60,9 +60,9 @@ class Slice:
 # ------------------------------------------------------------------------------
 
 class Comparison:
-    '''
+    """
     A comparison between a Roman numeral and the corresponding slices for that range.
-    '''
+    """
 
     def __init__(self):
         self.measure = None
@@ -81,11 +81,11 @@ class Comparison:
 # ------------------------------------------------------------------------------
 
 class Feedback:
-    '''
+    """
     A feedback object for organising what advice to print.
     All types or just some?
     All cases or only where constructive suggestions are on offer?
-    '''
+    """
 
     def __init__(self):
         self.message = None  # for all cases
@@ -96,13 +96,13 @@ class Feedback:
 # ------------------------------------------------------------------------------
 
 class ScoreAndAnalysis:
-    '''
+    """
     Class for handling
     - 'ground-truth' score data (in the form of chord and rest slices);
     - Roman numeral analysis either on that score or on a separate Roman text analysis file;
     - comparisons between the two.
     Both the score and the optional separate analysis should be pre-parsed.
-    '''
+    """
 
     def __init__(self, score, analysisLocation='On score', minBeatStrength=0.25, tolerance=0.6):
 
@@ -131,9 +131,9 @@ class ScoreAndAnalysis:
         self.rnSliceMatchUp()
 
     def retrieveSlices(self):
-        '''
+        """
         Extracts chord and rest info from scores as self.slices
-        '''
+        """
 
         if self.analysis == 'On score':
             noAnalysisScore = deepcopy(self.score)
@@ -184,10 +184,10 @@ class ScoreAndAnalysis:
                 self.slices.append(thisEntry)
 
     def checkMonotonicIncrease(self, x):
-        '''
+        """
         For checking monotonically increment through the piece.
         if not monotonically increasing, log error, reject element (slice or RN).
-        '''
+        """
 
         measure = int(x.measureNumber)
         beat = intBeat(x.beat)
@@ -209,11 +209,11 @@ class ScoreAndAnalysis:
         return True
 
     def getAnalysis(self, type='Lyric', partNo=-1):
-        '''
+        """
         Gets an analysis hosted in the main score,
         as lyrics in one part (the lowest, by default).
         Straight to putative 'comparison' object.
-        '''
+        """
 
         self.prevailingKey = 'FAKE KEY'
 
@@ -242,10 +242,10 @@ class ScoreAndAnalysis:
                 self.comparisons.append(thisComparison)
 
     def romanFromLyric(self, lyric):
-        '''
+        """
         Converts lyrics in recognised format into m21 Roman Numeral objects.
         Format: 'Key: Figure' for first entry and all key changes; otherwise just 'Figure'.
-        '''
+        """
 
         lyric = lyric.replace(' ', '')  # space
         lyric = lyric.replace('\xa0', '')  # non-breaking space
@@ -264,10 +264,10 @@ class ScoreAndAnalysis:
         return asRoman
 
     def getSeparateAnalysis(self):
-        '''
+        """
         Gets an analysis hosted in a separate RNTXT file.
         Straight to putative 'comparison' object.
-        '''
+        """
 
         self.lastBeat = 0
         self.lastMeasure = 0
@@ -305,10 +305,10 @@ class ScoreAndAnalysis:
     # ------------------------------------------------------------------------------
 
     def rnSliceMatchUp(self):
-        '''
+        """
         Compares a score-analysis pair.
         Currently using a simple metric for proportion of notes the same and of time.
-        '''
+        """
 
         self.indexCount = 0
 
@@ -324,11 +324,11 @@ class ScoreAndAnalysis:
             self.errorLog.append(f'Slices missing: {self.indexCount} accounted for of {len(self.slices)} total.')
 
     def singleMatchUp(self, thisComparison):
-        '''
+        """
         Comparison and match up of a Roman number with slices (potentially) in that range by position in score.
         Note that harmony changes between slice changes are not supported and may lead to erratic results.
         I.e. chords should change where at least one pitch changes.
-        '''
+        """
 
         for thisSlice in self.slices[self.indexCount:]:
             if thisComparison.startUniqueOffsetID <= thisSlice.startUniqueOffsetID < thisComparison.endUniqueOffsetID:
@@ -342,9 +342,9 @@ class ScoreAndAnalysis:
     # Assesments:
 
     def metricalPositions(self):
-        '''
+        """
         Check beatStrengths and returns unlikely choices.
-        '''
+        """
 
         for x in self.comparisons:
             if x.beatStrength < self.minBeatStrength:
@@ -358,10 +358,10 @@ class ScoreAndAnalysis:
                 # lastBeatStrength = x.beatStrength
 
     def comparePitches(self):
-        '''
+        """
         Single RN-slice comparison for pitches:
         do the chords reflect the pitch content of the score section in question?
-        '''
+        """
 
         pitchNumerator = 0
 
@@ -411,10 +411,10 @@ class ScoreAndAnalysis:
             self.pitchScore = round(pitchNumerator * 100 / self.totalLength, 2)
 
     def compareBass(self):
-        '''
+        """
         Single RN-slice comparison for bass / inversion.
         does at least one of the lowest notes during the span in question correspod to the chordal inversion asserted?
-        '''
+        """
 
         bassNumerator = 0
 
@@ -453,7 +453,7 @@ class ScoreAndAnalysis:
         self.bassScore = bassNumerator / self.totalLength
 
     def proportionSimilarity(self, comp, query):
-        '''
+        """
         Approximate measure of the 'similarity' between a
         reference comparison object (Roman numeral, etc) and query (actual slice in score).
 
@@ -461,7 +461,7 @@ class ScoreAndAnalysis:
 
         Note:
         This does not limit to distinct pitches: it returns a better score for multiple tonics, for instance.
-        '''
+        """
         # TODO: Penatly for notes in the RN not used? Not here, only overall.
         # NOTE: multiplication by the beat strength handled in another function.
 
@@ -481,12 +481,12 @@ class ScoreAndAnalysis:
     # Feedback:
 
     def printFeedback(self, pitches=True, metre=True, bass=True, constructiveOnly=False):
-        '''
+        """
         Select feedback to print: any or all of:
         'pitches' for pitch comparisons;
         'metre' for metrical positions; and
         'bass' for bass notes / inversions.
-        '''
+        """
 
         allToPrint = []
 
@@ -567,7 +567,7 @@ class ScoreAndAnalysis:
 # Static
 
 def intBeat(beat):
-    '''Beats as integers, or rounded decimals'''
+    """Beats as integers, or rounded decimals"""
     if int(beat) == beat:
         return int(beat)
     else:

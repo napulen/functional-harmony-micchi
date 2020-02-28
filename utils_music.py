@@ -23,8 +23,8 @@ import seaborn as sns
 import music21
 from numpy.lib.recfunctions import append_fields
 
-from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH, START_MAJ, END_MAJ, \
-    START_MIN, END_MIN
+from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH, KEY_START_MAJ, KEY_END_MAJ, \
+    KEY_START_MIN, KEY_END_MIN
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
@@ -571,11 +571,11 @@ def calculate_number_transpositions_key(chords):
     for k in keys:
         i = PF2I[k.upper()]
         if k.isupper():
-            l = i - START_MAJ  # we don't use the left-most major key (F--)
-            r = END_MAJ - i  # we don't use the 5 right-most major keys
+            l = i - KEY_START_MAJ  # we don't use the left-most major key (F--)
+            r = KEY_END_MAJ - i  # we don't use the 5 right-most major keys
         else:
-            l = i - START_MIN  # we don't use the 4 left-most minor keys (yes! different from the major case!)
-            r = END_MIN - i  # we don't use the 5 right-most minor keys
+            l = i - KEY_START_MIN  # we don't use the 4 left-most minor keys (yes! different from the major case!)
+            r = KEY_END_MIN - i  # we don't use the 5 right-most minor keys
         nl, nr = min(nl, l), min(nr, r)
     return nl, nr
 

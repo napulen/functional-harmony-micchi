@@ -1,3 +1,6 @@
+"""
+Transform the original bps dataset into our tabular format. We should never need this again.
+"""
 import csv
 import os
 
