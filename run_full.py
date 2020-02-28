@@ -138,8 +138,9 @@ if __name__ == '__main__':
     #         print(f'removing {f}')
     #         os.remove(os.path.join(analyses_folder, f))
 
-    model_folder = os.path.join('runs', 'run_06_(paper)', 'models', model_name)
-    model = load_model(os.path.join(model_folder, model_name + '.h5'))
+    # model_path = os.path.join('runs', 'run_06_(paper)', 'models', model_name, model_name + '.h5')
+    model_path = 'run_model.h5'
+    model = load_model(model_path)
     for i in w:
         fn = [f for f in i[2] if f.endswith('mxl')]
         try:
