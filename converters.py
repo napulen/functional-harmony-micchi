@@ -418,7 +418,7 @@ class ConverterTab2Rn(AnnotationConverter):
 
         # Convert measure numbers given by music21 from 1-indexed to 0-indexed
         ts_list = list(score.flat.getTimeSignatures())  # we need to call flat to create measure numbers
-        time_signatures = dict([(ts.measureNumber - 1, ts) for ts in ts_list])
+        time_signatures = dict([(max(ts.measureNumber - 1, 0), ts) for ts in ts_list])
         ts_measures = sorted(time_signatures.keys())
         ts_offsets = [measure_offsets[m] for m in ts_measures]
 
@@ -465,18 +465,30 @@ class ConverterTab2Rn(AnnotationConverter):
 
 if __name__ == '__main__':
     t2r = ConverterTab2Rn()
-    sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
-    ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords/wtc_i_prelude_01.csv'
-    op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/txt_generated/wtc_i_prelude_01.txt2'
-    t2r.convert_file(sp, ip, op)
+    # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
+    # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords/wtc_i_prelude_01.csv'
+    # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/txt_generated/wtc_i_prelude_01b.txt'
+    # t2r.convert_file(sp, ip, op)
+
+    # sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/lc4999304.mxl"
+    # ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/automatic.csv"
+    # op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/automatic2.txt"
+    # t2r.convert_file(sp, ip, op)
+
+    # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/lc5067312.mxl'
+    # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/automatic.csv'
+    # op = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/automatic2.txt'
+    # t2r.convert_file(sp, ip, op)
+
+
 
     r2t = ConverterRn2Tab()
-    sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
-    ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/txt/wtc_i_prelude_01.txt'
-    op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords_generated/wtc_i_prelude_01b.csv'
-    r2t.convert_file(sp, ip, op)
+    # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
+    # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/txt/wtc_i_prelude_01.txt'
+    # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords_generated/wtc_i_prelude_01b.csv'
+    # r2t.convert_file(sp, ip, op)
 
-    sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/scores/op18_no2_mov2.mxl'
-    ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/txt/op18_no2_mov2.txt'
-    op = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/chords_generated/op18_no2_mov2.csv'
-    r2t.convert_file(sp, ip, op)
+    # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/scores/op18_no2_mov2.mxl'
+    # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/txt/op18_no2_mov2.txt'
+    # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/chords_generated/op18_no2_mov2.csv'
+    # r2t.convert_file(sp, ip, op)
