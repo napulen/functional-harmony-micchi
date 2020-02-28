@@ -13,15 +13,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import tensorflow as tf
 from tensorflow.python.keras.backend import clear_session
 from tensorflow.python.keras.models import load_model
 
-from config import FEATURES, NOTES, N_VALID, PITCH_FIFTHS, \
-    VALID_BATCH_SIZE, VALID_STEPS, TEST_BPS_BATCH_SIZE, TEST_BPS_STEPS, N_TEST_BPS, KEYS_PITCH, \
-    KEYS_SPELLING, QUALITY, DATA_FOLDER
+from config import FEATURES, NOTES, PITCH_FIFTHS, KEYS_PITCH, KEYS_SPELLING, QUALITY, DATA_FOLDER
 from load_data import load_tfrecords_dataset
-from utils import create_dezrann_annotations, setup_tfrecords_paths, find_input_type, create_tabular_annotations
+from utils import setup_tfrecords_paths, find_input_type
 from utils_music import Q2I, find_root_full_output
 
 
@@ -145,10 +142,10 @@ def plot_results(y_true, y_pred, name, start, mode='probabilities', pitch_spelli
 
 def plot_piano_roll(pr, name):
     """
-    
-    :param pr: 
+
+    :param pr:
     :param name: the title of the piece we are analysing
-    :return: 
+    :return:
     """
     ax = sns.heatmap(pr.transpose(), vmin=0, vmax=1)
     ax.set(xlabel='time', ylabel='notes',
@@ -190,113 +187,76 @@ def _indices_to_one_hot(data, nb_classes):
     return np.eye(nb_classes)[targets]
 
 
-def analyse_results(data_folder, models_folder, model_name, dataset='validation', comparison=False, visualize=True,
-                    export_annotations=True):
+def generate_results(data_folder, models_folder, model_name, dataset='valid', verbose=True):
     """
-    The main function of this file. It applies the model to a given annotated dataset and calculates the accuracy.
+
     :param data_folder:
     :param models_folder:
     :param model_name:
-    :param dataset: One of the available annotated ones. Every dataset must be manually added as a switch in the code.
-    :param comparison: True if this is called by the comparison routine. It removes some plotting and printing.
-    :param visualize: True if you want to plot some things
-    :param export_annotations: True if you want to write annotations to file
-    :return: a dictionary in which keys are the name of a feature we analyse and the value is its accuracy
+    :param dataset:
+    :param verbose:
+    :return:
     """
+    input_type = find_input_type(model_name)
+
+    data_file, = setup_tfrecords_paths(data_folder, [dataset], input_type)
+    test_data = load_tfrecords_dataset(data_file, batch_size=16, shuffle_buffer=1, input_type=input_type, repeat=False)
+
     clear_session()  # Very important to avoid memory problems
     model = load_model(os.path.join(models_folder, model_name, model_name + '.h5'))
-    if comparison:  # force no visualization when comparing models
-        visualize = False
-    if not comparison:
+    if verbose:
         model.summary()
         print(model_name)
 
-    input_type = find_input_type(model_name)
-    datasets = ['valid', 'BPS', 'valid_bpsfh']
-    valid, test_bps, valid_bpsfh = setup_tfrecords_paths(data_folder, datasets, input_type)
-    ps = input_type.startswith('spelling')
+    ys_true, timesteps, file_names = [], [], []  # ys_true structure = [n_data][n_labels](ts, classes)
+    piano_rolls, start_frames = [], []
+    n_data = 0
+    for data_point in test_data.unbatch().as_numpy_iterator():
+        n_data += 1
+        (x, m, fn, tr, s), y = data_point
+        timesteps.append(np.sum(y[0], dtype=int))  # every label has a single 1 per timestep
+        file_names.append(fn[0].decode('utf-8'))
+        piano_rolls.append(x[:4 * timesteps[-1]])
+        start_frames.append(s[0])
+        ys_true.append([label[:timesteps[-1], :] for label in y])
 
-    if dataset == 'beethoven':
-        data_file = test_bps
-        batch_size = TEST_BPS_BATCH_SIZE
-        steps = TEST_BPS_STEPS
-        n_chunks = N_TEST_BPS
-    elif dataset == 'validation':
-        data_file = valid
-        batch_size = VALID_BATCH_SIZE
-        steps = VALID_STEPS
-        n_chunks = N_VALID
-    elif dataset == 'validation_bpsfh':
-        data_file = valid_bpsfh
-        batch_size = 11
-        steps = 9
-        n_chunks = 99
-    elif dataset == 'test':
-        data_file = os.path.join(data_folder, f'test_{input_type}.tfrecords')
-        batch_size = 1
-        steps = 103
-        n_chunks = 103
-    else:
-        raise ValueError("dataset handle not recognized")
+    # Predict new labels, same structure as ys_true
+    temp = model.predict(test_data, verbose=True)
+    ys_pred = [[d[e, :timesteps[e]] for d in temp] for e in range(n_data)]
 
-    test_data = load_tfrecords_dataset(data_file, batch_size, shuffle_buffer=1, input_type=input_type)
+    del model
+    return ys_true, ys_pred, (file_names, start_frames, piano_rolls)
 
-    """ Retrieve the true labels """
-    piano_rolls, test_true, timesteps, file_names, start_frames = [], [], [], [], []  # test_true structure = [n_chunks][LABELS](ts, classes)
-    test_data_iter = test_data.make_one_shot_iterator()
-    (x, m, fn, tr, s), y = test_data_iter.get_next()
-    with tf.Session() as sess:
-        for i in range(steps):
-            file_name, piano_roll, labels, start = sess.run(
-                [fn, x, y, s])  # shapes: (bs, b_ts, pitches), [output](bs, b_ts, output features)
-            # all elements in the batch have different length, so we have to find the correct number of ts for each
-            [timesteps.append(np.sum(d, dtype=int)) for d in labels[0]]  # every label has a single 1 per timestep
-            [piano_rolls.append(d[:4 * ts]) for d, ts in zip(piano_roll, timesteps)]
-            [file_names.append(fn[0].decode('utf-8')) for fn in file_name]
-            [start_frames.append(sf[0]) for sf in start]
-            for e in range(batch_size):  # e is the element in the batch, append shape (timesteps[j], output_features)
-                test_true.append([d[e, :timesteps[e + i * batch_size], :] for d in labels])
-    # test_true structure = [n_chunks][LABELS](ts, classes)
 
-    """ Predict new labels """
-    # test_pred = []  # It will have shape: [pieces][features](length of sonata, feature size)
-    temp = model.predict(test_data, steps=steps, verbose=True)
-    test_pred = [[d[e, :timesteps[e]] for d in temp] for e in range(n_chunks)]
+# def write_results(test_pred, timesteps, file_names):
+#     output_folder = os.path.join(models_folder, model_name, 'analyses')
+#     create_dezrann_annotations(test_pred, model_name, test_true, timesteps, file_names, output_folder=output_folder)
+#     create_tabular_annotations(test_pred, timesteps, file_names, output_folder=output_folder)
 
-    """ Visualize data """
-    if visualize:
-        classes_root = 35 if ps else 12  # the twelve notes without enharmonic duplicates
-        for pr, y_true, y_pred, ts, fn, frame in zip(piano_rolls, test_true, test_pred, timesteps, file_names,
-                                                     start_frames):
-            if 'bps_06' not in fn:
-                continue
-            # if 'Einsamkeit' not in fn:
-            #     continue
-            # if 'wtc_i_prelude_01' not in fn:
-            #     continue
-            # plot_piano_roll(pr, fn)
-            plot_results(y_true, y_pred, fn, frame, mode='predictions', pitch_spelling=ps)
-            # plot_results(y_true, y_pred, fn, frame, mode='probabilities', pitch_spelling=ps)
-            # plot_chord_changes(y_true, y_pred, fn, ts, True)
-            # plot_chord_changes(y_true, y_pred, fn, ts, False)
-            # plot_coherence(np.argmax(y_pred[5], axis=-1), find_root_full_output(y_pred), n_classes=classes_root, name=fn)
-            pass
 
-    """ Create annotations """
-    if export_annotations:
-        output_folder = os.path.join(models_folder, model_name, 'analyses')
-        create_dezrann_annotations(test_pred, model_name, test_true, timesteps, file_names, output_folder=output_folder)
-        create_tabular_annotations(test_pred, timesteps, file_names, output_folder=output_folder)
+def analyse_results(ys_true, ys_pred, verbose=True):
+    """
+    Given the true and predicted labels, calculate several metrics on them.
+    The features are key, deg1, deg2, qlt, inv, root
 
-    """" Calculate accuracy etc. """
-    roman_tp, roman_inv_tp, root_tp = 0, 0, 0
+    :param ys_true: shape [n_data][n_labels](ts, classes)
+    :param ys_pred:
+    :return: a dictionary in which keys are the name of a feature we analyse and the value is its accuracy
+    """
+    # clear_session()  # Very important to avoid memory problems
+
+    roman_tp = 0
+    roman_inv_tp = 0
+    root_tp = 0
     root_coherence = 0
     degree_tp, secondary_tp, secondary_total, d7_tp, d7_total = 0, 0, 0, 0, 0
     d7_corr = 0
-    total_predictions = np.sum(timesteps)  # one prediction per timestep
+    total_predictions = np.sum([_[0].shape[0] for _ in ys_true])
+    n_data = len(ys_true)
     true_positives = np.zeros(6)  # true positives for each separate feature
-    for step in range(n_chunks):
-        y_true, y_pred = test_true[step], test_pred[step]  # shape: [outputs], (timestep, output features)
+    ps = (ys_true[0][-1].shape[1] == 35)  # TODO: Dodgy and risky. Maybe find a cleaner way
+    for step in range(n_data):
+        y_true, y_pred = ys_true[step], ys_pred[step]  # shape: [outputs], (timestep, output features)
         correct = np.array([_check_predictions(y_true, y_pred, j) for j in range(6)])  # shape: (output, timestep)
         true_positives += np.sum(correct, axis=-1)  # true positives per every output
         roman_tp += np.sum(np.prod(correct[:4], axis=0), axis=-1)
@@ -327,12 +287,11 @@ def analyse_results(data_folder, models_folder, model_name, dataset='validation'
         100 * d7_tp / d7_total,
     ]
     accuracies = dict(zip(keys, values))
-    if not comparison:
+    if verbose:
         print(f"accuracy for the different items:")
         for k, v in accuracies.items():
             print(f'{k:15}: {v:2.2f} %')
 
-    del model
     return accuracies
 
 
@@ -472,8 +431,8 @@ def compare_results(data_folder, models_folder, dataset, export_annotations):
         # if model_name != 'conv_gru_pitch_bass_cut_1':
         #     continue
         print(f"model {i + 1} out of {n} - {model_name}")
-        accuracies = analyse_results(data_folder, models_folder, model_name, dataset, comparison=True,
-                                     export_annotations=export_annotations)
+        ys_true, ys_pred, info = generate_results(data_folder, models_folder, model_name, verbose=False)
+        accuracies = analyse_results(ys_true, ys_pred, verbose=False)
         results.append((model_name, accuracies))
 
     comparison_fp = os.path.join(models_folder, '..', f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv')
@@ -487,10 +446,11 @@ def compare_results(data_folder, models_folder, dataset, export_annotations):
 if __name__ == '__main__':
     # dataset = 'beethoven'
     # dataset = 'validation'
-    dataset = 'test'
-    # dataset = 'validation_bpsfh'
+    dataset = 'validation'
     runs_folder = os.path.join('runs', 'run_06_(paper)')
     models_folder = os.path.join(runs_folder, 'models')
     data_folder = DATA_FOLDER
-    compare_results(data_folder, models_folder, dataset, export_annotations=True)
-    analyse_results(data_folder, models_folder, 'conv_dil_spelling_bass_cut_2', dataset=dataset, visualize=False)
+
+    ys_true, ys_pred, info = generate_results(data_folder, models_folder, 'conv_dil_spelling_bass_cut_2')
+    acc = analyse_results(ys_true, ys_pred)
+    # compare_results(data_folder, models_folder, dataset, export_annotations=True)

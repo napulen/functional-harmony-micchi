@@ -1,5 +1,4 @@
 import os
-from math import ceil
 
 INPUT_TYPES = [
     'pitch_complete_cut',
@@ -99,32 +98,13 @@ KEYS_SPELLING = PITCH_FIFTHS[KEY_START_MAJ:KEY_END_MAJ] + [p.lower() for p in PI
 
 KEYS_PITCH = (NOTES + [n.lower() for n in NOTES])
 
-
-def find_best_batch_size(n, bs):
-    if not isinstance(n, int) or n < 1:
-        raise ValueError("n should be a positive integer")
-
-    found = False
-    while not found and bs > 1:
-        if n % bs == 0:
-            found = True
-        else:
-            bs -= 1
-    return bs
-
-
 BATCH_SIZE = 16  # 1
 SHUFFLE_BUFFER = 123  # 100_000
 EPOCHS = 100
 
 # number of records in datasets
 N_VALID = 162  # count_records(VALID_TFRECORDS)
-N_TEST_BPS = 401  # count_records(TEST_BPS_TFRECORDS)
-
-VALID_BATCH_SIZE = find_best_batch_size(N_VALID, BATCH_SIZE)
-TEST_BPS_BATCH_SIZE = find_best_batch_size(N_TEST_BPS, BATCH_SIZE)
-VALID_STEPS = ceil(N_VALID / VALID_BATCH_SIZE)
-TEST_BPS_STEPS = ceil(N_TEST_BPS / TEST_BPS_BATCH_SIZE)
+N_BPS = 401  # count_records(BPS_TFRECORDS)
 
 INPUT_TYPE2INPUT_SHAPE = {
     'pitch_complete_cut': 12 * 7,

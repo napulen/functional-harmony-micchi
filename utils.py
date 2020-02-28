@@ -365,3 +365,21 @@ def find_input_type(model_name):
     if input_type is None:
         raise AttributeError("can't determine which data needs to be fed to the algorithm...")
     return input_type
+
+
+def find_best_batch_size(n, bs):
+    """
+
+    :param n:
+    :param bs: maximum batch size to start with
+    :return:
+    """
+    if not isinstance(n, int) or n < 1:
+        raise ValueError("n should be a positive integer")
+
+    while bs > 1:
+        if n % bs == 0:
+            break
+        else:
+            bs -= 1
+    return bs
