@@ -9,7 +9,7 @@ import numpy as np
 from tensorflow.python.keras.models import load_model
 
 from config import DATA_FOLDER, FPQ, CHUNK_SIZE
-from converter_tabular2roman import convert_file
+from converters import ConverterTab2Rn
 from utils import find_input_type, create_dezrann_annotations, create_tabular_annotations
 from utils_music import load_score_pitch_complete, load_score_pitch_bass, load_score_pitch_class, \
     load_score_spelling_complete, load_score_spelling_bass, load_score_spelling_class
@@ -34,7 +34,7 @@ def analyse_music(sf, model, model_name, input_type, analyses_folder):
     create_tabular_annotations(model_output=test_pred, timesteps=ts,
                                file_names=file_names, output_folder=analyses_folder)
     try:
-        convert_file(sf, os.path.join(analyses_folder, song_name + '.csv'),
+        ConverterTab2Rn().convert_file(sf, os.path.join(analyses_folder, song_name + '.csv'),
                      os.path.join(analyses_folder, song_name + '.txt'))
     except:
         print(f"Couldn't create the rntxt version of {os.path.basename(sf).split('.')[0]}")
