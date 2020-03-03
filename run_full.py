@@ -1,14 +1,18 @@
-import os
-import sys
+"""
+This is an entry point, no other file should import from this one.
+Use the trained model to analyse the scores given. The paths must be set by hand in the code.
+This is very similar to the rn_app we publish, but it can be adapted to different situations.
+For example, a different structure of the data, when the scores are not in the same directory but are stored in
+a tree-structured fashion such as 'composer/opus/number_in_opus/files'
+"""
 import logging
-from argparse import ArgumentParser
-from datetime import datetime
+import os
 from math import ceil
 
 import numpy as np
 from tensorflow.python.keras.models import load_model
 
-from config import DATA_FOLDER, FPQ, CHUNK_SIZE
+from config import FPQ, CHUNK_SIZE
 from converters import ConverterTab2Rn
 from utils import find_input_type, create_dezrann_annotations, create_tabular_annotations
 from utils_music import load_score_pitch_complete, load_score_pitch_bass, load_score_pitch_class, \

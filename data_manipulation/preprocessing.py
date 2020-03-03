@@ -1,3 +1,21 @@
+"""
+This is an entry point, no other file should import from this one.
+Augment and convert the data from .mxl plus .csv to .tfrecords for training the system.
+This creates a tfrecord containing the following features:
+'name': the name of the file
+'transposition': the number of semitones of transposition (0 = original key)
+'piano_roll': the input data, in format [n_frames, features]
+'label_key': the local key of the music
+'label_degree_primary': the denominator of chord degree with respect to the key, possibly fractional, e.g. V/V
+'label_degree_secondary': the numerator of chord degree with respect to the key, possibly fractional, e.g. V/V
+'label_quality': e.g. m, M, D7 for minor, major, dominant 7th etc.
+'label_inversion': from 0 to 3 depending on what note is at the bass
+'label_root': the root of the chord
+
+ATTENTION: despite the name, the secondary_degree is actually "more important" than the primary degree,
+since the latter is almost always equal to 1.
+"""
+
 import logging
 import os
 
@@ -6,11 +24,10 @@ import tensorflow as tf
 
 from config import DATA_FOLDER, FPQ, HSIZE, CHUNK_SIZE, INPUT_TYPES
 from utils import setup_tfrecords_paths
-from utils_music import load_score_pitch_complete, load_chord_labels, shift_chord_labels, segment_chord_labels, \
+from utils_music import load_score_pitch_complete, load_chord_labels, transpose_chord_labels, segment_chord_labels, \
     encode_chords, load_score_pitch_bass, load_score_spelling_bass, calculate_number_transpositions_key, \
     attach_chord_root, load_score_pitch_class, load_score_spelling_complete, load_score_spelling_class
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -97,11 +114,8 @@ def create_tfrecords(input_type, data_folder):
         'train',
         'valid',
         'test',
-        # 'BPS',
-        # 'valid_bpsfh',
     ]
     tfrecords = setup_tfrecords_paths(data_folder, datasets, input_type)
-
     tfrecords = validate_tfrecords_paths(tfrecords, data_folder)
 
     for ds, output_file in zip(datasets, tfrecords):
@@ -121,6 +135,7 @@ def create_tfrecords(input_type, data_folder):
                 chord_labels = load_chord_labels(cf)
                 cl_full = attach_chord_root(chord_labels, input_type.startswith('spelling'))
 
+                # Load piano_roll and calculate transpositions to the left and right
                 if input_type.startswith('pitch'):
                     nl, nr = 6, 6
                     if 'complete' in input_type:
@@ -163,25 +178,25 @@ def create_tfrecords(input_type, data_folder):
                         continue
                     if input_type.startswith('pitch'):
                         if 'complete' in input_type:
-                            pr_shifted = np.roll(piano_roll, shift=s, axis=0)
+                            pr_transposed = np.roll(piano_roll, shift=s, axis=0)
                         else:
-                            pr_shifted = np.zeros(piano_roll.shape, dtype=np.int32)
+                            pr_transposed = np.zeros(piano_roll.shape, dtype=np.int32)
                             for i in range(12):  # transpose the main part
-                                pr_shifted[i, :] = piano_roll[(i - s) % 12, :]  # the minus sign is correct!
-                            for i in range(12, pr_shifted.shape[0]):  # transpose the bass, if present
-                                pr_shifted[i, :] = piano_roll[((i - s) % 12) + 12, :]
+                                pr_transposed[i, :] = piano_roll[(i - s) % 12, :]  # the minus sign is correct!
+                            for i in range(12, pr_transposed.shape[0]):  # transpose the bass, if present
+                                pr_transposed[i, :] = piano_roll[((i - s) % 12) + 12, :]
                     elif input_type.startswith('spelling'):
                         # nL and nR are calculated s.t. transpositions never have three flats or sharps.
                         # this means that they will never get out of the allotted 35 slots, and
                         # general pitches and bass will never mix
                         # that's why we can safely use roll without any validation of the result
                         # we also don't transpose to different octaves
-                        pr_shifted = np.roll(piano_roll, shift=s, axis=0)
+                        pr_transposed = np.roll(piano_roll, shift=s, axis=0)
 
-                    pp = 'fifth' if input_type.startswith(
-                        'spelling') else 'semitone'  # definition of proximity for pitches
-                    cl_shifted = shift_chord_labels(cl_segmented, s, pp)
-                    chords = encode_chords(cl_shifted, pp)
+                    # definition of proximity for pitches
+                    pp = 'fifth' if input_type.startswith('spelling') else 'semitone'
+                    cl_transposed = transpose_chord_labels(cl_segmented, s, pp)
+                    chords = encode_chords(cl_transposed, pp)
                     if any([x is None for c in chords for x in c]):
                         logger.warning(f"skipping transposition {s}")
                         continue
@@ -189,14 +204,14 @@ def create_tfrecords(input_type, data_folder):
                         start, end = 0, CHUNK_SIZE
                         while start < len(chords):
                             chord_partial = chords[start:end]
-                            pr_partial = pr_shifted[:, 4 * start:4 * end]
+                            pr_partial = pr_transposed[:, 4 * start:4 * end]
                             feature = create_feature_dictionary(pr_partial, chord_partial, fn, s, start, end)
                             writer.write(
                                 tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
                             start += CHUNK_SIZE
                             end += CHUNK_SIZE
                     else:
-                        feature = create_feature_dictionary(pr_shifted, chords, fn, s)
+                        feature = create_feature_dictionary(pr_transposed, chords, fn, s)
                         writer.write(tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString())
     return
 

@@ -1,18 +1,5 @@
 """
-create a tfrecord containing the following features:
-x the piano roll input data, with shape [n_frames, pitches]
-label_key the local key of the music
-label_degree_primary the chord degree with respect to the key, possibly fractional, e.g. V/V dominant of dominant
-label_degree_secondary the chord degree with respect to the key, possibly fractional, e.g. V/V dominant of dominant
-label_quality e.g. m, M, D7 for minor, major, dominant 7th etc.
-label_inversion, from 0 to 3 depending on what note is at the bass
-label_root, the root of the chord in jazz notation
-label_symbol, the quality of the chord in jazz notation
-sonata, the index of the sonata that is analysed
-transposed, the number of semitones of transposition (negative for down-transposition)
-
-ATTENTION: despite the name, the secondary_degree is actually "more important" than the primary degree,
-since the latter is almost always equal to 1.
+Regroups various functions used in the project, all concerning the music part. Probably join with utils?
 """
 import csv
 import logging
@@ -251,7 +238,7 @@ def load_chord_labels(chords_file):
     return np.array(chords, dtype=DT_READ)
 
 
-def shift_chord_labels(chord_labels, s, mode='semitone'):
+def transpose_chord_labels(chord_labels, s, mode='semitone'):
     """
 
     :param chord_labels:

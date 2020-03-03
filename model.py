@@ -1,3 +1,6 @@
+"""
+The definition of all the models used.
+"""
 import time
 
 import numpy as np
@@ -22,7 +25,8 @@ class TimeOut(Callback):
             print(f"\nReached {(time.time() - self.t0) / 60:.3f} minutes of training, stopping")
             self.model.stop_training = True
 
-
+# TODO: Change the definition of these layers from functions to classes
+# TODO: The name_scope doesn't work. Find out why.
 def DenseNetLayer(x, b, f, n=1):
     """
     Implementation of a DenseNetLayer
@@ -120,6 +124,31 @@ def ProgressionMultiTaskLayer(x, input_type):
     return [o_key, o_dg1, o_dg2]
 
 
+def find_root_pitch(x):
+    key, degree_den, degree_num = tf.argmax(x[0], axis=-1), tf.argmax(x[1], axis=-1), tf.argmax(x[2], axis=-1)
+
+    deg2sem_maj = np.array([0, 2, 4, 5, 7, 9, 11], dtype=np.int64)
+    deg2sem_min = np.array([0, 2, 3, 5, 7, 8, 10], dtype=np.int64)
+
+    deg2sem = deg2sem_maj if key // 12 == 0 else deg2sem_min  # keys 0-11 are major, 12-23 minor
+    n_den = tf.gather(deg2sem, degree_den % 7)  # (0-6 diatonic, 7-13 sharp, 14-20 flat)
+    if degree_den // 7 == 1:  # raised root
+        n_den += 1
+    elif degree_den // 7 == 2:  # lowered root
+        n_den -= 1
+    n_num = tf.gather(deg2sem, degree_num % 7)
+    if degree_num // 7 == 1:
+        n_num += 1
+    elif degree_num // 7 == 2:
+        n_num -= 1
+    # key % 12 finds the root regardless of major and minor, then both degrees are added, then sent back to 0-11
+    # both degrees are added, yes: example: V/IV on C major.
+    # primary degree = IV, secondary degree = V
+    # in C, that corresponds to the dominant on the fourth degree: C -> F -> C again
+    root_pred = (key % 12 + n_num + n_den) % 12
+    return tf.one_hot(root_pred, depth=12, axis=-1)
+
+
 def create_model(name, model_type, input_type, derive_root=False):
     """
 
@@ -171,28 +200,3 @@ def create_model(name, model_type, input_type, derive_root=False):
 
     model = Model(inputs=[notes, mask], outputs=y, name=name)
     return model
-
-
-def find_root_pitch(x):
-    key, degree_den, degree_num = tf.argmax(x[0], axis=-1), tf.argmax(x[1], axis=-1), tf.argmax(x[2], axis=-1)
-
-    deg2sem_maj = np.array([0, 2, 4, 5, 7, 9, 11], dtype=np.int64)
-    deg2sem_min = np.array([0, 2, 3, 5, 7, 8, 10], dtype=np.int64)
-
-    deg2sem = deg2sem_maj if key // 12 == 0 else deg2sem_min  # keys 0-11 are major, 12-23 minor
-    n_den = tf.gather(deg2sem, degree_den % 7)  # (0-6 diatonic, 7-13 sharp, 14-20 flat)
-    if degree_den // 7 == 1:  # raised root
-        n_den += 1
-    elif degree_den // 7 == 2:  # lowered root
-        n_den -= 1
-    n_num = tf.gather(deg2sem, degree_num % 7)
-    if degree_num // 7 == 1:
-        n_num += 1
-    elif degree_num // 7 == 2:
-        n_num -= 1
-    # key % 12 finds the root regardless of major and minor, then both degrees are added, then sent back to 0-11
-    # both degrees are added, yes: example: V/IV on C major.
-    # primary degree = IV, secondary degree = V
-    # in C, that corresponds to the dominant on the fourth degree: C -> F -> C again
-    root_pred = (key % 12 + n_num + n_den) % 12
-    return tf.one_hot(root_pred, depth=12, axis=-1)

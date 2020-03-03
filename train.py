@@ -1,3 +1,7 @@
+"""
+This is an entry point, no other file should import from this one.
+Train a model to return a Roman Numeral analysis given a score in musicxml format.
+"""
 import os
 import time
 from argparse import ArgumentParser

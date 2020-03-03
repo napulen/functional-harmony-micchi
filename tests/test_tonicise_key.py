@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from config import KEYS_PITCH
-from temperley_analysis import tonicise_key
+from key_detection_temperley import tonicise_key
 
 
 class TestTonicise_key(TestCase):

@@ -1,3 +1,6 @@
+"""
+Regroups various functions used in the project.
+"""
 import csv
 import json
 import os

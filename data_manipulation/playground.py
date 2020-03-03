@@ -1,3 +1,7 @@
+"""
+This is an entry point, no other file should import from this one.
+Just fool around trying to answer some quick questions about the data.
+"""
 import logging
 import os
 
@@ -6,7 +10,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from config import DATA_FOLDER, HSIZE, FPQ, PITCH_FIFTHS
-from utils_music import _load_score, load_chord_labels, attach_chord_root, segment_chord_labels, shift_chord_labels, \
+from utils_music import _load_score, load_chord_labels, attach_chord_root, segment_chord_labels, transpose_chord_labels, \
     encode_chords, load_score_pitch_complete, load_score_spelling_bass
 
 logging.basicConfig(level=logging.INFO)
@@ -41,7 +45,7 @@ if __name__ == '__main__':
             n_frames_analysis = int(chord_labels[-1][1] * 2)
             cl_full = attach_chord_root(chord_labels, input_type.startswith('spelling'))
             cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
-            cl_shifted = shift_chord_labels(cl_segmented, 2, pp)
+            cl_shifted = transpose_chord_labels(cl_segmented, 2, pp)
             chords = encode_chords(cl_shifted, pp)
 
             # if 'Tavern' in folder:

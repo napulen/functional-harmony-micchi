@@ -1,3 +1,7 @@
+"""
+Utils for loading the tfrecords data.
+"""
+
 import tensorflow as tf
 
 from config import CHUNK_SIZE, INPUT_TYPE2INPUT_SHAPE

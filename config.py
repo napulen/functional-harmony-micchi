@@ -1,4 +1,10 @@
+"""
+Configuration file. The lowest level file in our project, it should not import any other file.
+"""
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 INPUT_TYPES = [
     'pitch_complete_cut',
@@ -33,7 +39,8 @@ PITCH_SEMITONES = [
 ]
 
 SCALES = {
-    'C--': ['C--', 'D--', 'E--', 'F--', 'G--', 'A--', 'B--'], 'c--': ['C--', 'D--', 'E---', 'F--', 'G--', 'A---', 'B--'],
+    'C--': ['C--', 'D--', 'E--', 'F--', 'G--', 'A--', 'B--'],
+    'c--': ['C--', 'D--', 'E---', 'F--', 'G--', 'A---', 'B--'],
     'G--': ['G--', 'A--', 'B--', 'C--', 'D--', 'E--', 'F-'], 'g--': ['G--', 'A--', 'B---', 'C--', 'D--', 'E---', 'F-'],
     'D--': ['D--', 'E--', 'F-', 'G--', 'A--', 'B--', 'C-'], 'd--': ['D--', 'E--', 'F--', 'G--', 'A--', 'B---', 'C-'],
     'A--': ['A--', 'B--', 'C-', 'D--', 'E--', 'F-', 'G-'], 'a--': ['A--', 'B--', 'C--', 'D--', 'E--', 'F--', 'G-'],

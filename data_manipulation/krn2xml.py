@@ -1,3 +1,7 @@
+"""
+This is an entry point, no other file should import from this one.
+Augment and convert the data from .krn to .mxl. I don't even know why we have this one here, probably can be removed.
+"""
 import json
 import os
 

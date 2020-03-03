@@ -1,9 +1,7 @@
 """
-Analyse the results obtained from the model
-The data is always in the shape:
-x -> [data points] (timesteps, pitches)
-y -> [data points] [outputs] (timesteps, output_features)
-
+This is an entry point, no other file should import from this one.
+Analyse the results obtained from the model, with the possibility of generating predictions on new data, plus
+obtaining the accuracy of different models on annotated data, and comparing them.
 """
 import csv
 import os
@@ -189,13 +187,15 @@ def _indices_to_one_hot(data, nb_classes):
 
 def generate_results(data_folder, models_folder, model_name, dataset='valid', verbose=True):
     """
+    The generated data is always in the shape:
+    y -> [data points] [outputs] (timesteps, output_features)
 
     :param data_folder:
     :param models_folder:
     :param model_name:
     :param dataset:
     :param verbose:
-    :return:
+    :return: ys_true, ys_pred, (file_names, start_frames, piano_rolls)
     """
     input_type = find_input_type(model_name)
 
