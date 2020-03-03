@@ -18,7 +18,7 @@ class AnnotationConverter(ABC):
         self.in_ext = in_ext
         self.out_ext = out_ext
         self.logger = logging.getLogger("converter")
-        self.logger.setLevel('INFO')
+        self.logger.setLevel(logging.INFO)
         return
 
     @abstractmethod
@@ -37,6 +37,7 @@ class AnnotationConverter(ABC):
     def _get_measure_offsets(score):
         """
         The measure_offsets are zero-indexed: the first measure in the score will be at index zero, regardless of anacrusis.
+        This is implemented by keeping the order of the measure without looking at the keys.
 
         :param score:
         :return: a list where at index m there is the offset in quarter length of measure m
@@ -60,7 +61,9 @@ class AnnotationConverter(ABC):
         self.logger.info(f"Converting file {in_path} to {out_path}")
         score = music21.converter.parse(score_path)
         in_data = self._load_input(in_path)
-        out_data = self.run(in_data, score)
+        out_data, flag = self.run(in_data, score)
+        if flag:
+            print(f"{score_path}")
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         self._write_output(out_data, out_path)
         return
@@ -279,6 +282,7 @@ class ConverterRn2Tab(AnnotationConverter):
             out_data[-1][1] = end_of_piece
 
         out_data = []
+        flag = False
         measure_offsets = self._get_measure_offsets(score)
 
         initial_beat_length = score.flat.getTimeSignatures()[0].beatDuration.quarterLength
@@ -306,7 +310,7 @@ class ConverterRn2Tab(AnnotationConverter):
 
         _correct_final_offset_inplace(out_data, score)
 
-        return out_data
+        return out_data, flag
 
 
 class ConverterTab2Rn(AnnotationConverter):
@@ -414,11 +418,15 @@ class ConverterTab2Rn(AnnotationConverter):
         :return:
         """
         out_data = []
+        flag = False
         measure_offsets = self._get_measure_offsets(score)
 
-        # Convert measure numbers given by music21 from 1-indexed to 0-indexed
+        # Convert measure numbers given by music21 from 1-indexed (when that's the case) to 0-indexed
         ts_list = list(score.flat.getTimeSignatures())  # we need to call flat to create measure numbers
-        time_signatures = dict([(max(ts.measureNumber - 1, 0), ts) for ts in ts_list])
+        first_measure_number = 0 if any([ts.measureNumber == 0 for ts in ts_list]) else 1
+        time_signatures = dict([(max(ts.measureNumber - first_measure_number, 0), ts) for ts in ts_list])
+        if any([ts.measureNumber == 0 for ts in ts_list]) and len(ts_list) > 3:
+            flag = True
         ts_measures = sorted(time_signatures.keys())
         ts_offsets = [measure_offsets[m] for m in ts_measures]
 
@@ -460,7 +468,7 @@ class ConverterTab2Rn(AnnotationConverter):
                 out_data.append(self._get_rn_row([m, b, annotation]))
             previous_measure, previous_end, previous_key = m, end, key
 
-        return out_data
+        return out_data, flag
 
 
 if __name__ == '__main__':
@@ -470,9 +478,24 @@ if __name__ == '__main__':
     # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/txt_generated/wtc_i_prelude_01b.txt'
     # t2r.convert_file(sp, ip, op)
 
+    sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Mahler,_Gustav/Lieder_eines_fahrenden_Gesellen/4_-_Die_zwei_blauen_Augen_von_meinem_Schatz/lc5026316.mxl"
+    ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Mahler,_Gustav/Lieder_eines_fahrenden_Gesellen/4_-_Die_zwei_blauen_Augen_von_meinem_Schatz/automatic.csv"
+    op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Mahler,_Gustav/Lieder_eines_fahrenden_Gesellen/4_-_Die_zwei_blauen_Augen_von_meinem_Schatz/automatic2.txt"
+    t2r.convert_file(sp, ip, op)
+
+    sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Schumann,_Robert/Dichterliebe,_Op.48/01_-_Im_wunderschönen_Monat_Mai/lc4976777.mxl"
+    ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Schumann,_Robert/Dichterliebe,_Op.48/01_-_Im_wunderschönen_Monat_Mai/automatic.csv"
+    op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Schumann,_Robert/Dichterliebe,_Op.48/01_-_Im_wunderschönen_Monat_Mai/automatic2.txt"
+    t2r.convert_file(sp, ip, op)
+
     # sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/lc4999304.mxl"
     # ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/automatic.csv"
     # op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/automatic2.txt"
+    # t2r.convert_file(sp, ip, op)
+
+    # sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Brahms,_Johannes/8_Lieder_und_Gesänge,_Op.58/1_-_Blinde_Kuh/lc5123355.mxl"
+    # ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Brahms,_Johannes/8_Lieder_und_Gesänge,_Op.58/1_-_Blinde_Kuh/automatic.csv"
+    # op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Brahms,_Johannes/8_Lieder_und_Gesänge,_Op.58/1_-_Blinde_Kuh/automatic2.txt"
     # t2r.convert_file(sp, ip, op)
 
     # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/lc5067312.mxl'

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def analyse_music(sf, model, model_name, input_type, analyses_folder):
+def analyse_music(sf, model, model_name, input_type, analyses_folder, converter=None):
     score, mask = prepare_input_from_xml(sf, input_type)
     y_pred = model.predict((score, mask))
 
@@ -34,8 +34,10 @@ def analyse_music(sf, model, model_name, input_type, analyses_folder):
     create_tabular_annotations(model_output=test_pred, timesteps=ts,
                                file_names=file_names, output_folder=analyses_folder)
     try:
-        ConverterTab2Rn().convert_file(sf, os.path.join(analyses_folder, song_name + '.csv'),
-                     os.path.join(analyses_folder, song_name + '.txt'))
+        if converter is None:
+            converter = ConverterTab2Rn()
+        converter.convert_file(sf, os.path.join(analyses_folder, song_name + '.csv'),
+                               os.path.join(analyses_folder, song_name + '.txt'))
     except:
         print(f"Couldn't create the rntxt version of {os.path.basename(sf).split('.')[0]}")
 
@@ -141,6 +143,8 @@ if __name__ == '__main__':
     # model_path = os.path.join('runs', 'run_06_(paper)', 'models', model_name, model_name + '.h5')
     model_path = 'run_model.h5'
     model = load_model(model_path)
+    conv = ConverterTab2Rn()
+    # TODO: The for loop currently returns an error when w is over, while it should just silently quit I think...
     for i in w:
         fn = [f for f in i[2] if f.endswith('mxl')]
         try:
@@ -149,4 +153,4 @@ if __name__ == '__main__':
             continue
         analyses_folder = i[0]
         sf = os.path.join(analyses_folder, fn)
-        analyse_music(sf, model, model_name, input_type, analyses_folder)
+        analyse_music(sf, model, model_name, input_type, analyses_folder, conv)
