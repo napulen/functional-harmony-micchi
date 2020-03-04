@@ -545,13 +545,6 @@ def find_root_full_output(y_pred, pitch_spelling=True):
     return np.array(root_pred)
 
 
-def visualize_piano_roll(pr, sonata, fpq, start=None, end=None):
-    p = sns.heatmap(pr[::-1, start:end])
-    plt.title(f'Sonata {sonata}, quarters (start, end) = {start / fpq, end / fpq}')
-    plt.show(p)
-    return
-
-
 def calculate_number_transpositions_key(chords):
     keys = set([c['key'] for c in chords])
     nl, nr = 35, 35  # number of transpositions to the left or to the right

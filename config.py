@@ -20,9 +20,6 @@ DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 CHUNK_SIZE = 160  # dimension of each chunk when cutting the sonatas in chord time-steps
 HSIZE = 4  # hopping size between frames in 32nd notes, equivalent to 2 frames per quarter note
 FPQ = 8  # number of frames per quarter note with 32nd note quantization (check: HSIZE * FPQ = 32)
-PITCH_LOW = 18  # lowest midi pitch used, as returned by preprocessing.find_pitch_extremes()
-PITCH_HIGH = 107  # lowest midi pitch not used, i.e., piano_roll = piano_roll[PITCH_LOW:PITCH_HIGH]
-N_PITCHES = PITCH_HIGH - PITCH_LOW  # number of pitches kept out of total 128 midi pitches
 
 FEATURES = ['key', 'degree 1', 'degree 2', 'quality', 'inversion', 'root']
 NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -102,12 +99,7 @@ KEY_START_MAJ, KEY_END_MAJ, KEY_START_MIN, KEY_END_MIN = [
     PITCH_FIFTHS.index(p) for p in ['C-', 'G#', 'a-'.upper(), 'e#'.upper()]
 ]
 KEYS_SPELLING = PITCH_FIFTHS[KEY_START_MAJ:KEY_END_MAJ] + [p.lower() for p in PITCH_FIFTHS[KEY_START_MIN:KEY_END_MIN]]
-
 KEYS_PITCH = (NOTES + [n.lower() for n in NOTES])
-
-# number of records in datasets
-N_VALID = 162  # count_records(VALID_TFRECORDS)
-N_BPS = 401  # count_records(BPS_TFRECORDS)
 
 INPUT_TYPE2INPUT_SHAPE = {
     'pitch_complete_cut': 12 * 7,
