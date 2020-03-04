@@ -105,10 +105,6 @@ KEYS_SPELLING = PITCH_FIFTHS[KEY_START_MAJ:KEY_END_MAJ] + [p.lower() for p in PI
 
 KEYS_PITCH = (NOTES + [n.lower() for n in NOTES])
 
-BATCH_SIZE = 16  # 1
-SHUFFLE_BUFFER = 123  # 100_000
-EPOCHS = 100
-
 # number of records in datasets
 N_VALID = 162  # count_records(VALID_TFRECORDS)
 N_BPS = 401  # count_records(BPS_TFRECORDS)
