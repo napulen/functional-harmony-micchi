@@ -1,5 +1,10 @@
+"""
+Configuration file. The lowest level file in our project, it should not import any other file.
+"""
 import os
-from math import ceil
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 INPUT_TYPES = [
     'pitch_complete_cut',
@@ -15,9 +20,6 @@ DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
 CHUNK_SIZE = 160  # dimension of each chunk when cutting the sonatas in chord time-steps
 HSIZE = 4  # hopping size between frames in 32nd notes, equivalent to 2 frames per quarter note
 FPQ = 8  # number of frames per quarter note with 32nd note quantization (check: HSIZE * FPQ = 32)
-PITCH_LOW = 18  # lowest midi pitch used, as returned by preprocessing.find_pitch_extremes()
-PITCH_HIGH = 107  # lowest midi pitch not used, i.e., piano_roll = piano_roll[PITCH_LOW:PITCH_HIGH]
-N_PITCHES = PITCH_HIGH - PITCH_LOW  # number of pitches kept out of total 128 midi pitches
 
 FEATURES = ['key', 'degree 1', 'degree 2', 'quality', 'inversion', 'root']
 NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -34,7 +36,8 @@ PITCH_SEMITONES = [
 ]
 
 SCALES = {
-    'C--': ['C--', 'D--', 'E--', 'F--', 'G--', 'A--', 'B--'], 'c--': ['C--', 'D--', 'E---', 'F--', 'G--', 'A---', 'B--'],
+    'C--': ['C--', 'D--', 'E--', 'F--', 'G--', 'A--', 'B--'],
+    'c--': ['C--', 'D--', 'E---', 'F--', 'G--', 'A---', 'B--'],
     'G--': ['G--', 'A--', 'B--', 'C--', 'D--', 'E--', 'F-'], 'g--': ['G--', 'A--', 'B---', 'C--', 'D--', 'E---', 'F-'],
     'D--': ['D--', 'E--', 'F-', 'G--', 'A--', 'B--', 'C-'], 'd--': ['D--', 'E--', 'F--', 'G--', 'A--', 'B---', 'C-'],
     'A--': ['A--', 'B--', 'C-', 'D--', 'E--', 'F-', 'G-'], 'a--': ['A--', 'B--', 'C--', 'D--', 'E--', 'F--', 'G-'],
@@ -96,35 +99,7 @@ KEY_START_MAJ, KEY_END_MAJ, KEY_START_MIN, KEY_END_MIN = [
     PITCH_FIFTHS.index(p) for p in ['C-', 'G#', 'a-'.upper(), 'e#'.upper()]
 ]
 KEYS_SPELLING = PITCH_FIFTHS[KEY_START_MAJ:KEY_END_MAJ] + [p.lower() for p in PITCH_FIFTHS[KEY_START_MIN:KEY_END_MIN]]
-
 KEYS_PITCH = (NOTES + [n.lower() for n in NOTES])
-
-
-def find_best_batch_size(n, bs):
-    if not isinstance(n, int) or n < 1:
-        raise ValueError("n should be a positive integer")
-
-    found = False
-    while not found and bs > 1:
-        if n % bs == 0:
-            found = True
-        else:
-            bs -= 1
-    return bs
-
-
-BATCH_SIZE = 16  # 1
-SHUFFLE_BUFFER = 123  # 100_000
-EPOCHS = 100
-
-# number of records in datasets
-N_VALID = 162  # count_records(VALID_TFRECORDS)
-N_TEST_BPS = 401  # count_records(TEST_BPS_TFRECORDS)
-
-VALID_BATCH_SIZE = find_best_batch_size(N_VALID, BATCH_SIZE)
-TEST_BPS_BATCH_SIZE = find_best_batch_size(N_TEST_BPS, BATCH_SIZE)
-VALID_STEPS = ceil(N_VALID / VALID_BATCH_SIZE)
-TEST_BPS_STEPS = ceil(N_TEST_BPS / TEST_BPS_BATCH_SIZE)
 
 INPUT_TYPE2INPUT_SHAPE = {
     'pitch_complete_cut': 12 * 7,

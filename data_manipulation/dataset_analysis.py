@@ -1,3 +1,8 @@
+"""
+This is an entry point, no other file should import from this one.
+Collect information about the dataset at hand.
+"""
+
 import math
 import os
 from collections import Counter
@@ -5,24 +10,10 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import tensorflow as tf
 
-from config import FPQ, DATA_FOLDER, PITCH_FIFTHS, INPUT_TYPES
-from utils import setup_tfrecords_paths
+from config import FPQ, DATA_FOLDER, PITCH_FIFTHS
 from utils_music import load_score_pitch_complete, calculate_number_transpositions_key, load_score_spelling_bass, \
     load_chord_labels
-
-
-def count_records(tfrecord):
-    """ Count the number of lines in a tfrecord file. This is useful to establish 'steps_per_epoch' when training """
-    c = 0
-    if tf.__version__[0] == '2':
-        for _ in tf.data.TFRecordDataset(tfrecord):
-            c += 1
-    else:
-        for _ in tf.io.tf_record_iterator(tfrecord):
-            c += 1
-    return c
 
 
 def find_pitch_extremes():

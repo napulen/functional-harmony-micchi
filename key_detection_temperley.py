@@ -1,3 +1,8 @@
+"""
+This is an entry point, no other file should import from this one.
+
+Do a simple key detection using an algorithm inspired by Temperley's paper What's Key for Key.
+"""
 import os
 
 import numpy as np

@@ -1,4 +1,5 @@
 """
+This is an entry point, no other file should import from this one.
 Transform the original bps dataset into our tabular format. We should never need this again.
 """
 import csv

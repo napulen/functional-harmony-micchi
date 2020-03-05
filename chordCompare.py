@@ -30,15 +30,11 @@ Feedback is available in any or all of those areas, and can be set to flag up ei
 - only those for which it offers 'constructive' suggestions for replacement.
 """
 import os
-
-from music21 import converter
-from music21 import chord
-from music21 import note
-from music21 import pitch
-from music21 import roman
-
-import unittest
 from copy import deepcopy
+
+from music21 import chord
+from music21 import converter
+from music21 import roman
 
 
 # ------------------------------------------------------------------------------

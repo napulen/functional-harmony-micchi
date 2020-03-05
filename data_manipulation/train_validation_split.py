@@ -1,4 +1,5 @@
 """
+This is an entry point, no other file should import from this one.
 Split the data into training and validation set for every corpora that we have separately.
 """
 
