@@ -10,6 +10,8 @@ from abc import ABC, abstractmethod
 import music21
 import numpy as np
 
+logging.basicConfig(level=logging.INFO)
+
 
 def roman_to_int(roman):
     r2i = {
@@ -37,6 +39,55 @@ def int_to_roman(n):
         result.append(nums[i] * count)
         n -= ints[i] * count
     return ''.join(result)
+
+
+def merge_dezrann_annotations(in_path_1, in_path_2, out_path, layer_1=None, layer_2=None, force_overwrite=False):
+    """
+    Merge two dezrann files into a third one.
+    The layer field inside dezrann files is used to separate conceptually different annotations.
+    For example, it could be set to "automated", "annotator A", "annotator B", "reference", ...
+
+    :param in_path_1:
+    :param in_path_2:
+    :param out_path:
+    :param layer_1: If specified, overwrite the content of the layer field inside in_path_1
+    :param layer_2: If specified, overwrite the content of the layer field inside in_path_2
+    :param force_overwrite:
+    :return:
+    """
+    logger = logging.getLogger(__name__)
+    if layer_1 is None:
+        logger.info(f"layer_1 was not set, reusing the layer information specified in {in_path_1}")
+    if layer_2 is None:
+        logger.info(f"layer_2 was not set, reusing the layer information specified in {in_path_2}")
+    with open(in_path_1, 'r') as f:
+        x = json.load(f)
+    with open(in_path_2, 'r') as f:
+        y = json.load(f)
+
+    if not force_overwrite:
+        s1 = set([label['layer'] for label in x['labels']]) if layer_1 is None else set(layer_1)
+        s2 = set([label['layer'] for label in y['labels']]) if layer_2 is None else set(layer_2)
+        if not s1.isdisjoint(s2):
+            raise AttributeError(
+                "The layers in the two files overlap. This might cause visualization problems in Dezrann."
+                "Three possible courses of action: \n"
+                "1. set force_overwrite to True, which ignores this error.\n"
+                "2. pass the variables layer_1 and layer_2 that overwrite the (possibly more structured) information inside the dezrann files\n"
+                f"3. edit {in_path_1} and {in_path_2} manually."
+            )
+    if layer_1 is not None:
+        for label in x["labels"]:
+            label["layer"] = layer_1
+    if layer_2 is not None:
+        for label in y["labels"]:
+            label["layer"] = layer_2
+
+    out_data = {"labels": x["labels"] + y["labels"]}
+    with open(out_path, 'w') as fp:
+        json.dump(out_data, fp)
+
+    return
 
 
 class AnnotationConverter(ABC):
@@ -242,7 +293,7 @@ class AnnotationConverter(ABC):
                 quality = 'It+6'
             # TODO Document well the behavior on ninths
 
-            # elif len(str(x.figure)) > 0:  # TODO this is especially dodgy and risky ****
+            # elif len(str(x.figure)) > 0:  # TODO this is especially dodgy and risky **** What does this even do?
             #     fig = str(x.figure)[:-1]
             #     # print(x.figure, fig, x.measureNumber)
             #     rn = music21.roman.RomanNumeral(fig, x.key)
@@ -283,7 +334,10 @@ class AnnotationConverter(ABC):
         :param out_path:
         :return:
         """
-        self.logger.info(f"Converting file {in_path} to {out_path}")
+
+        self.logger.info(
+            f"Converting file {os.path.relpath(in_path, os.curdir)} to {os.path.relpath(in_path, os.curdir)}"
+        )
         score = music21.converter.parse(score_path)
         in_data = self.load_input(in_path)
         out_data, flag = self.run(in_data, score)
@@ -294,7 +348,7 @@ class AnnotationConverter(ABC):
         return
 
     # TODO Put an "experimental" decorator here
-    def convert_corpus(self, corpus_id, score_folder, in_folder, out_folder, **kwargs):
+    def convert_corpus(self, score_folder, in_folder, out_folder, corpus_id, **kwargs):
         """
 
         :param corpus_id:
@@ -305,10 +359,9 @@ class AnnotationConverter(ABC):
         """
         os.makedirs(out_folder, exist_ok=True)
 
-        dir_entries = [x for x in os.scandir(in_folder) if x.isfile and x.name.endswith(self.in_ext)]
+        dir_entries = [x for x in os.scandir(in_folder) if x.is_file() and x.name.endswith(self.in_ext)]
 
         for in_file in dir_entries:
-            print(in_file.name)
             score_file = f'{in_file.name[:-6]}.mxl' if 'Tavern' in corpus_id else f'{in_file.name[:-4]}.mxl'
             out_file = '.'.join([in_file.name[:-4], self.out_ext])
             self.convert_file(os.path.join(score_folder, score_file), in_file.path, os.path.join(out_folder, out_file),
@@ -318,7 +371,7 @@ class AnnotationConverter(ABC):
 
 class ConverterRn2Tab(AnnotationConverter):
     def __init__(self):
-        super().__init__(in_ext='csv', out_ext='txt')
+        super().__init__(in_ext='txt', out_ext='csv')
 
     def write_output(self, out_data, out_path):
         with open(out_path, 'w') as fp:
@@ -547,7 +600,7 @@ class ConverterTab2Rn(AnnotationConverter):
             # Was there a no-chord passage in between?
             if start != previous_end:
                 m, b = _retrieve_measure_and_beat(end, measure_offsets, time_signatures, ts_measures,
-                                                       starting_beat)
+                                                  starting_beat)
                 if m == previous_measure:
                     out_data[-1] = _get_rn_row([m, b, ''], in_row=out_data[-1])
                 else:
@@ -567,7 +620,7 @@ class ConverterTab2Rn(AnnotationConverter):
 
 class ConverterTab2Dez(AnnotationConverter):
     def __init__(self):
-        super().__init__(in_ext='csv', out_ext='txt')
+        super().__init__(in_ext='csv', out_ext='dez')
         self.datatype_chord = [
             ('onset', 'float'),
             ('end', 'float'),
@@ -584,12 +637,8 @@ class ConverterTab2Dez(AnnotationConverter):
         :param out_path:
         :return:
         """
-        annotation = {
-            "labels": out_data
-        }
-
         with open(out_path, 'w') as fp:
-            json.dump(annotation, fp)
+            json.dump(out_data, fp)
 
         return
 
@@ -654,7 +703,7 @@ class ConverterTab2Dez(AnnotationConverter):
 
             return out_rn
 
-        out_data = []
+        labels = []
         flag = False
 
         # The same key can be associated with multiple chords, and therefore multiple lines.
@@ -666,7 +715,7 @@ class ConverterTab2Dez(AnnotationConverter):
         # Two for-loops are apparent below, and one each hides in _get_keys() and _get_rn()
         # However, it is so fast that I prefer to keep it like this, for the moment.
         for start, end, key in _get_keys(tabular):
-            out_data.append({
+            labels.append({
                 "type": 'Tonality',
                 "layers": [layer],
                 "start": start,
@@ -674,7 +723,7 @@ class ConverterTab2Dez(AnnotationConverter):
                 "tag": key,
             })
         for start, end, rn in _get_rn(tabular):
-            out_data.append({
+            labels.append({
                 "type": 'Harmony',
                 "layers": [layer],
                 "start": start,
@@ -682,12 +731,14 @@ class ConverterTab2Dez(AnnotationConverter):
                 "tag": rn,
             })
 
+        out_data = {"labels": labels}
+
         return out_data, flag
 
 
 class ConverterDez2Tab(AnnotationConverter):
     def __init__(self):
-        super().__init__(in_ext='csv', out_ext='txt')
+        super().__init__(in_ext='dez', out_ext='csv')
         self.datatype_chord = [
             ('onset', 'float'),
             ('end', 'float'),
@@ -744,55 +795,59 @@ class ConverterDez2Tab(AnnotationConverter):
 
 if __name__ == '__main__':
     c = ConverterTab2Dez()
-    sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
-    ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords/wtc_i_prelude_01.csv'
-    op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/dezrann_generated/wtc_i_prelude_01.dez'
-    c.convert_file(sp, ip, op)
-
-    c = ConverterDez2Tab()
-    sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
-    ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/dezrann_generated/wtc_i_prelude_01.dez'
-    op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords_generated/wtc_i_prelude_01b.csv'
-    c.convert_file(sp, ip, op)
-
-    t2r = ConverterTab2Rn()
     # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
     # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords/wtc_i_prelude_01.csv'
-    # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/txt_generated/wtc_i_prelude_01b.txt'
-    # t2r.convert_file(sp, ip, op)
+    # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/dezrann_generated/wtc_i_prelude_01.dez'
+    # c.convert_file(sp, ip, op)
+    score_f = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores'
+    in_f = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords'
+    out_f = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/dezrann_generated'
+    c.convert_corpus(score_f, in_f, out_f, "WTC")
 
-    sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Mahler,_Gustav/Lieder_eines_fahrenden_Gesellen/4_-_Die_zwei_blauen_Augen_von_meinem_Schatz/lc5026316.mxl"
-    ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Mahler,_Gustav/Lieder_eines_fahrenden_Gesellen/4_-_Die_zwei_blauen_Augen_von_meinem_Schatz/automatic.csv"
-    op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Mahler,_Gustav/Lieder_eines_fahrenden_Gesellen/4_-_Die_zwei_blauen_Augen_von_meinem_Schatz/automatic2.txt"
-    t2r.convert_file(sp, ip, op)
-
-    sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Schumann,_Robert/Dichterliebe,_Op.48/01_-_Im_wunderschönen_Monat_Mai/lc4976777.mxl"
-    ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Schumann,_Robert/Dichterliebe,_Op.48/01_-_Im_wunderschönen_Monat_Mai/automatic.csv"
-    op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Schumann,_Robert/Dichterliebe,_Op.48/01_-_Im_wunderschönen_Monat_Mai/automatic2.txt"
-    t2r.convert_file(sp, ip, op)
-
-    # sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/lc4999304.mxl"
-    # ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/automatic.csv"
-    # op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/automatic2.txt"
-    # t2r.convert_file(sp, ip, op)
-
-    # sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Brahms,_Johannes/8_Lieder_und_Gesänge,_Op.58/1_-_Blinde_Kuh/lc5123355.mxl"
-    # ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Brahms,_Johannes/8_Lieder_und_Gesänge,_Op.58/1_-_Blinde_Kuh/automatic.csv"
-    # op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Brahms,_Johannes/8_Lieder_und_Gesänge,_Op.58/1_-_Blinde_Kuh/automatic2.txt"
-    # t2r.convert_file(sp, ip, op)
-
-    # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/lc5067312.mxl'
-    # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/automatic.csv'
-    # op = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/automatic2.txt'
-    # t2r.convert_file(sp, ip, op)
-
-    r2t = ConverterRn2Tab()
+    # c = ConverterDez2Tab()
     # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
-    # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/txt/wtc_i_prelude_01.txt'
+    # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/dezrann_generated/wtc_i_prelude_01.dez'
     # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords_generated/wtc_i_prelude_01b.csv'
-    # r2t.convert_file(sp, ip, op)
-
-    # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/scores/op18_no2_mov2.mxl'
-    # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/txt/op18_no2_mov2.txt'
-    # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/chords_generated/op18_no2_mov2.csv'
-    # r2t.convert_file(sp, ip, op)
+    # c.convert_file(sp, ip, op)
+    #
+    # t2r = ConverterTab2Rn()
+    # # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
+    # # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords/wtc_i_prelude_01.csv'
+    # # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/txt_generated/wtc_i_prelude_01b.txt'
+    # # t2r.convert_file(sp, ip, op)
+    #
+    # sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Mahler,_Gustav/Lieder_eines_fahrenden_Gesellen/4_-_Die_zwei_blauen_Augen_von_meinem_Schatz/lc5026316.mxl"
+    # ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Mahler,_Gustav/Lieder_eines_fahrenden_Gesellen/4_-_Die_zwei_blauen_Augen_von_meinem_Schatz/automatic.csv"
+    # op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Mahler,_Gustav/Lieder_eines_fahrenden_Gesellen/4_-_Die_zwei_blauen_Augen_von_meinem_Schatz/automatic2.txt"
+    # t2r.convert_file(sp, ip, op)
+    #
+    # sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Schumann,_Robert/Dichterliebe,_Op.48/01_-_Im_wunderschönen_Monat_Mai/lc4976777.mxl"
+    # ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Schumann,_Robert/Dichterliebe,_Op.48/01_-_Im_wunderschönen_Monat_Mai/automatic.csv"
+    # op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Schumann,_Robert/Dichterliebe,_Op.48/01_-_Im_wunderschönen_Monat_Mai/automatic2.txt"
+    # t2r.convert_file(sp, ip, op)
+    #
+    # # sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/lc4999304.mxl"
+    # # ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/automatic.csv"
+    # # op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Chaminade,_Cécile/_/Amour_d'automne/automatic2.txt"
+    # # t2r.convert_file(sp, ip, op)
+    #
+    # # sp = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Brahms,_Johannes/8_Lieder_und_Gesänge,_Op.58/1_-_Blinde_Kuh/lc5123355.mxl"
+    # # ip = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Brahms,_Johannes/8_Lieder_und_Gesänge,_Op.58/1_-_Blinde_Kuh/automatic.csv"
+    # # op = "/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Brahms,_Johannes/8_Lieder_und_Gesänge,_Op.58/1_-_Blinde_Kuh/automatic2.txt"
+    # # t2r.convert_file(sp, ip, op)
+    #
+    # # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/lc5067312.mxl'
+    # # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/automatic.csv'
+    # # op = '/home/gianluca/PycharmProjects/functional-harmony/data/OpenScore-LiederCorpus/scores/Reichardt,_Louise/Zwölf_Deutsche_und_Italiänische_Romantische_Gesänge/01_-_Frühlingslied/automatic2.txt'
+    # # t2r.convert_file(sp, ip, op)
+    #
+    # r2t = ConverterRn2Tab()
+    # # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/scores/wtc_i_prelude_01.mxl'
+    # # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/txt/wtc_i_prelude_01.txt'
+    # # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Bach_WTC_1_Preludes/chords_generated/wtc_i_prelude_01b.csv'
+    # # r2t.convert_file(sp, ip, op)
+    #
+    # # sp = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/scores/op18_no2_mov2.mxl'
+    # # ip = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/txt/op18_no2_mov2.txt'
+    # # op = '/home/gianluca/PycharmProjects/functional-harmony/data/Beethoven_4tets/chords_generated/op18_no2_mov2.csv'
+    # # r2t.convert_file(sp, ip, op)
