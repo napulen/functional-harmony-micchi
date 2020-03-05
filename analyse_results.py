@@ -16,7 +16,7 @@ from tensorflow.python.keras.models import load_model
 
 from config import FEATURES, NOTES, PITCH_FIFTHS, KEYS_PITCH, KEYS_SPELLING, QUALITY, DATA_FOLDER
 from load_data import load_tfrecords_dataset
-from utils import setup_tfrecords_paths, find_input_type
+from utils import setup_tfrecords_paths, find_input_type, write_tabular_annotations
 from utils_music import Q2I, find_root_full_output
 
 
@@ -185,13 +185,13 @@ def _indices_to_one_hot(data, nb_classes):
     return np.eye(nb_classes)[targets]
 
 
-def generate_results(data_folder, models_folder, model_name, dataset='valid', verbose=True):
+def generate_results(data_folder, model_folder, model_name, dataset='valid', verbose=True):
     """
     The generated data is always in the shape:
     y -> [data points] [outputs] (timesteps, output_features)
 
     :param data_folder:
-    :param models_folder:
+    :param model_folder:
     :param model_name:
     :param dataset:
     :param verbose:
@@ -203,7 +203,7 @@ def generate_results(data_folder, models_folder, model_name, dataset='valid', ve
     test_data = load_tfrecords_dataset(data_file, batch_size=16, shuffle_buffer=1, input_type=input_type, repeat=False)
 
     clear_session()  # Very important to avoid memory problems
-    model = load_model(os.path.join(models_folder, model_name, model_name + '.h5'))
+    model = load_model(os.path.join(model_folder, model_name + '.h5'))
     if verbose:
         model.summary()
         print(model_name)
@@ -225,13 +225,13 @@ def generate_results(data_folder, models_folder, model_name, dataset='valid', ve
     ys_pred = [[d[e, :timesteps[e]] for d in temp] for e in range(n_data)]
 
     del model
-    return ys_true, ys_pred, (file_names, start_frames, piano_rolls)
-
-
-# def write_results(test_pred, timesteps, file_names):
-#     output_folder = os.path.join(models_folder, model_name, 'analyses')
-#     create_dezrann_annotations(test_pred, model_name, test_true, timesteps, file_names, output_folder=output_folder)
-#     create_tabular_annotations(test_pred, timesteps, file_names, output_folder=output_folder)
+    info = {
+        "file_names": file_names,
+        "start_frames": start_frames,
+        "piano_rolls": piano_rolls,
+        "timesteps": timesteps,
+    }
+    return ys_true, ys_pred, info
 
 
 def analyse_results(ys_true, ys_pred, verbose=True):
@@ -424,33 +424,37 @@ def compare_results(data_folder, models_folder, dataset, export_annotations):
     :param export_annotations: boolean, whether to write analyses to file
     :return:
     """
-    models = sorted(os.listdir(models_folder))
+    models = os.listdir(models_folder)
     n = len(models)
     results = []
     for i, model_name in enumerate(models):
         # if model_name != 'conv_gru_pitch_bass_cut_1':
         #     continue
         print(f"model {i + 1} out of {n} - {model_name}")
-        ys_true, ys_pred, info = generate_results(data_folder, models_folder, model_name, verbose=False)
+        model_folder = os.path.join(models_folder, model_name)
+        ys_true, ys_pred, info = generate_results(data_folder, model_folder, model_name, dataset, verbose=False)
+        if export_annotations:
+            write_tabular_annotations(ys_pred, info["timesteps"], info["file_names"], os.path.join(model_folder, 'analyses'))
         accuracies = analyse_results(ys_true, ys_pred, verbose=False)
         results.append((model_name, accuracies))
 
-    comparison_fp = os.path.join(models_folder, '..', f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv')
-    _write_comparison_file(results, comparison_fp)
-    average_fp = comparison_fp.replace("comparison", "average")
-    _average_results(comparison_fp, average_fp)
-    _t_test_results(comparison_fp)
-    return
+    return results
 
 
 if __name__ == '__main__':
     # dataset = 'beethoven'
     # dataset = 'validation'
-    dataset = 'validation'
-    runs_folder = os.path.join('runs', 'run_06_(paper)')
-    models_folder = os.path.join(runs_folder, 'models')
-    data_folder = DATA_FOLDER
+    dataset = 'valid'
+    models_folder = os.path.join('runs', 'run_08', 'models')
 
-    ys_true, ys_pred, info = generate_results(data_folder, models_folder, 'conv_dil_spelling_bass_cut_2')
-    acc = analyse_results(ys_true, ys_pred)
-    # compare_results(data_folder, models_folder, dataset, export_annotations=True)
+    # model_name = ''
+    # mf = os.path.join(models_folder, model_name)
+    # ys_true, ys_pred, info = generate_results(DATA_FOLDER, mf, model_name)
+    # write_tabular_annotations(ys_pred, info["timesteps"], info["file_names"], os.path.join(mf, 'analyses'))
+    # acc = analyse_results(ys_true, ys_pred)
+    model_with_accuracies = compare_results(DATA_FOLDER, models_folder, dataset, export_annotations=True)
+    comparison_fp = os.path.join(models_folder, '..', f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv')
+    _write_comparison_file(model_with_accuracies, comparison_fp)
+    _average_results(comparison_fp, comparison_fp.replace("comparison", "average"))
+    _t_test_results(comparison_fp)
+

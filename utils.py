@@ -30,6 +30,14 @@ def create_dezrann_annotations(model_output, model_name, annotations, timesteps,
     """
     os.makedirs(output_folder, exist_ok=True)
 
+    def _set_chunk_offset(file_names, timesteps):
+        n = len(timesteps)
+        offsets = np.zeros(n)
+        for i in range(1, n):
+            if file_names[i] == file_names[i - 1]:
+                offsets[i] = offsets[i - 1] + timesteps[i - 1]
+        return offsets
+
     if annotations is None:
         annotations = model_output  # this allows to just consider one case
         save_reference = False
@@ -109,16 +117,7 @@ def create_dezrann_annotations(model_output, model_name, annotations, timesteps,
     return
 
 
-def _set_chunk_offset(file_names, timesteps):
-    n = len(timesteps)
-    offsets = np.zeros(n)
-    for i in range(1, n):
-        if file_names[i] == file_names[i - 1]:
-            offsets[i] = offsets[i - 1] + timesteps[i - 1]
-    return offsets
-
-
-def create_tabular_annotations(model_output, timesteps, file_names, output_folder):
+def write_tabular_annotations(model_output, timesteps, file_names, output_folder):
     os.makedirs(output_folder, exist_ok=True)
 
     def _save_csv(current_file, data):
@@ -127,11 +126,19 @@ def create_tabular_annotations(model_output, timesteps, file_names, output_folde
             w.writerows(data)
         return
 
+    def _set_chunk_offset(file_names, timesteps):
+        n = len(timesteps)
+        offsets = np.zeros(n)
+        for i in range(1, n):
+            if file_names[i] == file_names[i - 1]:
+                offsets[i] = offsets[i - 1] + timesteps[i - 1]
+        return offsets
+
     offsets = _set_chunk_offset(file_names, timesteps)
     data, current_file, current_label, start, end = [], None, None, 0, None
     for y, ts, name, t0 in zip(model_output, timesteps, file_names, offsets):
         # Save previous analysis if a new one starts
-        if name != current_file:  # a new sonata started
+        if name != current_file:  # a new piece has started
             if current_file is not None:  # save previous file, if it exists
                 data.append([start, end, *current_label])
                 _save_csv(current_file, data)

@@ -14,7 +14,7 @@ from tensorflow.python.keras.models import load_model
 
 from config import FPQ, CHUNK_SIZE
 from converters import ConverterTab2Rn
-from utils import find_input_type, create_dezrann_annotations, create_tabular_annotations
+from utils import find_input_type, create_dezrann_annotations, write_tabular_annotations
 from utils_music import load_score_pitch_complete, load_score_pitch_bass, load_score_pitch_class, \
     load_score_spelling_complete, load_score_spelling_bass, load_score_spelling_class
 
@@ -35,8 +35,8 @@ def analyse_music(sf, model, model_name, input_type, analyses_folder):
     file_names = [song_name] * n_chunks
     create_dezrann_annotations(model_output=test_pred, model_name=model_name, annotations=None, timesteps=ts,
                                file_names=file_names, output_folder=analyses_folder)
-    create_tabular_annotations(model_output=test_pred, timesteps=ts,
-                               file_names=file_names, output_folder=analyses_folder)
+    write_tabular_annotations(model_output=test_pred, timesteps=ts,
+                              file_names=file_names, output_folder=analyses_folder)
     try:
         ConverterTab2Rn().convert_file(sf, os.path.join(analyses_folder, song_name + '.csv'),
                      os.path.join(analyses_folder, song_name + '.txt'))
