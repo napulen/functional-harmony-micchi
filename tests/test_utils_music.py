@@ -1,29 +1,22 @@
 from unittest import TestCase
 
-from utils_music import find_enharmonic_equivalent
+from utils_music import _encode_degree, find_enharmonic_equivalent
 
 
-class TestFind_enharmonic_equivalent(TestCase):
-    def test_1(self):
+class Test(TestCase):
+    def test__encode_degree(self):
+        self.assertEqual(_encode_degree("+5/7"), (6, 11))
+        self.assertEqual(_encode_degree("1"), (0, 0))
+        self.assertEqual(_encode_degree("3"), (0, 2))
+        self.assertEqual(_encode_degree("-7/2"), (1, 20))
+
+    def test_find_enharmonic_equivalent(self):
         self.assertEqual(find_enharmonic_equivalent('C##'), 'D')
-
-    def test_2(self):
         self.assertEqual(find_enharmonic_equivalent('C-'), 'B')
-
-    def test_3(self):
         self.assertEqual(find_enharmonic_equivalent('D-'), 'C#')
-
-    def test_4(self):
         self.assertEqual(find_enharmonic_equivalent('C--'), 'A#')
-
-    def test_5(self):
         self.assertEqual(find_enharmonic_equivalent('B--'), 'A')
-
-    def test_6(self):
         self.assertEqual(find_enharmonic_equivalent('b--'), 'a')
-
-    def test_7(self):
         self.assertEqual(find_enharmonic_equivalent('c'), 'c')
-
-    def test_8(self):
         self.assertEqual(find_enharmonic_equivalent('B#'), 'C')
+
