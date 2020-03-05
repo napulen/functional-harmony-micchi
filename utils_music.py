@@ -3,6 +3,7 @@ Regroups various functions used in the project, all concerning the music part. P
 """
 import csv
 import logging
+from math import ceil
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,8 +11,10 @@ import seaborn as sns
 import music21
 from numpy.lib.recfunctions import append_fields
 
-from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH, KEY_START_MAJ, KEY_END_MAJ, \
-    KEY_START_MIN, KEY_END_MIN
+from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH, KEY_START_MAJ, \
+    KEY_END_MAJ, \
+    KEY_START_MIN, KEY_END_MIN, FPQ, CHUNK_SIZE
+from run_full import logger
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
@@ -571,3 +574,47 @@ if __name__ == '__main__':
     # plt.yticks(np.arange(70) + 0.5, PITCH_FIFTHS + ['b ' + p for p in PITCH_FIFTHS])
     # plt.show()
     # print('hi')
+
+
+def prepare_input_from_xml(sf, input_type):
+    logger.info(f"Analysing {sf}")
+
+    if input_type.startswith('pitch'):
+        if 'complete' in input_type:
+            piano_roll = load_score_pitch_complete(sf, FPQ)
+        elif 'bass' in input_type:
+            piano_roll = load_score_pitch_bass(sf, FPQ)
+        elif 'class' in input_type:
+            piano_roll = load_score_pitch_class(sf, FPQ)
+        else:
+            raise NotImplementedError("verify the input_type")
+    elif input_type.startswith('spelling'):
+        if 'complete' in input_type:
+            piano_roll, _, _ = load_score_spelling_complete(sf, FPQ)
+        elif 'bass' in input_type:
+            piano_roll, _, _ = load_score_spelling_bass(sf, FPQ)
+        elif 'class' in input_type:
+            piano_roll, _, _ = load_score_spelling_class(sf, FPQ)
+        else:
+            raise NotImplementedError("verify the input_type")
+    else:
+        raise NotImplementedError("verify the input_type")
+
+    if input_type.endswith('cut'):
+        start, end = 0, CHUNK_SIZE
+        score = []
+        mask = []
+        while 4 * start < piano_roll.shape[1]:
+            pr = np.transpose(piano_roll[:, 4 * start:4 * end])
+            ts = pr.shape[0]
+            # 4*CHUNK_SIZE because it was adapted to chords, not piano rolls who have a higher resolution
+            score.append(np.pad(pr, ((0, 4 * CHUNK_SIZE - ts), (0, 0)), mode='constant'))
+            start += CHUNK_SIZE
+            end += CHUNK_SIZE
+            m = np.ones(CHUNK_SIZE, dtype=bool)  # correct size
+            m[ceil(ts // 4):] = 0  # put zeroes where no data
+            mask.append(m[:, np.newaxis])
+    else:
+        score = [np.transpose(piano_roll)]
+        mask = np.ones(ceil(len(piano_roll) // 4))[:, np.newaxis]
+    return np.array(score), np.array(mask)

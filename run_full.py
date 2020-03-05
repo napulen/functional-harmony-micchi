@@ -7,89 +7,43 @@ a tree-structured fashion such as 'composer/opus/number_in_opus/files'
 """
 import logging
 import os
-from math import ceil
 
 import numpy as np
 from tensorflow.python.keras.models import load_model
 
-from config import FPQ, CHUNK_SIZE
-from converters import ConverterTab2Rn
-from utils import find_input_type, create_dezrann_annotations, write_tabular_annotations
-from utils_music import load_score_pitch_complete, load_score_pitch_bass, load_score_pitch_class, \
-    load_score_spelling_complete, load_score_spelling_bass, load_score_spelling_class
+from converters import ConverterTab2Rn, ConverterTab2Dez
+from utils import find_input_type, write_tabular_annotations
+from utils_music import prepare_input_from_xml
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def analyse_music(sf, model, model_name, input_type, analyses_folder, converter=None):
+def analyse_music(sf, model, input_type, analyses_folder, tab2rn=None, tab2dez=None):
     score, mask = prepare_input_from_xml(sf, input_type)
     y_pred = model.predict((score, mask))
 
-    ts = np.squeeze(np.sum(mask, axis=1), axis=1)
-    n_chunks = len(ts)
-    test_pred = [[d[e, :ts[e]] for d in y_pred] for e in range(n_chunks)]
+    ts = np.squeeze(np.sum(mask, axis=1), axis=1)  # It is a vector with size equal to the number of chunks in which the song is split
+    test_pred = [[d[n, :end] for d in y_pred] for n, end in enumerate(ts)]
     # song_name = os.path.basename(sf).split('.')[0]
     song_name = 'automatic'  # this effectively calls all analyses files 'automatic', use with care
-    file_names = [song_name] * n_chunks
-    create_dezrann_annotations(model_output=test_pred, model_name=model_name, annotations=None, timesteps=ts,
-                               file_names=file_names, output_folder=analyses_folder)
-    write_tabular_annotations(model_output=test_pred, timesteps=ts,
-                              file_names=file_names, output_folder=analyses_folder)
+    file_names = [song_name] * len(ts)
+    write_tabular_annotations(model_output=test_pred, timesteps=ts, file_names=file_names, output_folder=analyses_folder)
+
+    # Conversions
+    out_fp_no_ext = os.path.join(analyses_folder, song_name)
+    if tab2dez is None:
+        tab2dez = ConverterTab2Dez()
+    tab2dez.convert_file(sf, out_fp_no_ext + '.csv', out_fp_no_ext + '.dez')
     try:
-        if converter is None:
-            converter = ConverterTab2Rn()
-        converter.convert_file(sf, os.path.join(analyses_folder, song_name + '.csv'),
-                               os.path.join(analyses_folder, song_name + '.txt'))
+        if tab2rn is None:
+            tab2rn = ConverterTab2Rn()
+        tab2rn.convert_file(sf, out_fp_no_ext + '.csv', out_fp_no_ext + '.txt')
     except:
         print(f"Couldn't create the rntxt version of {os.path.basename(sf).split('.')[0]}")
 
     return
-
-
-def prepare_input_from_xml(sf, input_type):
-    logger.info(f"Analysing {sf}")
-
-    if input_type.startswith('pitch'):
-        if 'complete' in input_type:
-            piano_roll = load_score_pitch_complete(sf, FPQ)
-        elif 'bass' in input_type:
-            piano_roll = load_score_pitch_bass(sf, FPQ)
-        elif 'class' in input_type:
-            piano_roll = load_score_pitch_class(sf, FPQ)
-        else:
-            raise NotImplementedError("verify the input_type")
-    elif input_type.startswith('spelling'):
-        if 'complete' in input_type:
-            piano_roll, _, _ = load_score_spelling_complete(sf, FPQ)
-        elif 'bass' in input_type:
-            piano_roll, _, _ = load_score_spelling_bass(sf, FPQ)
-        elif 'class' in input_type:
-            piano_roll, _, _ = load_score_spelling_class(sf, FPQ)
-        else:
-            raise NotImplementedError("verify the input_type")
-    else:
-        raise NotImplementedError("verify the input_type")
-
-    if input_type.endswith('cut'):
-        start, end = 0, CHUNK_SIZE
-        score = []
-        mask = []
-        while 4 * start < piano_roll.shape[1]:
-            pr = np.transpose(piano_roll[:, 4 * start:4 * end])
-            ts = pr.shape[0]
-            # 4*CHUNK_SIZE because it was adapted to chords, not piano rolls who have a higher resolution
-            score.append(np.pad(pr, ((0, 4 * CHUNK_SIZE - ts), (0, 0)), mode='constant'))
-            start += CHUNK_SIZE
-            end += CHUNK_SIZE
-            m = np.ones(CHUNK_SIZE, dtype=bool)  # correct size
-            m[ceil(ts // 4):] = 0  # put zeroes where no data
-            mask.append(m[:, np.newaxis])
-    else:
-        score = [np.transpose(piano_roll)]
-        mask = np.ones(ceil(len(piano_roll) // 4))[:, np.newaxis]
-    return np.array(score), np.array(mask)
 
 
 def get_args():
@@ -157,4 +111,4 @@ if __name__ == '__main__':
             continue
         analyses_folder = i[0]
         sf = os.path.join(analyses_folder, fn)
-        analyse_music(sf, model, model_name, input_type, analyses_folder, conv)
+        analyse_music(sf, model, input_type, analyses_folder, conv)

@@ -575,8 +575,8 @@ class ConverterTab2Rn(AnnotationConverter):
         ts_measures = sorted(time_signatures.keys())
         ts_offsets = [measure_offsets[m] for m in ts_measures]
 
-        if any([ts.measureNumber == 0 for ts in ts_list]) and len(ts_list) > 3:  # debugging tool
-            flag = True
+        # if any([ts.measureNumber == 0 for ts in ts_list]) and len(ts_list) > 3:  # debugging tool
+        #     flag = True
 
         # (starting beat == 0) <=> no anacrusis
         starting_beat = ts_list[0].beat - 1  # Convert beats to zero index
