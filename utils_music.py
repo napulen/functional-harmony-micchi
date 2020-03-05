@@ -5,16 +5,12 @@ import csv
 import logging
 from math import ceil
 
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn as sns
 import music21
+import numpy as np
 from numpy.lib.recfunctions import append_fields
 
 from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH, KEY_START_MAJ, \
-    KEY_END_MAJ, \
-    KEY_START_MIN, KEY_END_MIN, FPQ, CHUNK_SIZE
-from run_full import logger
+    KEY_END_MAJ, KEY_START_MIN, KEY_END_MIN, FPQ, CHUNK_SIZE
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
@@ -26,8 +22,14 @@ KP2I = dict([(e[1], e[0]) for e in enumerate(KEYS_PITCH)])
 PF2PS = dict([(n, PITCH_SEMITONES.index(p)) for n, p in enumerate(PITCH_FIFTHS)])
 PS2PF = dict([(n, PITCH_FIFTHS.index(p)) for n, p in enumerate(PITCH_SEMITONES)])
 
-DT_READ = [('onset', 'float'), ('end', 'float'), ('key', '<U10'), ('degree', '<U10'), ('quality', '<U10'),
-           ('inversion', 'int')]  # datatype for reading data from BPS-FH
+DT_READ = [
+    ('onset', 'float'),
+    ('end', 'float'),
+    ('key', '<U10'),
+    ('degree', '<U10'),
+    ('quality', '<U10'),
+    ('inversion', 'int')
+]  # datatype for reading data in tabular representation
 
 
 class HarmonicAnalysisError(Exception):
@@ -319,6 +321,50 @@ def encode_chords(chords, mode='semitone'):
     :param mode: (key_enc, degree_p_enc, degree_s_enc, quality_enc, inversion_enc, root_enc)
     :return:
     """
+
+    def _encode_key(key, mode):
+        """
+        if mode == 'semitone', Major keys: 0-11, Minor keys: 12-23
+        if mode == 'fifth',
+        """
+        # minor keys are always encoded after major keys
+        if mode == 'semitone':
+            # 12 because there are 12 pitch classes
+            # res = N2I[find_enharmonic_equivalent(key).upper()] + (12 if key.islower() else 0)
+            res = KP2I[find_enharmonic_equivalent(key)]
+        elif mode == 'fifth':
+            # -1 because we don't use F-- as a key (it has triple flats) and that is the first element in the PITCH_LINE
+            # + 35 because there are 35 total major keys and this is the theoretical distance between a major key
+            # and its minor equivalent if all keys were used
+            # -9 because we don't use the last 5 major keys (triple sharps) and the first 4 minor keys (triple flats)
+            # res = PF2I[key.upper()] - START_MAJ + (END_MAJ - START_MIN if key.islower() else 0)
+            res = KS2I[key]
+        else:
+            raise ValueError("_encode_key: Mode not recognized")
+        return res
+
+    def _encode_root(root, mode, chord):
+        if mode == 'semitone':
+            try:
+                res = N2I[root]
+            except KeyError:
+                print(f'invalid root {root} for chord {chord}')
+                res = None
+                # raise KeyError(f'{root} for chord {chord}')
+        elif mode == 'fifth':
+            try:
+                res = PF2I[root]
+            except KeyError:
+                print(f'invalid root {root} for chord {chord}')
+                res = None
+                # raise KeyError(f'{root} for chord {chord}')
+        else:
+            raise ValueError("_encode_root: Mode not recognized")
+        return res
+
+    def _encode_quality(quality):
+        return Q2I[quality]
+
     chords_enc = []
     n = 0
     for chord in chords:
@@ -334,82 +380,39 @@ def encode_chords(chords, mode='semitone'):
     return chords_enc
 
 
-def _encode_key(key, mode):
-    """
-    if mode == 'semitone', Major keys: 0-11, Minor keys: 12-23
-    if mode == 'fifth',
-    """
-    # minor keys are always encoded after major keys
-    if mode == 'semitone':
-        # 12 because there are 12 pitch classes
-        # res = N2I[find_enharmonic_equivalent(key).upper()] + (12 if key.islower() else 0)
-        res = KP2I[find_enharmonic_equivalent(key)]
-    elif mode == 'fifth':
-        # -1 because we don't use F-- as a key (it has triple flats) and that is the first element in the PITCH_LINE
-        # + 35 because there are 35 total major keys and this is the theoretical distance between a major key
-        # and its minor equivalent if all keys were used
-        # -9 because we don't use the last 5 major keys (triple sharps) and the first 4 minor keys (triple flats)
-        # res = PF2I[key.upper()] - START_MAJ + (END_MAJ - START_MIN if key.islower() else 0)
-        res = KS2I[key]
-    else:
-        raise ValueError("_encode_key: Mode not recognized")
-    return res
-
-
-def _encode_root(root, mode, chord):
-    if mode == 'semitone':
-        try:
-            res = N2I[root]
-        except KeyError:
-            print(f'invalid root {root} for chord {chord}')
-            res = None
-            # raise KeyError(f'{root} for chord {chord}')
-    elif mode == 'fifth':
-        try:
-            res = PF2I[root]
-        except KeyError:
-            print(f'invalid root {root} for chord {chord}')
-            res = None
-            # raise KeyError(f'{root} for chord {chord}')
-    else:
-        raise ValueError("_encode_root: Mode not recognized")
-    return res
-
-
 def _encode_degree(degree):
     """
+    If the input is 7/5, the output is (4, 6):
+      - the two numbers are inverted because the primary degree is at the denominator
+      - everything is reduced by one because of 1-index vs 0-index conventions
     7 diatonics *  3 chromatics  = 21; (0-6 diatonic, 7-13 sharp, 14-20 flat)
+    :param degree: It must be a string following the conventions of tabular representation
     :return: primary_degree, secondary_degree
     """
+    logger = logging.getLogger('encoding')
 
     if '/' in degree:
         num, den = degree.split('/')
-        primary = _encode_degree_no_slash(den)  # 1-indexed as usual in musicology
-        secondary = _encode_degree_no_slash(num)
-    else:
-        primary = 1  # 1-indexed as usual in musicology
-        secondary = _encode_degree_no_slash(degree)
-    return primary - 1, secondary - 1  # set 0-indexed
+        _, primary = _encode_degree(den)  # 1-indexed as usual in musicology
+        _, secondary = _encode_degree(num)
+        return primary, secondary
 
-
-def _encode_degree_no_slash(degree_str):  # diatonic 1-7, raised 8-14, lowered 15-21
-    if degree_str[0] == '-':
+    if degree[0] == '-':
         offset = 14
-    elif degree_str[0] == '+':
+        degree = degree[1:]
+    elif degree[0] == '+':
         offset = 7
-    elif len(degree_str) == 2 and degree_str[1] == '+':  # the case of augmented chords (only 1+ ?)
-        degree_str = degree_str[0]
+        degree = degree[1:]
+    elif len(degree) == 2 and degree[1] == '+':  # the case of augmented chords (only 1+ ?)
+        degree = degree[0]
         offset = 0
     else:
         offset = 0
-    if len(degree_str) > 2:
-        print(f'weird degree_str: {degree_str}, chucking off the first char to {degree_str[1:]}')
-        degree_str = degree_str[1:]
-    return abs(int(degree_str)) + offset  # 1-indexed as usual in musicology
 
-
-def _encode_quality(quality):
-    return Q2I[quality]
+    while len(degree) > 2:  # This introduces some noise in the data but prevents errors in the execution
+        logger.warning(f'weird degree_str: {degree}, chucking off the first char to {degree[1:]}')
+        degree = degree[1:]
+    return 0, (int(degree) - 1 + offset)
 
 
 def find_enharmonic_equivalent(note):
@@ -563,22 +566,7 @@ def calculate_number_transpositions_key(chords):
     return nl, nr
 
 
-if __name__ == '__main__':
-    # score_file = '/home/gianluca/PycharmProjects/functional-harmony/test_data/score.mxl'
-    score_file = '/home/gianluca/PycharmProjects/functional-harmony/test_data/bps_01_01.mxl'
-    # fpq = 8
-    # pr, _, _ = load_score_spelling_bass(score_file, fpq)
-    # pr2, _, _ = load_score_spelling_bass_chordify(score_file, fpq)
-    # sns.heatmap(pr2 - pr)
-    # plt.xticks(np.arange(8) * 32 + 8, np.arange(8) + 1)
-    # plt.yticks(np.arange(70) + 0.5, PITCH_FIFTHS + ['b ' + p for p in PITCH_FIFTHS])
-    # plt.show()
-    # print('hi')
-
-
 def prepare_input_from_xml(sf, input_type):
-    logger.info(f"Analysing {sf}")
-
     if input_type.startswith('pitch'):
         if 'complete' in input_type:
             piano_roll = load_score_pitch_complete(sf, FPQ)
@@ -618,3 +606,17 @@ def prepare_input_from_xml(sf, input_type):
         score = [np.transpose(piano_roll)]
         mask = np.ones(ceil(len(piano_roll) // 4))[:, np.newaxis]
     return np.array(score), np.array(mask)
+
+
+if __name__ == '__main__':
+    pass
+    # score_file = '/home/gianluca/PycharmProjects/functional-harmony/test_data/score.mxl'
+    # score_file = '/home/gianluca/PycharmProjects/functional-harmony/test_data/bps_01_01.mxl'
+    # fpq = 8
+    # pr, _, _ = load_score_spelling_bass(score_file, fpq)
+    # pr2, _, _ = load_score_spelling_bass_chordify(score_file, fpq)
+    # sns.heatmap(pr2 - pr)
+    # plt.xticks(np.arange(8) * 32 + 8, np.arange(8) + 1)
+    # plt.yticks(np.arange(70) + 0.5, PITCH_FIFTHS + ['b ' + p for p in PITCH_FIFTHS])
+    # plt.show()
+    # print('hi')

@@ -21,6 +21,7 @@ logger.setLevel(logging.INFO)
 
 
 def analyse_music(sf, model, input_type, analyses_folder, tab2rn=None, tab2dez=None):
+    logger.info(f"Analysing {sf}")
     score, mask = prepare_input_from_xml(sf, input_type)
     y_pred = model.predict((score, mask))
 
