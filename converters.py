@@ -1,5 +1,5 @@
 """
-Ideally, all converters should be subclasses of a general Converter class. Maybe implement it someday?
+Converters between the 3 annotation formats: tabular, rntxt, dezrann.
 """
 import csv
 import json
