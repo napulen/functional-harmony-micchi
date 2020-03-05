@@ -193,18 +193,18 @@ def _fill_level(l, i_p=None):
     return y, i_o
 
 
-def int_to_roman(input):
+def int_to_roman(n):
     """ Convert an integer to a Roman numeral. """
 
-    if not 0 < input < 8:
+    if not 0 < n < 8:
         raise ValueError("Argument must be between 1 and 7")
     ints = (5, 4, 1)
     nums = ('V', 'IV', 'I')
     result = []
     for i in range(len(ints)):
-        count = int(input / ints[i])
+        count = int(n / ints[i])
         result.append(nums[i] * count)
-        input -= ints[i] * count
+        n -= ints[i] * count
     return ''.join(result)
 
 

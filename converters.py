@@ -1,5 +1,5 @@
 """
-Ideally, all converters should be subclasses of a general Converter class. Maybe implement it someday?
+Converters to and from the tabular format we use for machine learning.
 """
 import csv
 import json
