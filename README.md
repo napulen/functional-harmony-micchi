@@ -6,7 +6,7 @@ Please contact us at gianluca.micchi@univ-lille.fr for further information.
 
 ## Code explanation
 There are several entry points:
- - run\_full.py, that can be used to run a previously trained model with symbolic music files as input; a pre-trained model (run\_model.h5) is alreadt provided.
+ - run\_full.py, that can be used to run a previously trained model with symbolic music files as input; a pre-trained model (run\_model.h5) is already provided
  - train.py, that can be used to train new models, provided they are in encoded in the correct format
  - converters.py, which allows for conversion between the three different supported file formats: tabular, rntxt, and dezrann
  - data_manipulation/preprocessing.py, that can be used to encode data from tabular format into tfrecords for training
