@@ -6,8 +6,8 @@ Please contact us at gianluca.micchi@univ-lille.fr for further information.
 
 ## Code explanation
 There are several entry points:
- - run\_full.py, that can be used to run a previously trained model with symbolic music files as input; a pre-trained model (run\_model.h5) is already provided
- - train.py, that can be used to train new models, provided they are in encoded in the correct format
+ - run\_full.py, that can be used to run a previously trained model with symbolic music files as input; a pre-trained model (run\_model.h5) is already provided; `python3 run_full.py --in /PATH/TO/SCORE` runs the model and analyses the given score
+ - train.py, that can be used to train new models, provided they are in encoded in the correct format; `python3 train.py --model 0 --input 4` trains a model with the same parameters as in the paper
  - converters.py, which allows for conversion between the three different supported file formats: tabular, rntxt, and dezrann
- - data_manipulation/preprocessing.py, that can be used to encode data from tabular format into tfrecords for training
+ - data_manipulation/preprocessing.py, that can be used to encode data from tabular format into tfrecords for training; `python3 preprocessing.py /PATH/TO/FOLDER` creates the tfrecords from the file contained in the folder. The folder should have a specific structure: two subfolders, train and valid, each with two subfolders, chords and scores.
  - analyse_results.py, that can be used to get some plots and insight into the results of a model by comparing the predictions with the targets
