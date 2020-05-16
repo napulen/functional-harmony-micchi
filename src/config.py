@@ -15,7 +15,7 @@ INPUT_TYPES = [
     'spelling_class_cut',
 ]
 
-DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
 
 CHUNK_SIZE = 160  # dimension of each chunk when cutting the sonatas in chord time-steps
 HSIZE = 4  # hopping size between frames in 32nd notes, equivalent to 2 frames per quarter note

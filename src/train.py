@@ -55,9 +55,9 @@ epochs = 100
 if __name__ == '__main__':
     parser = ArgumentParser(description='Train a neural network for Roman Numeral analysis')
     parser.add_argument('--model', dest='model_idx', action='store', type=int,
-                        help=f'index to select the model, between 0 and {len(models)}')
+                        help=f'index to select the model, between 0 and {len(models)}, {[f"{n}: {m}" for n, m in enumerate(models)]}')
     parser.add_argument('--input', dest='input_idx', action='store', type=int,
-                        help=f'index to select input type, between 0 and {len(INPUT_TYPES)}')
+                        help=f'index to select input type, between 0 and {len(INPUT_TYPES)}, {[f"{n}: {m}" for n, m in enumerate(INPUT_TYPES)]}')
     args = parser.parse_args()
 
     model_type, input_type = models[args.model_idx], INPUT_TYPES[args.input_idx]

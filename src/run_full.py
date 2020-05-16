@@ -7,6 +7,7 @@ a tree-structured fashion such as 'composer/opus/number_in_opus/files'
 """
 import logging
 import os
+from argparse import ArgumentParser
 
 import numpy as np
 from tensorflow.python.keras.models import load_model
@@ -25,12 +26,14 @@ def analyse_music(sf, model, input_type, analyses_folder, tab2rn=None, tab2dez=N
     score, mask = prepare_input_from_xml(sf, input_type)
     y_pred = model.predict((score, mask))
 
-    ts = np.squeeze(np.sum(mask, axis=1), axis=1)  # It is a vector with size equal to the number of chunks in which the song is split
+    ts = np.squeeze(np.sum(mask, axis=1),
+                    axis=1)  # It is a vector with size equal to the number of chunks in which the song is split
     test_pred = [[d[n, :end] for d in y_pred] for n, end in enumerate(ts)]
     # song_name = os.path.basename(sf).split('.')[0]
     song_name = 'automatic'  # this effectively calls all analyses files 'automatic', use with care
     file_names = [song_name] * len(ts)
-    write_tabular_annotations(model_output=test_pred, timesteps=ts, file_names=file_names, output_folder=analyses_folder)
+    write_tabular_annotations(model_output=test_pred, timesteps=ts, file_names=file_names,
+                              output_folder=analyses_folder)
 
     # Conversions
     out_fp_no_ext = os.path.join(analyses_folder, song_name)
@@ -81,35 +84,37 @@ def get_args():
 
 
 if __name__ == '__main__':
+    parser = ArgumentParser(description='Do a roman numeral analysis of the scores you provide.')
+    parser.add_argument('--in', dest='music_path', action='store', type=str,
+                        help='score or folder containing the scores')
+    # parser.add_argument('--out', dest='output_folder', action='store', type=str,
+    #                     help='folder where to store the outputs')
+    parser.add_argument('--model', dest='model_file', action='store', type=str,
+                        help='path to the model file (.h5 extension)')
+    # parser.set_defaults(output_folder=os.path.join('analyses', datetime.now().strftime("%Y-%m-%d_%H-%M")))
+    parser.set_defaults(model_file='./conv_gru_spelling_bass_cut.h5')
+    args = parser.parse_args()
+    print(f"Selected scores: {args.music_path}")
+    # print(f"Output path: {args.output_folder}")
+
     model_name = 'conv_gru_spelling_bass_cut_3'
     input_type = find_input_type(model_name)
 
-    music_path = os.path.join('data', 'OpenScore-LiederCorpus')
-    # try:
-    #     files = sorted([os.path.join(music_path, m) for m in os.listdir(music_path)])
-    # except NotADirectoryError:
-    #     files = [music_path]
-    # analyses_folder = os.path.join('analyses', '_'.join([model_name, datetime.now().strftime("%Y-%m-%d_%H-%M")]))
-    w = os.walk(music_path, topdown=False)
-
-    # for i in w:
-    #     analyses_folder = i[0]
-    #     fn = [f for f in i[2] if f.startswith('automated')]
-    #     for f in fn:
-    #         print(f'removing {f}')
-    #         os.remove(os.path.join(analyses_folder, f))
-
-    # model_path = os.path.join('runs', 'run_06_(paper)', 'models', model_name, model_name + '.h5')
-    model_path = 'run_model.h5'
-    model = load_model(model_path)
+    model = load_model(args.model_file)
     conv = ConverterTab2Rn()
-    # TODO: The for loop currently returns an error when w is over, while it should just silently quit I think...
-    for i in w:
-        fn = [f for f in i[2] if f.endswith('mxl')]
-        try:
-            fn = fn[0]
-        except IndexError:
-            continue
-        analyses_folder = i[0]
-        sf = os.path.join(analyses_folder, fn)
-        analyse_music(sf, model, input_type, analyses_folder, conv)
+    if os.path.isfile(args.music_path):
+        analyses_folder = os.path.dirname(args.music_path)
+        analyse_music(args.music_path, model, input_type, analyses_folder, conv)
+
+    else:
+        w = os.walk(args.music_path, topdown=False)
+        # TODO: The for loop currently returns an error when w is over, while it should just silently quit I think...
+        for i in w:
+            fn = [f for f in i[2] if f.endswith('mxl')]
+            try:
+                fn = fn[0]
+            except IndexError:
+                continue
+            analyses_folder = i[0]
+            sf = os.path.join(analyses_folder, fn)
+            analyse_music(sf, model, input_type, analyses_folder, conv)

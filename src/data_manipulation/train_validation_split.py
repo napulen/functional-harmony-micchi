@@ -225,8 +225,8 @@ if __name__ == '__main__':
     os.makedirs(os.path.join(data_folder, 'valid', 'scores'))
     os.makedirs(os.path.join(data_folder, 'valid', 'chords'))
 
-    # create_training_validation_set_bps(data_folder)
-    # create_training_validation_set_wtc(data_folder)
-    # create_training_validation_set_songs(data_folder)
-    # create_training_validation_set_bsq(data_folder)
-    # create_training_validation_set_tavern(data_folder)
+    create_training_validation_set_bps(data_folder)
+    create_training_validation_set_wtc(data_folder)
+    create_training_validation_set_songs(data_folder)
+    create_training_validation_set_bsq(data_folder)
+    create_training_validation_set_tavern(data_folder)

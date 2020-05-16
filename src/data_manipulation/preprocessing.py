@@ -18,6 +18,7 @@ since the latter is almost always equal to 1.
 
 import logging
 import os
+from argparse import ArgumentParser
 
 import numpy as np
 import tensorflow as tf
@@ -113,7 +114,7 @@ def create_tfrecords(input_type, data_folder):
     datasets = [
         'train',
         'valid',
-        'test',
+        # 'test',
     ]
     tfrecords = setup_tfrecords_paths(data_folder, datasets, input_type)
     tfrecords = validate_tfrecords_paths(tfrecords, data_folder)
@@ -217,9 +218,13 @@ def create_tfrecords(input_type, data_folder):
 
 
 if __name__ == '__main__':
-    # input_type = INPUT_TYPES
-    input_type = ['spelling_bass_cut']
-    # data_folder = DATA_FOLDER
-    data_folder = 'data_small'
+    parser = ArgumentParser(description='Train a neural network for Roman Numeral analysis')
+    parser.add_argument('data_folder', dest='data_folder', action='store', type=str,
+                        help=f'a folder containing two subfolders, train and valid, each with two subfolders, chords and scores')
+    parser.set_defaults(data_folder=DATA_FOLDER)
+    args = parser.parse_args()
+
+    input_type = INPUT_TYPES
+    # input_type = ['spelling_bass_cut']
     for it in input_type:
-        create_tfrecords(it, data_folder)
+        create_tfrecords(it, args.data_folder)
