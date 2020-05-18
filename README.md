@@ -2,6 +2,8 @@
 This repository contains the code that has been used to train and evaluate the models described in the TISMIR paper https://transactions.ismir.net/articles/10.5334/tismir.45/ .
 We invite you to consult the paper (which is open access) for more information on the models and data representations used.
 
+The corpus in this repository reflects the one used at the moment of the paper submission. You can find the most updated version at https://github.com/MarkGotham/When-in-Rome.
+
 Please contact us at gianluca.micchi@univ-lille.fr for further information.
 
 ## Code explanation
