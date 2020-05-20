@@ -336,7 +336,7 @@ class AnnotationConverter(ABC):
         """
 
         self.logger.info(
-            f"Converting file {os.path.relpath(in_path, os.curdir)} to {os.path.relpath(in_path, os.curdir)}"
+            f"Converting file {os.path.relpath(in_path, os.curdir)} to {os.path.relpath(out_path, os.curdir)}"
         )
         score = music21.converter.parse(score_path)
         in_data = self.load_input(in_path)
