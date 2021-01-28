@@ -15,6 +15,11 @@ from load_data import load_tfrecords_dataset
 from model import create_model, TimeOut
 from utils import setup_tfrecords_paths
 
+import tensorflow as tf
+# These lines are specific to a problem I had with tf2
+# https://github.com/tensorflow/tensorflow/issues/45044
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 def visualize_data(data):
     for x, y in data:

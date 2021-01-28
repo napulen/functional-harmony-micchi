@@ -167,6 +167,9 @@ def create_model(name, model_type, input_type, derive_root=False):
     n = INPUT_TYPE2INPUT_SHAPE[input_type]
     notes = Input(shape=(None, n), name="piano_roll_input")
     mask = Input(shape=(None, 1), name="mask_input")
+    _1 = Input(shape=(None,), name="_1")
+    _2 = Input(shape=(None,), name="_2")
+    _3 = Input(shape=(None,), name="_3")
 
     if 'conv' in model_type:
         x = DenseNetLayer(notes, b=4, f=8, n=1)
@@ -198,5 +201,5 @@ def create_model(name, model_type, input_type, derive_root=False):
     else:
         y = MultiTaskLayer(x, derive_root, input_type)
 
-    model = Model(inputs=[notes, mask], outputs=y, name=name)
+    model = Model(inputs=[notes, mask, _1, _2, _3], outputs=y, name=name)
     return model
