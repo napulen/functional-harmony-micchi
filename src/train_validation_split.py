@@ -5,6 +5,7 @@ Split the data into training and validation set for every corpora that we have s
 
 import os
 from shutil import copyfile
+from argparse import ArgumentParser
 
 import numpy as np
 
@@ -13,18 +14,17 @@ from config import DATA_FOLDER
 
 # TODO: Implement test set everywhere
 
-def split_like_chen_su():
+def split_like_chen_su(data_folder):
     """
     Create the same dataset as Chen and Su for comparison.
     :return:
     """
-    data_folder = 'data_chen-su'
-    os.makedirs(os.path.join(data_folder, 'train', 'scores'), exist_ok=True)
-    os.makedirs(os.path.join(data_folder, 'train', 'chords'), exist_ok=True)
-    os.makedirs(os.path.join(data_folder, 'valid', 'scores'), exist_ok=True)
-    os.makedirs(os.path.join(data_folder, 'valid', 'chords'), exist_ok=True)
-    os.makedirs(os.path.join(data_folder, 'test', 'scores'), exist_ok=True)
-    os.makedirs(os.path.join(data_folder, 'test', 'chords'), exist_ok=True)
+    os.makedirs(os.path.join(data_folder, 'train', 'scores'))
+    os.makedirs(os.path.join(data_folder, 'train', 'chords'))
+    os.makedirs(os.path.join(data_folder, 'valid', 'scores'))
+    os.makedirs(os.path.join(data_folder, 'valid', 'chords'))
+    os.makedirs(os.path.join(data_folder, 'test', 'scores'))
+    os.makedirs(os.path.join(data_folder, 'test', 'chords'))
 
     # The training, validation, and test sonatas used by Chen and Su in their paper, for comparison
     i_trn = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3]
@@ -55,6 +55,22 @@ def split_like_chen_su():
         chords_file = os.path.join(data_folder, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
         output_chords_file = os.path.join(data_folder, 'test', 'chords', f'bps_{i:02d}_01.csv')
         copyfile(chords_file, output_chords_file)
+
+def split_like_micchi_et_al(data_folder):
+    """
+    Create the full dataset presented in Micchi et al., 2020.
+    :return:
+    """
+    os.makedirs(os.path.join(data_folder, 'train', 'scores'))
+    os.makedirs(os.path.join(data_folder, 'train', 'chords'))
+    os.makedirs(os.path.join(data_folder, 'valid', 'scores'))
+    os.makedirs(os.path.join(data_folder, 'valid', 'chords'))
+
+    create_training_validation_set_bps(data_folder)
+    create_training_validation_set_wtc(data_folder)
+    create_training_validation_set_songs(data_folder)
+    create_training_validation_set_bsq(data_folder)
+    create_training_validation_set_tavern(data_folder)
 
 
 def create_training_validation_set_bps(data_folder, i_trn=None, i_vld=None, i_tst=None, s=18):
@@ -219,14 +235,11 @@ def create_training_validation_set_bsq(data_folder, s=18):
 
 
 if __name__ == '__main__':
-    data_folder = DATA_FOLDER
-    os.makedirs(os.path.join(data_folder, 'train', 'scores'))
-    os.makedirs(os.path.join(data_folder, 'train', 'chords'))
-    os.makedirs(os.path.join(data_folder, 'valid', 'scores'))
-    os.makedirs(os.path.join(data_folder, 'valid', 'chords'))
-
-    create_training_validation_set_bps(data_folder)
-    create_training_validation_set_wtc(data_folder)
-    create_training_validation_set_songs(data_folder)
-    create_training_validation_set_bsq(data_folder)
-    create_training_validation_set_tavern(data_folder)
+    parser = ArgumentParser(description='Split the training, validation, and test data')
+    parser.add_argument('--chen-su', dest="split_function", action="store_const", const=split_like_chen_su,
+                        help="split the data as in Chen and Su (2018) for direct comparison")
+    parser.add_argument('--data_folder', action='store', type=str,
+                        help=f'the folder where the data is located and where the train, validation, test splits will be created')
+    parser.set_defaults(data_folder=DATA_FOLDER, split_function=split_like_micchi_et_al)
+    args = parser.parse_args()
+    args.split_function(args.data_folder)
