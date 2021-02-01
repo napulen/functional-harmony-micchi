@@ -19,12 +19,12 @@ def split_like_chen_su():
     :return:
     """
     data_folder = 'data_chen-su'
-    os.makedirs(os.path.join(data_folder, 'train', 'scores'))
-    os.makedirs(os.path.join(data_folder, 'train', 'chords'))
-    os.makedirs(os.path.join(data_folder, 'valid', 'scores'))
-    os.makedirs(os.path.join(data_folder, 'valid', 'chords'))
-    os.makedirs(os.path.join(data_folder, 'test', 'scores'))
-    os.makedirs(os.path.join(data_folder, 'test', 'chords'))
+    os.makedirs(os.path.join(data_folder, 'train', 'scores'), exist_ok=True)
+    os.makedirs(os.path.join(data_folder, 'train', 'chords'), exist_ok=True)
+    os.makedirs(os.path.join(data_folder, 'valid', 'scores'), exist_ok=True)
+    os.makedirs(os.path.join(data_folder, 'valid', 'chords'), exist_ok=True)
+    os.makedirs(os.path.join(data_folder, 'test', 'scores'), exist_ok=True)
+    os.makedirs(os.path.join(data_folder, 'test', 'chords'), exist_ok=True)
 
     # The training, validation, and test sonatas used by Chen and Su in their paper, for comparison
     i_trn = [5, 12, 17, 21, 27, 32, 4, 9, 13, 18, 24, 22, 28, 30, 31, 11, 2, 3]

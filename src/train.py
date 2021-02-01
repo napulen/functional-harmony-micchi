@@ -63,7 +63,10 @@ if __name__ == '__main__':
                         help=f'index to select the model, between 0 and {len(models)}, {[f"{n}: {m}" for n, m in enumerate(models)]}')
     parser.add_argument('--input', dest='input_idx', action='store', type=int,
                         help=f'index to select input type, between 0 and {len(INPUT_TYPES)}, {[f"{n}: {m}" for n, m in enumerate(INPUT_TYPES)]}')
+    parser.add_argument("--data-folder", type=str)
     args = parser.parse_args()
+
+    DATA_FOLDER = args.data_folder or DATA_FOLDER
 
     model_type, input_type = models[args.model_idx], INPUT_TYPES[args.input_idx]
 

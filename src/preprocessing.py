@@ -219,7 +219,7 @@ def create_tfrecords(input_type, data_folder):
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Train a neural network for Roman Numeral analysis')
-    parser.add_argument('data_folder', dest='data_folder', action='store', type=str,
+    parser.add_argument('data_folder', action='store', type=str,
                         help=f'a folder containing two subfolders, train and valid, each with two subfolders, chords and scores')
     parser.set_defaults(data_folder=DATA_FOLDER)
     args = parser.parse_args()

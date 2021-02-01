@@ -20,11 +20,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+import tensorflow as tf
+# These lines are specific to a problem I had with tf2
+# https://github.com/tensorflow/tensorflow/issues/45044
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 
 def analyse_music(sf, model, input_type, analyses_folder, tab2rn=None, tab2dez=None):
     logger.info(f"Analysing {sf}")
     score, mask = prepare_input_from_xml(sf, input_type)
-    y_pred = model.predict((score, mask))
+    _ = np.zeros((1, 160, 1))
+    y_pred = model.predict((score, mask, _, _, _))
 
     ts = np.squeeze(np.sum(mask, axis=1),
                     axis=1)  # It is a vector with size equal to the number of chunks in which the song is split
