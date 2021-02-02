@@ -103,7 +103,7 @@ def create_feature_dictionary(piano_roll, chords, name, s=None, start=None, end=
     return feature
 
 
-def create_tfrecords(input_type, data_folder):
+def create_tfrecords(input_type, data_folder, include_test):
     if input_type not in INPUT_TYPES:
         raise ValueError('Choose a valid value for input_type')
 
@@ -111,11 +111,9 @@ def create_tfrecords(input_type, data_folder):
           f"You are currently working in the {input_type} mode.\n"
           f"Thank you for choosing algomus productions and have a nice day!\n")
 
-    datasets = [
-        'train',
-        'valid',
-        # 'test',
-    ]
+    datasets = ['train', 'valid']
+    if include_test:
+        datasets += ['test']
     tfrecords = setup_tfrecords_paths(data_folder, datasets, input_type)
     tfrecords = validate_tfrecords_paths(tfrecords, data_folder)
 
@@ -223,10 +221,12 @@ if __name__ == '__main__':
                         help=f'a folder containing two subfolders, train and valid, each with two subfolders, chords and scores')
     parser.add_argument("--input", dest="input_type", action="append", choices=INPUT_TYPES,
                         help="generate a specific type of input from the accepted values")
-    parser.set_defaults(data_folder=DATA_FOLDER)
+    parser.add_argument("--test", dest="include_test", action="store_true",
+                        help="indicate whether the test set should also be included")
+    parser.set_defaults(data_folder=DATA_FOLDER, include_test=False)
     args = parser.parse_args()
 
     input_type = args.input_type or INPUT_TYPES
 
     for it in input_type:
-        create_tfrecords(it, args.data_folder)
+        create_tfrecords(it, args.data_folder, args.include_test)
