@@ -219,12 +219,14 @@ def create_tfrecords(input_type, data_folder):
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Train a neural network for Roman Numeral analysis')
-    parser.add_argument('data_folder', action='store', type=str,
+    parser.add_argument('--data_folder', action='store', type=str,
                         help=f'a folder containing two subfolders, train and valid, each with two subfolders, chords and scores')
+    parser.add_argument("--input", dest="input_type", action="append", choices=INPUT_TYPES,
+                        help="generate a specific type of input from the accepted values")
     parser.set_defaults(data_folder=DATA_FOLDER)
     args = parser.parse_args()
 
-    input_type = INPUT_TYPES
-    # input_type = ['spelling_bass_cut']
+    input_type = args.input_type or INPUT_TYPES
+
     for it in input_type:
         create_tfrecords(it, args.data_folder)
