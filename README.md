@@ -1,3 +1,41 @@
+# Update (2021)
+
+This is a fork of the repository located at https://gitlab.com/algomus.fr/functional-harmony
+
+An effort has been done here to attempt to (and make easier to) replicate the code in that repository.
+
+## Running the code
+
+```bash
+# Get the dependencies
+pip install -r requirements.txt
+
+# Move to the source folder
+cd src
+
+# Split the provided data into training/validation[/test] splits
+python train_validation_split.py
+# or
+python train_validation_split.py --chen-su
+# if willing to use the Chen and Su (2018, 2019) dataset for comparison
+
+# Create the .tfrecord files from the data splits
+python preprocessing.py
+# if there was a test split, then...
+python preprocessing.py --test
+
+# Train a model from scratch
+python train.py --model <model> --input <input_representation>
+# if left blank, model defaults to "conv_gru"
+# if left blank, input_representation defaults to "bass_spelling_cut"
+# (the best-performing model shown in Micchi et al. 2020)
+
+# Predict
+python run_full --model <path_to_model>.h5 --in <input_score>
+```
+
+> Original `README` next
+
 # Not All Roads Lead to Rome: Pitch Representation and Model Architecture for Automatic Harmonic Analysis
 This repository contains the code that has been used to train and evaluate the models described in the TISMIR paper https://transactions.ismir.net/articles/10.5334/tismir.45/ .
 We invite you to consult the paper (which is open access) for more information on the models and data representations used.
