@@ -34,7 +34,7 @@ python train.py --model <model> --input <input_representation>
 python run_full --model <path_to_model>.h5 --in <input_score>
 ```
 
-> Original `README` next
+(Original `README` follows)
 
 # Not All Roads Lead to Rome: Pitch Representation and Model Architecture for Automatic Harmonic Analysis
 This repository contains the code that has been used to train and evaluate the models described in the TISMIR paper https://transactions.ismir.net/articles/10.5334/tismir.45/ .
