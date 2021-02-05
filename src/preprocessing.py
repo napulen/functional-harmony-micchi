@@ -103,7 +103,7 @@ def create_feature_dictionary(piano_roll, chords, name, s=None, start=None, end=
     return feature
 
 
-def create_tfrecords(input_type, data_folder, include_test):
+def create_tfrecords(input_type, data_folder, include_test, data_augmentation):
     if input_type not in INPUT_TYPES:
         raise ValueError('Choose a valid value for input_type')
 
@@ -167,14 +167,16 @@ def create_tfrecords(input_type, data_folder, include_test):
 
                 # Pre-process the chords
                 cl_segmented = segment_chord_labels(cl_full, n_frames_analysis, hsize=HSIZE, fpq=FPQ)
-                if ds == 'train':
+                if data_augmentation and ds == 'train':
                     logger.info(f"Transposing {nl} times to the left and {nr - 1} to the right")
                 if nl < 0 or nr < 0:
                     logger.warning(
                         f"The original score doesn't satisfy the pitch and key constraints! nl={nl}, nr={nr}")
                 for s in range(-nl, nr):
-                    if ds != 'train' and s != 0:  # transpose only for training data
-                        continue
+                    if s != 0:
+                        # transposition only in training set and if data_augmentation is enabled
+                        if not data_augmentation or ds != 'train':
+                            continue
                     if input_type.startswith('pitch'):
                         if 'complete' in input_type:
                             pr_transposed = np.roll(piano_roll, shift=s, axis=0)
@@ -223,10 +225,12 @@ if __name__ == '__main__':
                         help="generate a specific type of input from the accepted values")
     parser.add_argument("--test", dest="include_test", action="store_true",
                         help="indicate whether the test set should also be included")
-    parser.set_defaults(data_folder=DATA_FOLDER, include_test=False)
+    parser.add_argument("--no-augmentation", dest="data_augmentation", action="store_false",
+                        help="do not perform any data augmentation")
+    parser.set_defaults(data_folder=DATA_FOLDER, include_test=False, data_augmentation=True)
     args = parser.parse_args()
 
     input_type = args.input_type or INPUT_TYPES
 
     for it in input_type:
-        create_tfrecords(it, args.data_folder, args.include_test)
+        create_tfrecords(it, args.data_folder, args.include_test, args.data_augmentation)
