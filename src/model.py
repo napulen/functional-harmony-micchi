@@ -11,7 +11,7 @@ from tensorflow.python.keras.callbacks import Callback
 from tensorflow.python.keras.layers import Conv1D, Concatenate, MaxPooling1D, TimeDistributed, Dense, Lambda, \
     BatchNormalization, Masking, GRU, Bidirectional, Activation
 
-from config import INPUT_TYPE2INPUT_SHAPE, KEYS_SPELLING
+from config import MODEL_TYPES, INPUT_TYPE2INPUT_SHAPE, KEYS_SPELLING
 
 
 class TimeOut(Callback):
@@ -158,10 +158,8 @@ def create_model(name, model_type, input_type, derive_root=False):
     :param derive_root:
     :return:
     """
-    allowed_models = ['conv_dil', 'conv_gru', 'gru']
-    allowed_models += ['conv_dil_local', 'conv_gru_local']
 
-    if model_type not in allowed_models:
+    if model_type not in MODEL_TYPES:
         raise ValueError("model_type not supported, check its value")
 
     n = INPUT_TYPE2INPUT_SHAPE[input_type]

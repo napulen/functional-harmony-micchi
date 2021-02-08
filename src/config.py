@@ -6,13 +6,23 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
+MODEL_TYPES = [
+    'conv_gru',
+    'conv_dil',
+    'gru',
+    'conv_gru_local',
+    'conv_dil_local'
+]
+
 INPUT_TYPES = [
     'pitch_complete_cut',
     'pitch_bass_cut',
     'pitch_class_cut',
+    'pitch_hybrid_cut',
     'spelling_complete_cut',
     'spelling_bass_cut',
     'spelling_class_cut',
+    'spelling_compressed_cut',
 ]
 
 DATA_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
@@ -23,6 +33,7 @@ FPQ = 8  # number of frames per quarter note with 32nd note quantization (check:
 
 FEATURES = ['key', 'degree 1', 'degree 2', 'quality', 'inversion', 'root']
 NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+STEPS = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 PITCH_FIFTHS = [
     'F--', 'C--', 'G--', 'D--', 'A--', 'E--', 'B--',
     'F-', 'C-', 'G-', 'D-', 'A-', 'E-', 'B-',
@@ -101,11 +112,17 @@ KEY_START_MAJ, KEY_END_MAJ, KEY_START_MIN, KEY_END_MIN = [
 KEYS_SPELLING = PITCH_FIFTHS[KEY_START_MAJ:KEY_END_MAJ] + [p.lower() for p in PITCH_FIFTHS[KEY_START_MIN:KEY_END_MIN]]
 KEYS_PITCH = (NOTES + [n.lower() for n in NOTES])
 
+MIN_OCTAVE = 3
+MAX_OCTAVE = 5
+N_OCTAVES = MAX_OCTAVE - MIN_OCTAVE + 1
+
 INPUT_TYPE2INPUT_SHAPE = {
     'pitch_complete_cut': 12 * 7,
     'pitch_bass_cut': 12 * 2,
     'pitch_class_cut': 12,
+    'pitch_hybrid_cut':(19*N_OCTAVES),
     'spelling_complete_cut': 35 * 7,
     'spelling_bass_cut': 35 * 2,
     'spelling_class_cut': 35,
+    'spelling_compressed_cut': 35 + (7*N_OCTAVES),
 }
