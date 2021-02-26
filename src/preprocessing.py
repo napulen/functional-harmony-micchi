@@ -23,15 +23,28 @@ from argparse import ArgumentParser
 import numpy as np
 import tensorflow as tf
 
-from config import DATA_FOLDER, FPQ, HSIZE, CHUNK_SIZE, INPUT_TYPES
+from config import DATA_FOLDER, FPQ, HSIZE, CHUNK_SIZE, INPUT_TYPES, INTERVAL_TRANSPOSITIONS, N_OCTAVES
 from utils import setup_tfrecords_paths
-from utils_music import load_score_pitch_complete, load_chord_labels, transpose_chord_labels, segment_chord_labels, \
-    encode_chords, load_score_pitch_bass, load_score_spelling_bass, calculate_number_transpositions_key, \
-    attach_chord_root, load_score_pitch_class, load_score_spelling_complete, load_score_spelling_class
+from utils_music import (
+    load_score_pitch_complete,
+    load_chord_labels,
+    transpose_chord_labels,
+    segment_chord_labels,
+    encode_chords,
+    load_score_pitch_bass,
+    load_score_spelling_bass,
+    calculate_number_transpositions_key,
+    attach_chord_root, load_score_pitch_class,
+    load_score_spelling_complete,
+    load_score_spelling_class,
+    load_score_spelling_compressed,
+    load_score_pitch_hybrid,
+)
+
+from analyse_results import plot_piano_roll
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
 
 def validate_tfrecords_paths(tfrecords, data_folder):
     existent = [f for f in tfrecords if os.path.isfile(f)]
@@ -143,6 +156,9 @@ def create_tfrecords(input_type, data_folder, include_test, data_augmentation):
                         piano_roll = load_score_pitch_bass(sf, FPQ)
                     elif 'class' in input_type:
                         piano_roll = load_score_pitch_class(sf, FPQ)
+                    elif 'hybrid' in input_type:
+                        piano_roll, mean_sharpness = load_score_pitch_hybrid(sf, FPQ)
+                        # plot_piano_roll(piano_roll, f'original piano roll')
                     else:
                         raise NotImplementedError("verify the input_type")
                 elif input_type.startswith('spelling'):
@@ -152,6 +168,8 @@ def create_tfrecords(input_type, data_folder, include_test, data_augmentation):
                         piano_roll, nl_pitches, nr_pitches = load_score_spelling_bass(sf, FPQ)
                     elif 'class' in input_type:
                         piano_roll, nl_pitches, nr_pitches = load_score_spelling_class(sf, FPQ)
+                    elif 'compressed' in input_type:
+                        piano_roll, nl_pitches, nr_pitches = load_score_spelling_compressed(sf, FPQ)
                     else:
                         raise NotImplementedError("verify the input_type")
                     nl_keys, nr_keys = calculate_number_transpositions_key(chord_labels)
@@ -178,7 +196,38 @@ def create_tfrecords(input_type, data_folder, include_test, data_augmentation):
                         if not data_augmentation or ds != 'train':
                             continue
                     if input_type.startswith('pitch'):
-                        if 'complete' in input_type:
+                        if 'hybrid' in input_type:
+                            transposition = ('', 1337)
+                            for interval, sharpness in INTERVAL_TRANSPOSITIONS[s]:
+                                if abs(sharpness + mean_sharpness) < transposition[1]:
+                                    transposition = (interval, sharpness)
+                            # If the key signature exceeds 7 sharps or seven flats, omit transposition
+                            if abs(transposition[1]) > 7:
+                                continue
+                            interval, sharpness = transposition
+                            # the shift in note_letters is equal to the generic interval
+                            letter_s = int(interval[1:])
+                            if letter_s < 0:
+                                sign_s = -1
+                            elif letter_s > 0:
+                                sign_s = 1
+                            else:
+                                sign_s = 0
+                            letter_s -= sign_s
+
+                            # transpose the chromagrams
+                            pr_chromatic = piano_roll[:(12*N_OCTAVES), :].reshape(N_OCTAVES, 12, -1)
+                            pr_chromatic = np.roll(pr_chromatic, shift=s, axis=1)
+                            pr_letter = piano_roll[(12*N_OCTAVES):, :].reshape(N_OCTAVES, 7, -1)
+                            pr_letter = np.roll(pr_letter, shift=letter_s, axis=1)
+                            pr_chromatic = pr_chromatic.reshape(N_OCTAVES * 12, -1)
+                            pr_letter = pr_letter.reshape(N_OCTAVES * 7, -1)
+                            pr_transposed = np.zeros(piano_roll.shape)
+                            pr_transposed[:(12*N_OCTAVES), :] = pr_chromatic
+                            pr_transposed[(12*N_OCTAVES):, :] = pr_letter
+                            # plot_piano_roll(pr_transposed, f"Transposed to {interval}")
+                            # continue
+                        elif 'complete' in input_type:
                             pr_transposed = np.roll(piano_roll, shift=s, axis=0)
                         else:
                             pr_transposed = np.zeros(piano_roll.shape, dtype=np.int32)

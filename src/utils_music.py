@@ -9,8 +9,25 @@ import music21
 import numpy as np
 from numpy.lib.recfunctions import append_fields
 
-from config import NOTES, PITCH_FIFTHS, QUALITY, SCALES, KEYS_SPELLING, PITCH_SEMITONES, KEYS_PITCH, KEY_START_MAJ, \
-    KEY_END_MAJ, KEY_START_MIN, KEY_END_MIN, FPQ, CHUNK_SIZE
+from config import (
+    NOTES,
+    PITCH_FIFTHS,
+    QUALITY,
+    SCALES,
+    KEYS_SPELLING,
+    PITCH_SEMITONES,
+    KEYS_PITCH,
+    KEY_START_MAJ,
+    KEY_END_MAJ,
+    KEY_START_MIN,
+    KEY_END_MIN,
+    FPQ,
+    CHUNK_SIZE,
+    STEPS,
+    MIN_OCTAVE,
+    MAX_OCTAVE,
+    N_OCTAVES
+)
 
 F2S = dict()
 N2I = dict([(e[1], e[0]) for e in enumerate(NOTES)])
@@ -21,6 +38,8 @@ KS2I = dict([(e[1], e[0]) for e in enumerate(KEYS_SPELLING)])
 KP2I = dict([(e[1], e[0]) for e in enumerate(KEYS_PITCH)])
 PF2PS = dict([(n, PITCH_SEMITONES.index(p)) for n, p in enumerate(PITCH_FIFTHS)])
 PS2PF = dict([(n, PITCH_FIFTHS.index(p)) for n, p in enumerate(PITCH_SEMITONES)])
+PF2STEPS = {n: STEPS.index(p[0]) for n, p in enumerate(PITCH_FIFTHS)}
+PS2STEPS = {n: STEPS.index(p[0]) for n, p in enumerate(PITCH_SEMITONES)}
 
 DT_READ = [
     ('onset', 'float'),
@@ -37,7 +56,7 @@ class HarmonicAnalysisError(Exception):
     pass
 
 
-def _load_score(score_file, fpq):
+def _load_score(score_file, fpq, transposition=None):
     if 'bps' in score_file:
         try:
             score = music21.converter.parse(score_file).expandRepeats()
@@ -48,6 +67,8 @@ def _load_score(score_file, fpq):
     else:
         score = music21.converter.parse(score_file)
     n_frames = int(score.duration.quarterLength * fpq)
+    if transposition:
+        score = score.transpose(transposition)
     return score, n_frames
 
 
@@ -114,6 +135,71 @@ def load_score_spelling_complete(score_file, fpq, mode='fifth'):
     return piano_roll, num_flatwards, num_sharpwards
 
 
+def _load_score_note_letter(score_file, fpq, transposition=None):
+    logger = logging.getLogger("load_score")
+    score, n_frames = _load_score(score_file, fpq, transposition)
+    piano_roll = np.zeros(shape=(7 * N_OCTAVES, n_frames), dtype=np.int32)
+    for n in score.flat.notes:
+        notes = [x for x in n] if n.isChord else [n]
+        start = int(round(n.offset * fpq))
+        end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
+        time = np.arange(start, end)
+        for note in notes:
+            pitch_name = note.pitch.name
+            octave = note.pitch.octave
+            while octave < MIN_OCTAVE:
+                # logger.warning("Score lower than octave boundaries. Transposing up.")
+                octave += 1
+            while octave > MAX_OCTAVE:
+                # logger.warning("Score higher than octave boundaries. Transposing down.")
+                octave -= 1
+            # regardless of the minimum octave, it will be encoded as index 0
+            octave -= MIN_OCTAVE
+            idx = STEPS.index(pitch_name[0])
+            # idx = PF2I[pitch_name] if mode == 'fifth' else PS2I[pitch_name]
+            # flattest = min(flattest, idx if mode == 'fifth' else PS2PF[idx])
+            # sharpest = max(sharpest, idx if mode == 'fifth' else PS2PF[idx])
+            piano_roll[idx + 7 * octave, time] = 1
+
+    # num_flatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
+    # num_sharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
+    return piano_roll
+
+
+def _load_score_hybrid_chromagram(score_file, fpq, transposition=None):
+    logger = logging.getLogger("load_score")
+    score, n_frames = _load_score(score_file, fpq, transposition)
+    note_letters = np.zeros(shape=(7 * N_OCTAVES, n_frames), dtype=np.int32)
+    chromagrams = np.zeros(shape=(12 * N_OCTAVES, n_frames), dtype=np.int32)
+    piano_roll = np.zeros(shape=(19 * N_OCTAVES, n_frames), dtype=np.int32)
+    for n in score.flat.notes:
+        notes = [x for x in n] if n.isChord else [n]
+        start = int(round(n.offset * fpq))
+        end = start + max(int(round(n.duration.quarterLength * fpq)), 1)
+        time = np.arange(start, end)
+        for note in notes:
+            pitch_name = note.pitch.name
+            pitch_class = note.pitch.pitchClass
+            octave = note.pitch.octave
+            while octave < MIN_OCTAVE:
+                # logger.warning("Score lower than octave boundaries. Transposing up.")
+                octave += 1
+            while octave > MAX_OCTAVE:
+                # logger.warning("Score higher than octave boundaries. Transposing down.")
+                octave -= 1
+            # regardless of the minimum octave, it will be encoded as index 0
+            octave -= MIN_OCTAVE
+            note_letter = STEPS.index(pitch_name[0])
+            note_letters[note_letter + 7 * octave, time] = 1
+            chromagrams[pitch_class + 12 * octave, time] = 1
+
+    piano_roll[:chromagrams.shape[0], :] = chromagrams
+    piano_roll[chromagrams.shape[0]:, :] = note_letters
+    sharpness = [ks.sharps for ks in score.recurse().getElementsByClass("KeySignature")]
+    mean_sharpness = sum(sharpness) / len(sharpness)
+    return piano_roll, mean_sharpness
+
+
 def load_score_spelling_bass(score_file, fpq):
     """
 
@@ -140,8 +226,8 @@ def load_score_spelling_bass(score_file, fpq):
     return piano_roll, num_flatwards, num_sharpwards
 
 
-def load_score_spelling_class(score_file, fpq):
-    score, n_frames = _load_score(score_file, fpq)
+def load_score_spelling_class(score_file, fpq, transposition=None):
+    score, n_frames = _load_score(score_file, fpq, transposition)
     piano_roll = np.zeros(shape=(35, n_frames), dtype=np.int32)
     flattest, sharpest = 35, 0
     for n in score.flat.notes:
@@ -158,6 +244,52 @@ def load_score_spelling_class(score_file, fpq):
     num_flatwards = flattest  # these are transpositions to the LEFT, with our definition of PITCH_LINE
     num_sharpwards = 35 - sharpest  # these are transpositions to the RIGHT, with our definition of PITCH_LINE
     return piano_roll, num_flatwards, num_sharpwards
+
+def load_score_spelling_compressed(score_file, fpq, transposition=None):
+    """
+    :param score_file:
+    :param fpq:
+    :return: piano_roll, number of transposition flatwards, nof sharpwards
+    """
+    # Encode with an ordering that is comfortable for finding out the bass
+    spelling_class, num_flatwards, num_sharpwards = load_score_spelling_class(score_file, fpq, transposition)
+    n_frames = spelling_class.shape[1]
+
+    # get the diatonic steps
+    note_letter = _load_score_note_letter(score_file, fpq, transposition=transposition)
+    n_letters = note_letter.shape[0]
+
+    piano_roll = np.zeros(shape=(35 + n_letters, n_frames), dtype=np.int32)
+    piano_roll[0:35, :] = spelling_class
+    piano_roll[35:, :] = note_letter
+
+    # # add beat strength
+    # beat_strength = load_score_beat_strength(score_file, fpq)
+    # piano_roll[70:, :] = beat_strength
+    return piano_roll, num_flatwards, num_sharpwards
+
+
+def load_score_pitch_hybrid(score_file, fpq, transposition=None):
+    """
+    :param score_file:
+    :param fpq:
+    :return: piano_roll, number of transposition flatwards, nof sharpwards
+    """
+    # # get the pitch class
+    # pitch_class = load_score_pitch_class(score_file, fpq)
+    # n_frames = pitch_class.shape[1]
+
+    # # get the diatonic steps
+    # note_letter = _load_score_note_letter(score_file, fpq, transposition=transposition)
+    # n_letters = note_letter.shape[0]
+
+    # # put them together
+    # piano_roll = np.zeros(shape=(12 + n_letters, n_frames), dtype=np.int32)
+    # piano_roll[0:12, :] = pitch_class
+    # piano_roll[12:, :] = note_letter
+
+    piano_roll = _load_score_hybrid_chromagram(score_file, fpq)
+    return piano_roll
 
 
 # Load the score for the midi pitch representation

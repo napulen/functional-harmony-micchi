@@ -10,7 +10,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from tensorflow.python.keras.callbacks import EarlyStopping, TensorBoard, ModelCheckpoint
 
-from config import INPUT_TYPES, DATA_FOLDER
+from config import INPUT_TYPES, MODEL_TYPES, DATA_FOLDER
 from load_data import load_tfrecords_dataset
 from model import create_model, TimeOut
 from utils import setup_tfrecords_paths
@@ -52,23 +52,23 @@ def setup_model_paths(exploratory, model_type, input_type):
 timeout = None
 exploratory = False
 # exploratory = True
-models = ['conv_gru', 'conv_dil', 'gru', 'conv_gru_local', 'conv_dil_local']
 
 batch_size = 16
 shuffle_buffer = 100_000
 epochs = 100
 if __name__ == '__main__':
     parser = ArgumentParser(description='Train a neural network for Roman Numeral analysis')
-    parser.add_argument('--model', dest='model_idx', action='store', type=int,
-                        help=f'index to select the model, between 0 and {len(models)}, {[f"{n}: {m}" for n, m in enumerate(models)]}')
-    parser.add_argument('--input', dest='input_idx', action='store', type=int,
-                        help=f'index to select input type, between 0 and {len(INPUT_TYPES)}, {[f"{n}: {m}" for n, m in enumerate(INPUT_TYPES)]}')
+    parser.add_argument('--model', dest='model_type', action='store', choices=MODEL_TYPES,
+                        help=f'type of network architecture')
+    parser.add_argument('--input', dest='input_type', action='store', choices=INPUT_TYPES,
+                        help=f'type of input representation')
     parser.add_argument("--data-folder", type=str)
     args = parser.parse_args()
 
     DATA_FOLDER = args.data_folder or DATA_FOLDER
 
-    model_type, input_type = models[args.model_idx], INPUT_TYPES[args.input_idx]
+    model_type = args.model_type or "conv_gru"
+    input_type = args.input_type or "spelling_bass_cut"
 
     train_path, valid_path = setup_tfrecords_paths(DATA_FOLDER, ['train', 'valid'], input_type)
     train_data = load_tfrecords_dataset(train_path, batch_size, shuffle_buffer, input_type, repeat=False)
