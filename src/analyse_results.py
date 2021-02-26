@@ -14,10 +14,16 @@ import seaborn as sns
 from tensorflow.python.keras.backend import clear_session
 from tensorflow.python.keras.models import load_model
 
-from config import FEATURES, NOTES, PITCH_FIFTHS, KEYS_PITCH, KEYS_SPELLING, QUALITY, DATA_FOLDER
+from config import FEATURES, NOTES, PITCH_FIFTHS, KEYS_PITCH, KEYS_SPELLING, QUALITY, DATA_FOLDER, MODEL_FOLDER
 from load_data import load_tfrecords_dataset
 from utils import setup_tfrecords_paths, find_input_type, write_tabular_annotations
 from utils_music import Q2I, find_root_full_output
+
+import tensorflow as tf
+# These lines are specific to a problem I had with tf2
+# https://github.com/tensorflow/tensorflow/issues/45044
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
 # PLOTS
@@ -445,7 +451,7 @@ if __name__ == '__main__':
     # dataset = 'beethoven'
     # dataset = 'validation'
     dataset = 'valid'
-    models_folder = os.path.join('runs', 'run_08', 'models')
+    models_folder = MODEL_FOLDER
 
     # model_name = ''
     # mf = os.path.join(models_folder, model_name)
