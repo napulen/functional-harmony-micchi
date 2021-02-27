@@ -459,8 +459,9 @@ if __name__ == '__main__':
     # write_tabular_annotations(ys_pred, info["timesteps"], info["file_names"], os.path.join(mf, 'analyses'))
     # acc = analyse_results(ys_true, ys_pred)
     model_with_accuracies = compare_results(DATA_FOLDER, models_folder, dataset, export_annotations=True)
-    comparison_fp = os.path.join(models_folder, '..', f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv')
-    _write_comparison_file(model_with_accuracies, comparison_fp)
-    _average_results(comparison_fp, comparison_fp.replace("comparison", "average"))
-    _t_test_results(comparison_fp)
+    print(model_with_accuracies)
+    # comparison_fp = os.path.join(models_folder, '..', f'comparison_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.csv')
+    # _write_comparison_file(model_with_accuracies, comparison_fp)
+    # _average_results(comparison_fp, comparison_fp.replace("comparison", "average"))
+    # _t_test_results(comparison_fp)
 
