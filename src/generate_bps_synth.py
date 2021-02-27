@@ -22,8 +22,18 @@ quality_music21_to_tab = {
     "Italian augmented sixth chord": "It+6",
     "minor-augmented tetrachord": "m",  # I know, but we have to stay consistent with BPS-FH ...
     # 'Neapolitan chord': 'N6'  # N/A: major triad  TODO: Add support to Neapolitan chords?
-    "incomplete half-diminished seventh chord": "h7"
+    "incomplete half-diminished seventh chord": "h7",
 }
+
+
+def _parseScaleDegree(rn):
+    scaleDegree, alteration = rn.scaleDegreeWithAlteration
+    if alteration:
+        alterationToken = alteration.modifier.replace("#", "+")
+        ret = f"{alterationToken}{scaleDegree}"
+    else:
+        ret = f"{scaleDegree}"
+    return ret
 
 
 def rn2tab(s, outpath):
@@ -40,35 +50,24 @@ def rn2tab(s, outpath):
     """
     fout = open(outpath, "w")
     for rn in s.flat.getElementsByClass("RomanNumeral"):
-        cols = []
         offset = round(float(rn.offset), 4)
         end = round(float(rn.quarterLength) + offset, 4)
         key = rn.key.tonicPitchNameWithCase
-        scaleDegree, alteration = rn.scaleDegreeWithAlteration
-        if alteration:
-            scaleDegree = f"{alteration.modifier}{scaleDegree}"
-        else:
-            scaleDegree = f"{scaleDegree}"
-        secondaryDegree = rn.secondaryRomanNumeral
-        if secondaryDegree:
-            scaleDegree, alteration = secondaryDegree.scaleDegreeWithAlteration
-            if alteration:
-                scaleDegree = f"{alteration.modifier}{scaleDegree}"
-            else:
-                scaleDegree = f"{scaleDegree}"
-            secondaryDegree = scaleDegree
-        else:
-            secondaryDegree = None
-        if secondaryDegree:
-            scaleDegree = f"{scaleDegree}/{secondaryDegree}"
         quality = quality_music21_to_tab[rn.commonName]
         inversion = rn.inversion()
-        row = f"{offset},{end},{key},{scaleDegree},{quality},{inversion}\n"
+        degree1 = _parseScaleDegree(rn)
+        # Hack: the preprocessing code doesn't like raised seventh degrees in minor
+        if degree1 == "+7" and quality in ["d", "d7"]:
+            degree1 = "7"
+        rn2 = rn.secondaryRomanNumeral
+        degree2 = _parseScaleDegree(rn2) if rn2 else None
+        degree = f"{degree1}/{degree2}" if degree2 else f"{degree1}"
+        row = f"{offset},{end},{key},{degree},{quality},{inversion}\n"
         fout.write(row)
     fout.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     BPS_ROMANTEXT_FOLDER = os.path.join(DATA_FOLDER, "BPS/txt")
     BPSSYNTH_FOLDER = os.path.join(DATA_FOLDER, "BPSSynth")
     Path(os.path.join(BPSSYNTH_FOLDER, "chords")).mkdir(
@@ -87,7 +86,6 @@ if __name__ == '__main__':
         chordspath = os.path.join(
             BPSSYNTH_FOLDER, "chords", rntxt.replace(".txt", ".csv")
         )
-        s = music21.converter.parse(rntxtpath, format="romantext")
+        s = music21.converter.parse(rntxtpath, format="romantext").expandRepeats()
         s.write(fp=scorepath, fmt="mxl")
         rn2tab(s, chordspath)
-        # print(rn2tab)
