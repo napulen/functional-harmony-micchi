@@ -14,7 +14,7 @@ from config import DATA_FOLDER
 
 # TODO: Implement test set everywhere
 
-def split_like_chen_su(data_folder):
+def split_like_chen_su(data_folder, bpssynth=False):
     """
     Create the same dataset as Chen and Su for comparison.
     :return:
@@ -31,28 +31,30 @@ def split_like_chen_su(data_folder):
     i_vld = [8, 19, 29, 16, 26, 6, 20]
     i_tst = [1, 14, 23, 15, 10, 25, 7]
 
+    bps_folder = "BPSSynth" if bpssynth else "BPS"
+
     for i in i_trn:
-        score_file = os.path.join(data_folder, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
+        score_file = os.path.join(data_folder, bps_folder, 'scores', f'bps_{i:02d}_01.mxl')
         output_score_file = os.path.join(data_folder, 'train', 'scores', f'bps_{i:02d}_01.mxl')
         copyfile(score_file, output_score_file)
 
-        chords_file = os.path.join(data_folder, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
+        chords_file = os.path.join(data_folder, bps_folder, 'chords', f'bps_{i:02d}_01.csv')
         output_chords_file = os.path.join(data_folder, 'train', 'chords', f'bps_{i:02d}_01.csv')
         copyfile(chords_file, output_chords_file)
     for i in i_vld:
-        score_file = os.path.join(data_folder, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
+        score_file = os.path.join(data_folder, bps_folder, 'scores', f'bps_{i:02d}_01.mxl')
         output_score_file = os.path.join(data_folder, 'valid', 'scores', f'bps_{i:02d}_01.mxl')
         copyfile(score_file, output_score_file)
 
-        chords_file = os.path.join(data_folder, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
+        chords_file = os.path.join(data_folder, bps_folder, 'chords', f'bps_{i:02d}_01.csv')
         output_chords_file = os.path.join(data_folder, 'valid', 'chords', f'bps_{i:02d}_01.csv')
         copyfile(chords_file, output_chords_file)
     for i in i_tst:
-        score_file = os.path.join(data_folder, 'BPS', 'scores', f'bps_{i:02d}_01.mxl')
+        score_file = os.path.join(data_folder, bps_folder, 'scores', f'bps_{i:02d}_01.mxl')
         output_score_file = os.path.join(data_folder, 'test', 'scores', f'bps_{i:02d}_01.mxl')
         copyfile(score_file, output_score_file)
 
-        chords_file = os.path.join(data_folder, 'BPS', 'chords', f'bps_{i:02d}_01.csv')
+        chords_file = os.path.join(data_folder, bps_folder, 'chords', f'bps_{i:02d}_01.csv')
         output_chords_file = os.path.join(data_folder, 'test', 'chords', f'bps_{i:02d}_01.csv')
         copyfile(chords_file, output_chords_file)
 
@@ -240,6 +242,8 @@ if __name__ == '__main__':
                         help="split the data as in Chen and Su (2018) for direct comparison")
     parser.add_argument('--data_folder', action='store', type=str,
                         help=f'the folder where the data is located and where the train, validation, test splits will be created')
-    parser.set_defaults(data_folder=DATA_FOLDER, split_function=split_like_micchi_et_al)
+    parser.add_argument("--bps-synth", action="store_true",
+                        help="work with the synthetic BPS data rather than the real scores")
+    parser.set_defaults(data_folder=DATA_FOLDER, split_function=split_like_micchi_et_al, bps_synth=False)
     args = parser.parse_args()
-    args.split_function(args.data_folder)
+    args.split_function(args.data_folder, bpssynth=args.bps_synth)
