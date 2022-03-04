@@ -69,7 +69,7 @@ def train_valid_test_split(in_folder, out_folder, seed=18, split=(0.8, 0.1, 0.1)
             sorted(os.listdir(os.path.join(in_folder, "chords"))),
             sorted(os.listdir(os.path.join(in_folder, "scores"))),
         )
-    ), "The structure of the input folder is wrong"
+    ), f"The structure of the input folder {in_folder} is wrong"
 
     file_names = [
         os.path.splitext(f)[0]
