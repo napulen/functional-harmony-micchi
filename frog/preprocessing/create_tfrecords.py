@@ -147,6 +147,10 @@ def _create_tfrecords(tfr_base_folder, input_type, output_mode, beat_strength, n
     for sub_folder in os.listdir(in_folder):
         if sub_folder == "Beethoven_4tets":
             continue  # We are not legally allowed to use this dataset, for the moment
+        if sub_folder.__contains__("Tavern"):
+            continue  # Slightly different structure, not compatible yet
+        if sub_folder == "BPS_other-movements":
+            continue  # Data not uploaded
         # elif sub_folder == "BPS":
         #     split_bps_like_chen_su(os.path.join(in_folder, sub_folder), out_folder)
         # elif sub_folder == "Bach_WTC_1_Preludes":
