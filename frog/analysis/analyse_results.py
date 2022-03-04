@@ -4,23 +4,24 @@ Analyse the results obtained from the model, with the possibility of generating 
 data, plus obtaining the accuracy of different models on annotated data, and comparing them.
 """
 import argparse
+import glob
 import json
 import logging
 import math
 import os
 import sys
-import glob
 from functools import reduce
-from sklearn.metrics import confusion_matrix
-import matplotlib.pyplot as plt
-import seaborn as sns
-from matplotlib.colors import LogNorm
-import mir_eval
 from itertools import groupby
-import numpy as np
-import tensorflow as tf
 
-from frog import OUTPUT_FPC, INPUT_FPC
+import matplotlib.pyplot as plt
+import mir_eval
+import numpy as np
+import seaborn as sns
+import tensorflow as tf
+from matplotlib.colors import LogNorm
+from sklearn.metrics import confusion_matrix
+
+from frog import INPUT_FPC, OUTPUT_FPC
 from frog.label_codec import LabelCodec, QUALITIES_MIREX
 from frog.load_data import load_tfrecords_dataset
 from frog.models.models import load_model_with_info

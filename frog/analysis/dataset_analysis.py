@@ -3,21 +3,20 @@ This is an entry point, no other file should import from this one.
 Collect information about the dataset at hand.
 """
 
-import math
 import os
-from collections import Counter
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from frog import INPUT_FPC, DATA_FOLDER, PITCH_FIFTHS
+from frog import INPUT_FPC
 from frog.label_codec import LabelCodec
-from frog.preprocessing.preprocess_chords import _load_chord_labels, calculate_lr_transpositions_key
+from frog.preprocessing.preprocess_chords import (
+    _load_chord_labels,
+)
 from frog.preprocessing.preprocess_scores import (
     import_piano_roll,
-    calculate_lr_transpositions_pitches,
 )
 
 columns = ["dataset", "file", "duration", "key", "degree", "quality", "inversion", "root"]

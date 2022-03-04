@@ -2,12 +2,11 @@ import json
 import logging
 import os
 from abc import ABC, abstractmethod
-from functools import reduce
 
 import tensorflow as tf
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Bidirectional, Dense, GRU
-from tensorflow.python.keras.models import Model
+from tensorflow.keras import Input
+from tensorflow.keras.layers import Bidirectional, Dense, GRU
+from tensorflow.keras.models import Model
 
 from frog import INPUT_FEATURES
 from frog.label_codec import LabelCodec

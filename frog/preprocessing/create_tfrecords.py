@@ -22,21 +22,16 @@ from math import inf
 
 import tensorflow as tf
 
-from frog import DATA_FOLDER, INPUT_FPC, HOP_SIZE, CHUNK_SIZE, INPUT_TYPES, OUTPUT_FPC
+from frog import CHUNK_SIZE, DATA_FOLDER, HOP_SIZE, INPUT_FPC, INPUT_TYPES, OUTPUT_FPC
 from frog.label_codec import LabelCodec, OUTPUT_MODES
-from frog.preprocessing.preprocess_chords import (
-    transpose_chord_labels,
-    calculate_lr_transpositions_key,
-    import_chords,
-    generate_chord_chunks,
-)
-from frog.preprocessing.preprocess_scores import (
-    import_piano_roll,
-    calculate_lr_transpositions_pitches,
-    generate_input_chunks,
-    transpose_piano_roll,
-    get_metrical_information,
-)
+from frog.preprocessing.preprocess_chords import (calculate_lr_transpositions_key,
+                                                  generate_chord_chunks, import_chords,
+                                                  transpose_chord_labels)
+from frog.preprocessing.preprocess_scores import (calculate_lr_transpositions_pitches,
+                                                  generate_input_chunks,
+                                                  get_metrical_information,
+                                                  import_piano_roll,
+                                                  transpose_piano_roll)
 from frog.preprocessing.train_valid_test_split import train_valid_test_split
 
 logger = logging.getLogger(__name__)

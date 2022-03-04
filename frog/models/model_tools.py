@@ -5,14 +5,9 @@ import time
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras.callbacks import Callback
-from tensorflow.python.keras.layers import (
-    Dense,
-    Conv1D,
-    BatchNormalization,
-    AveragePooling1D,
-)
-from tensorflow.python.keras.models import Model
+from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.layers import AveragePooling1D, BatchNormalization, Conv1D, Dense
+from tensorflow.keras.models import Model
 
 eps = np.finfo(np.float32).eps  # This is the smallest float that can be represented
 
