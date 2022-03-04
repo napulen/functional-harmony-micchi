@@ -7,7 +7,7 @@ The corpus in this repository reflects the one used at the moment of the paper s
 UPDATE: The repository contains the updated scripts and model related to the ISMIR2021 paper: [A deep learning method for enforcing coherence in Automatic Chord Recognition](https://archives.ismir.net/ismir2021/paper/000055.pdf).
 
 
-Please contact us at gianluca.micchi@univ-lille.fr for further information.
+Please contact me at gianluca.micchi@gmail.com for further information.
 
 ## Code explanation
 There are several entry points:
