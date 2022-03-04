@@ -13,7 +13,7 @@ class BlockNADE(tf.keras.layers.Layer):
 
     def __init__(self, name, num_visible_units, num_hidden_units, n_timesteps):
         """Initialise various class attributes."""
-        super().__init__(name)
+        super().__init__(name=name)
         self.n_blocks = len(num_visible_units)
         self.visible_units_per_block = num_visible_units  # a list of units per block
         self.hidden_units = num_hidden_units
