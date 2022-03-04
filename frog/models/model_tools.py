@@ -19,8 +19,9 @@ class TimeOut(Callback):
         self.timeout = timeout  # time in minutes
 
     def on_train_batch_end(self, batch, logs=None):
-        if time.time() - self.t0 > self.timeout * 60:  # 58 minutes
-            print(f"\nReached {(time.time() - self.t0) / 60:.3f} minutes of training, stopping")
+        minutes = (time.time() - self.t0) / 60
+        if minutes > self.timeout:  # 58 minutes
+            print(f"\nReached {minutes:.3f} minutes of training, stopping")
             self.model.stop_training = True
 
 
