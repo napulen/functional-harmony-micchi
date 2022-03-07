@@ -6,12 +6,14 @@ import sys
 
 import pandas as pd
 
-from frog import INPUT_TYPES, DATA_FOLDER, MODEL_TYPES
-from frog.analysis.analyse_results import generate_results, analyse_results
+from frog import DATA_FOLDER, INPUT_TYPES, MODEL_TYPES
+from frog.analysis.analyse_results import analyse_results, generate_results
 
 logger = logging.getLogger(__name__)
 
+
 # TODO: This module is broken! Remove?
+
 
 def _find_input_type(model_name):
     for it in INPUT_TYPES:

@@ -175,18 +175,27 @@ def train(
 
 
 def main(opts):
-    parser = ArgumentParser(description="Train a neural network for Roman Numeral analysis")
-    parser.add_argument("tfrecords_folder", help="The folder where the tfrecords are stored")
-    parser.add_argument(
-        "-f", dest="model_folder", default="../logs", help="Where to store the saved model"
-    )
-    parser.add_argument("-m", dest="model_type", choices=MODEL_TYPES, help="Model to use")
-    parser.add_argument("-n", dest="num_epochs", default=200, type=int, help="Number of epochs")
-    parser.add_argument("-b", dest="batch_size", default=128, type=int, help="Batch size")
-    parser.add_argument("-v", dest="verbose", action="store_true", help="Verbose execution (slow!)")
+    # fmt:off
+    parser = ArgumentParser(
+        description="Train a neural network for Roman Numeral analysis")
+    parser.add_argument("tfrecords_folder",
+                        help="The folder where the tfrecords are stored")
+    parser.add_argument("-f", dest="model_folder", default="../logs",
+                        help="Where to store the saved model")
+    parser.add_argument("-m", dest="model_type", choices=MODEL_TYPES,
+                        help="Model to use")
+    parser.add_argument("-n", dest="num_epochs", default=200, type=int,
+                        help="Number of epochs")
+    parser.add_argument("-b", dest="batch_size", default=128, type=int,
+                        help="Batch size")
+    parser.add_argument("-v", dest="verbose", action="store_true",
+                        help="Verbose execution (slow!)")
     parser.add_argument("-e", dest="eager", action="store_true", help="Execute eagerly")
-    parser.add_argument("--no_struct", action="store_true", help="Remove music structure info")
+    parser.add_argument("--no_struct", action="store_true",
+                        help="Remove music structure info")
     args = parser.parse_args(opts)
+    # fmt:on
+
     tf.config.run_functions_eagerly(args.eager)
     train(
         args.tfrecords_folder,

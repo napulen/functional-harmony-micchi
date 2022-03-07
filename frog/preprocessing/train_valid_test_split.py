@@ -64,8 +64,7 @@ def train_valid_test_split(in_folder, out_folder, seed=18, split=(0.8, 0.1, 0.1)
     """
     if not os.path.isdir(in_folder):
         logger.warning(
-            f"{in_folder} is not a folder. Can't find the files to split. Skipping."
-        )
+            f"{in_folder} is not a folder. Can't find the files to split. Skipping.")
         return
     if in_folder.startswith("."):
         logger.warning(f"{in_folder} is hidden. Skipping.")

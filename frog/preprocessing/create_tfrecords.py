@@ -24,23 +24,30 @@ import tensorflow as tf
 
 from frog import CHUNK_SIZE, DATA_FOLDER, HOP_SIZE, INPUT_FPC, INPUT_TYPES, OUTPUT_FPC
 from frog.label_codec import LabelCodec, OUTPUT_MODES
-from frog.preprocessing.preprocess_chords import (calculate_lr_transpositions_key,
-                                                  generate_chord_chunks, import_chords,
-                                                  transpose_chord_labels)
-from frog.preprocessing.preprocess_scores import (calculate_lr_transpositions_pitches,
-                                                  generate_input_chunks,
-                                                  get_metrical_information,
-                                                  import_piano_roll,
-                                                  transpose_piano_roll)
+from frog.preprocessing.preprocess_chords import (
+    calculate_lr_transpositions_key,
+    generate_chord_chunks,
+    import_chords,
+    transpose_chord_labels,
+)
+from frog.preprocessing.preprocess_scores import (
+    calculate_lr_transpositions_pitches,
+    generate_input_chunks,
+    get_metrical_information,
+    import_piano_roll,
+    transpose_piano_roll,
+)
 from frog.preprocessing.train_valid_test_split import train_valid_test_split
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def _make_tfr_feature(piano_roll, structure, chords, label_codec, name, s, start, beat_strength):
+def _make_tfr_feature(piano_roll, structure, chords, label_codec, name, s, start,
+                      beat_strength):
     feature = {
-        "name": tf.train.Feature(bytes_list=tf.train.BytesList(value=[name.encode("utf-8")])),
+        "name": tf.train.Feature(
+            bytes_list=tf.train.BytesList(value=[name.encode("utf-8")])),
         "transposition": tf.train.Feature(int64_list=tf.train.Int64List(value=[s])),
         "start": tf.train.Feature(int64_list=tf.train.Int64List(value=[start])),
         "piano_roll": tf.train.Feature(float_list=tf.train.FloatList(value=piano_roll.reshape(-1))),

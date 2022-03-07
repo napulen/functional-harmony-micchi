@@ -116,4 +116,3 @@ class BlockNADE(tf.keras.layers.Layer):
         h_i = hid_prev + tf.tensordot(v_i, VtoH_i, axes=[2, 0])
 
         return h_i, v_i
-

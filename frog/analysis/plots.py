@@ -2,11 +2,13 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from frog import PITCH_FIFTHS, NOTES
+from frog import NOTES, PITCH_FIFTHS
 from frog.analysis.analyse_results import _find_root_from_output
-from frog.label_codec import QUALITIES, OUTPUT_FEATURES, KEYS_SPELLING, KEYS_PITCH
+from frog.label_codec import KEYS_PITCH, KEYS_SPELLING, OUTPUT_FEATURES, QUALITIES
+
 
 # TODO: Fix this module, it is currently broken. Or just throw it away?
+
 
 def plot_chord_changes(y_true, y_pred, name, ts, inversions=True):
     """

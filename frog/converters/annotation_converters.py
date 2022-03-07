@@ -12,6 +12,7 @@ import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 
+
 def roman_to_int(roman):
     r2i = {
         "I": 1,
@@ -26,7 +27,7 @@ def roman_to_int(roman):
 
 
 def int_to_roman(n):
-    """ Convert an integer to a Roman numeral. """
+    """Convert an integer to a Roman numeral."""
     if not 0 < n < 8:
         raise ValueError("Argument must be between 1 and 7")
     ints = (5, 4, 1)

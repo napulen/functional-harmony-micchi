@@ -7,22 +7,14 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.callbacks import Callback
-from tensorflow.python.keras.layers import (
-    Conv1D,
-    Concatenate,
-    MaxPooling1D,
-    TimeDistributed,
-    Dense,
-    Lambda,
-    BatchNormalization,
-    Masking,
-    GRU,
-    Bidirectional,
-    Activation,
-)
+from tensorflow.python.keras.layers import (Activation, BatchNormalization,
+                                            Bidirectional, Concatenate, Conv1D, Dense,
+                                            GRU, Lambda, Masking, MaxPooling1D,
+                                            TimeDistributed)
 
 from frog import INPUT_TYPE2INPUT_SHAPE
-from frog.label_codec import KEYS_SPELLING, KEYS_PITCH
+from frog.label_codec import KEYS_PITCH, KEYS_SPELLING
+
 
 # TODO: This module is currently broken! Should we just remove it?
 

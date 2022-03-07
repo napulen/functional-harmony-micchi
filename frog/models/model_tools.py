@@ -60,6 +60,7 @@ class PoolingBlock1D(Model):
     This implement the transition layer described in section 3, DenseNets, as described in paragraph
      "Pooling layers." The only difference is that our layers are 1D.
     """
+
     def __init__(self, name, filters, pooling_size):
         super().__init__(name=name)
 
@@ -123,7 +124,8 @@ class DilatedConvBlock(Model):
     def __init__(self, name, params):
         super().__init__(name=name)
         self.dcb = [
-            Conv1D(params["filters_dcl"], kernel_size=3, padding="same", dilation_rate=3 ** i)
+            Conv1D(params["filters_dcl"], kernel_size=3, padding="same",
+                   dilation_rate=3 ** i)
             for i in range(params["num_dcl"])
         ]
 

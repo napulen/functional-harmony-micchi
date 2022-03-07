@@ -14,8 +14,8 @@ import music21.converter
 import numpy as np
 import tensorflow as tf
 
-from frog import OUTPUT_FPC, CHUNK_SIZE, FROG_MODEL_PATH
-from frog.converters.annotation_converters import ConverterTab2Rn, ConverterTab2Dez
+from frog import CHUNK_SIZE, FROG_MODEL_PATH, OUTPUT_FPC
+from frog.converters.annotation_converters import ConverterTab2Dez, ConverterTab2Rn
 from frog.label_codec import LabelCodec
 from frog.models.models import load_model_with_info
 from frog.preprocessing.preprocess_scores import prepare_input_from_score_file
@@ -106,8 +106,9 @@ def analyse_file(
                 logger.warning(f"Couldn't create the rntxt version of {song_name}")
     return data
 
+
 def get_frog_data(fpath):
-    model, info = load_model_with_info(FROG_MODEL_PATH) 
+    model, info = load_model_with_info(FROG_MODEL_PATH)
 
     return analyse_file(fpath, model, info["input type"], info["output mode"], metrical=False)
 

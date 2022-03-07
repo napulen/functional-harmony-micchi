@@ -5,7 +5,10 @@ from argparse import ArgumentParser
 
 import numpy as np
 
-from frog.analysis.analyse_results import analyse_results, analyse_results_concatenated, make_plots, create_mir_eval_lab_files, compute_mir_eval_metrics
+from frog.analysis.analyse_results import (analyse_results,
+                                           analyse_results_concatenated,
+                                           compute_mir_eval_metrics,
+                                           create_mir_eval_lab_files, make_plots)
 from frog.label_codec import LabelCodec
 from frog.preprocessing.preprocess_chords import import_chords
 
@@ -52,14 +55,15 @@ def model_analysis_from_csv(folder_ground_truth, folder_predictions, spelling):
     return analysis
 
 
-def model_analysis_global_output_for_HT(folder_ground_truth, folder_predictions, spelling, output_folder):
+def model_analysis_global_output_for_HT(
+        folder_ground_truth, folder_predictions, spelling, output_folder
+):
     lc = LabelCodec(spelling=False, mode="legacy", strict=False)
     y_true = []
     y_pred = []
 
-
     for f in sorted(os.listdir(folder_ground_truth)):
-        if '.DS_Store' not in f:    
+        if ".DS_Store" not in f:
             ground_truth = os.path.join(folder_ground_truth, f)
             prediction = os.path.join(folder_predictions, f)
             y_true_file = get_results(ground_truth, lc)
@@ -77,7 +81,6 @@ def model_analysis_global_output_for_HT(folder_ground_truth, folder_predictions,
             y_true.append(y_true_file)
             y_pred.append(y_pred_file)
 
-
     ## Get visualisations
     make_plots(y_true, y_pred, spelling, False, output_folder)
 
@@ -85,9 +88,13 @@ def model_analysis_global_output_for_HT(folder_ground_truth, folder_predictions,
     create_mir_eval_lab_files(y_true, y_pred, spelling, False, output_folder)
 
     ## Get mir-eval metrics
-    compute_mir_eval_metrics(os.path.join(output_folder, "annotations_true"), os.path.join(output_folder, "annotations_predicted"), output_folder)
+    compute_mir_eval_metrics(
+        os.path.join(output_folder, "annotations_true"),
+        os.path.join(output_folder, "annotations_predicted"),
+        output_folder,
+    )
     acc = analyse_results(y_true, y_pred, spelling, "legacy")
-    
+
     with open(os.path.join(output_folder, "accuracy.json"), "w") as f:
         json.dump(acc, f, indent=2)
     return acc

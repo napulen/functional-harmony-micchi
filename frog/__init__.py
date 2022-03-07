@@ -183,10 +183,10 @@ def find_enharmonic_equivalent(note):
 
 
 def _flat_alteration(note):
-    """ Ex: _flat_alteration(G) = G-,  _flat_alteration(G#) = G """
+    """Ex: _flat_alteration(G) = G-,  _flat_alteration(G#) = G"""
     return note[:-1] if "#" in note else note + "-"
 
 
 def _sharp_alteration(note):
-    """ Ex: _sharp_alteration(G) = G#,  _sharp_alteration(G-) = G """
+    """Ex: _sharp_alteration(G) = G#,  _sharp_alteration(G-) = G"""
     return note[:-1] if "-" in note else note + "#"
