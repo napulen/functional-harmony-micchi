@@ -6,13 +6,11 @@ The corpus in this repository reflects the one used at the moment of the paper s
 
 UPDATE: The repository contains the updated scripts and model related to the ISMIR2021 paper: [A deep learning method for enforcing coherence in Automatic Chord Recognition](https://archives.ismir.net/ismir2021/paper/000055.pdf).
 
-
 Please contact me at gianluca.micchi@gmail.com for further information.
 
-## Code explanation
-There are several entry points:
- - run\_full.py, that can be used to run a previously trained model with symbolic music files as input; a pre-trained model (run\_model.h5) is already provided; `python3 run_full.py --in /PATH/TO/SCORE` runs the model and analyses the given score
- - train.py, that can be used to train new models, provided they are in encoded in the correct format; `python3 train.py --model 0 --input 4` trains a model with the same parameters as in the paper
- - converters.py, which allows for conversion between the three different supported file formats: tabular, rntxt, and dezrann
- - data_manipulation/preprocessing.py, that can be used to encode data from tabular format into tfrecords for training; `python3 preprocessing.py /PATH/TO/FOLDER` creates the tfrecords from the file contained in the folder. The folder should have a specific structure: two subfolders, train and valid, each with two subfolders, chords and scores.
- - analyse_results.py, that can be used to get some plots and insight into the results of a model by comparing the predictions with the targets
+## (brief) Code explanation
+The main entry points to the code are stored under the folder scripts. Briefly:
+ - cra_preprocess: encode data from tabular format into tfrecords for training; `python3 -m scripts.cra_preprocess /data` creates the tfrecords from the data files contained in the folder.
+ - cra_train: train a new model; `python3 -m scripts.cra_train <ARGUMENTS>`, launch with flag -h to get help 
+ - cra_run: run the model on a symbolic music score file and return its harmonic analysis
+ - cra_optimisation: run a search for the best hyperparameters
