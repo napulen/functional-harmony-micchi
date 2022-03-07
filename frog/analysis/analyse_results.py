@@ -668,7 +668,7 @@ def compute_mir_eval_metrics(folder_path_true, folder_path_predicted, output_fol
         score_overseg = mir_eval.chord.weighted_accuracy(comparisons_overseg, durations)
         score_underseg = mir_eval.chord.weighted_accuracy(comparisons_underseg,
                                                           durations)
-        score_seg = mir_eval.chord.weighted_accuracy(omparisons_seg, durations)
+        score_seg = mir_eval.chord.weighted_accuracy(comparisons_seg, durations)
 
         scores_root.append(score_root)
         scores_majmin.append(score_majmin)
