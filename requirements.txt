@@ -1,0 +1,9 @@
+seaborn
+tensorflow>=2.4
+pandas
+matplotlib
+music21==6.5.0
+hyperopt>=0.2.5
+scikit-learn
+tqdm
+mir_eval
