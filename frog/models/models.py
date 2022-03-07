@@ -160,7 +160,7 @@ class CraModel(Model, ABC):
         )
         x = self.conv(x, training=training)
         x = tf.nn.relu(x)  # Should this be here or not?
-        x = self.gru(x, mask=input_tensor[2], training=training)
+        x = self.gru(x, mask=tf.cast(input_tensor[2], tf.bool), training=training)
         x = self.fc(x)
         return x
 

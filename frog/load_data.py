@@ -4,7 +4,7 @@ Utils for loading the tfrecords data.
 
 import tensorflow as tf
 
-from frog import CHUNK_SIZE, INPUT_TYPE2INPUT_SHAPE, INPUT_FPC, OUTPUT_FPC
+from frog import CHUNK_SIZE, INPUT_FPC, INPUT_TYPE2INPUT_SHAPE, OUTPUT_FPC
 from frog.label_codec import LabelCodec
 
 
@@ -27,7 +27,7 @@ def _parse_function(proto, n, lc):
     piano_roll = tf.reshape(parsed_features["piano_roll"], (-1, n))
     structure = tf.reshape(parsed_features["structure"], (-1, 2))
     # Get the mask by checking the length of the first output feature
-    mask = tf.ones([tf.shape(parsed_features[lc.output_features[0]])[0]], tf.bool)
+    mask = tf.ones([tf.shape(parsed_features[lc.output_features[0]])[0]])
     x = (piano_roll, structure, mask)
     y = tuple([tf.one_hot(parsed_features[f], depth=lc.output_size[f]) for f in lc.output_features])
     meta = (filename, transposition, start)
