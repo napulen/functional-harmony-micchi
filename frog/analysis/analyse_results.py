@@ -682,9 +682,9 @@ def compute_mir_eval_metrics(folder_path_true, folder_path_predicted, output_fol
         scores_tetrads_inv.append(score_tetrads_inv)
         scores_sevenths.append(score_sevenths)
         scores_sevenths_inv.append(score_sevenths_inv)
-        scores_overseg.append(comparisons_overseg)
-        scores_underseg.append(comparisons_underseg)
-        scores_seg.append(comparisons_seg)
+        scores_overseg.append(score_overseg)
+        scores_underseg.append(score_underseg)
+        scores_seg.append(score_seg)
 
     average_metrics = {
         "root": [np.mean(scores_root), np.std(scores_root)],
