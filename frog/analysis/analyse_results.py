@@ -240,8 +240,7 @@ def analyse_results_concatenated(yc_true, yc_pred, spelling, mode, verbose=True)
                                                        axis=-1),
         "roman numeral w/o key (chen and su)": 100
                                                * np.average(
-            np.prod(success[1:-1], axis=0), axis=-1
-        ),
+            np.prod(success[1:-1], axis=0), axis=-1),
         ##  correct when: tonacisation, degree, quality and inversion are all correct. We exclude the key
         "roman numeral w/o inversion": 100 * np.average(np.prod(success[:-2], axis=0),
                                                         axis=-1),

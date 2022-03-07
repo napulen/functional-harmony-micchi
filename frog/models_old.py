@@ -7,10 +7,19 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import Input, Model
 from tensorflow.python.keras.callbacks import Callback
-from tensorflow.python.keras.layers import (Activation, BatchNormalization,
-                                            Bidirectional, Concatenate, Conv1D, Dense,
-                                            GRU, Lambda, Masking, MaxPooling1D,
-                                            TimeDistributed)
+from tensorflow.python.keras.layers import (
+    Activation,
+    BatchNormalization,
+    Bidirectional,
+    Concatenate,
+    Conv1D,
+    Dense,
+    GRU,
+    Lambda,
+    Masking,
+    MaxPooling1D,
+    TimeDistributed,
+)
 
 from frog import INPUT_TYPE2INPUT_SHAPE
 from frog.label_codec import KEYS_PITCH, KEYS_SPELLING

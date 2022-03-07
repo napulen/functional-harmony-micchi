@@ -3,8 +3,14 @@ import random
 
 import numpy as np
 
-from frog import (NOTES, PITCH_FIFTHS, SCALES, _flat_alteration, _sharp_alteration,
-                  find_enharmonic_equivalent)
+from frog import (
+    NOTES,
+    PITCH_FIFTHS,
+    SCALES,
+    _flat_alteration,
+    _sharp_alteration,
+    find_enharmonic_equivalent,
+)
 
 OUTPUT_MODES = ["legacy", "experimental"]
 KEY_START, KEY_END = [PITCH_FIFTHS.index(p) for p in ["C-", "A#"]]

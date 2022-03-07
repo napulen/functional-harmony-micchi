@@ -19,7 +19,16 @@ from frog.preprocessing.preprocess_scores import (
     import_piano_roll,
 )
 
-columns = ["dataset", "file", "duration", "key", "degree", "quality", "inversion", "root"]
+columns = [
+    "dataset",
+    "file",
+    "duration",
+    "key",
+    "degree",
+    "quality",
+    "inversion",
+    "root",
+]
 
 
 def analyse_single_chords_file(cf, lc):
@@ -87,23 +96,12 @@ def create_subplot_column(info, col, axis):
 
 def plot_data_distributions(info, output_folder):
     os.makedirs(output_folder, exist_ok=True)
+    # fmt:off
     q = [
-        "M",
-        "m",
-        "d",
-        "a",
-        "m7",
-        "M7",
-        "D7",
-        "d7",
-        "+7",
-        "h7",
-        "+6",
-        "Gr+6",
-        "It+6",
-        "Fr+6",
-        "sus",
+        "M", "m", "d", "a", "m7", "M7", "D7", "d7",
+        "+7", "h7", "+6", "Gr+6", "It+6", "Fr+6", "sus",
     ]
+    # fmt:on
     info["quality"] = info["quality"].apply(lambda x: x if x in q else "other")
     info["tonicisation"] = info["degree"].apply(lambda x: "1" if "/" not in x else x.split("/")[1])
     info["degree"] = info["degree"].apply(lambda x: x if "/" not in x else x.split("/")[0])

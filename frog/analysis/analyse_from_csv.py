@@ -5,10 +5,13 @@ from argparse import ArgumentParser
 
 import numpy as np
 
-from frog.analysis.analyse_results import (analyse_results,
-                                           analyse_results_concatenated,
-                                           compute_mir_eval_metrics,
-                                           create_mir_eval_lab_files, make_plots)
+from frog.analysis.analyse_results import (
+    analyse_results,
+    analyse_results_concatenated,
+    compute_mir_eval_metrics,
+    create_mir_eval_lab_files,
+    make_plots,
+)
 from frog.label_codec import LabelCodec
 from frog.preprocessing.preprocess_chords import import_chords
 
