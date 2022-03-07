@@ -10,7 +10,7 @@ from hyperopt.mongoexp import MongoTrials
 from hyperopt.pyll import scope
 
 from frog import MODEL_TYPES, INPUT_TYPES
-from frog.train_custom import train
+from frog.train import train
 
 # {
 #     "dropout": 0.21235324691490887,
