@@ -124,8 +124,7 @@ class DilatedConvBlock(Model):
     def __init__(self, name, params):
         super().__init__(name=name)
         self.dcb = [
-            Conv1D(params["filters_dcl"], kernel_size=3, padding="same",
-                   dilation_rate=3 ** i)
+            Conv1D(params["filters_dcl"], kernel_size=3, padding="same", dilation_rate=3**i)
             for i in range(params["num_dcl"])
         ]
 

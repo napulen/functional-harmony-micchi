@@ -96,8 +96,7 @@ def _find_root_from_output(y_pred, lc):
         _inversion_enc,
         _root_enc,
     ) = lc.get_outputs(y_pred)
-    root_pred = [lc.find_chord_root_enc(k, t, d) for k, t, d in
-                 zip(keys_enc, ton_enc, degree_enc)]
+    root_pred = [lc.find_chord_root_enc(k, t, d) for k, t, d in zip(keys_enc, ton_enc, degree_enc)]
     return np.array(root_pred)
 
 
@@ -236,26 +235,19 @@ def analyse_results_concatenated(yc_true, yc_pred, spelling, mode, verbose=True)
     )
     # the features are (key, tonicisation, degree, quality, inversion, root)
     accuracies = {
-        "roman numeral w/ inversion": 100 * np.average(np.prod(success[:-1], axis=0),
-                                                       axis=-1),
+        "roman numeral w/ inversion": 100 * np.average(np.prod(success[:-1], axis=0), axis=-1),
         "roman numeral w/o key (chen and su)": 100
-                                               * np.average(
-            np.prod(success[1:-1], axis=0), axis=-1),
+        * np.average(np.prod(success[1:-1], axis=0), axis=-1),
         ##  correct when: tonacisation, degree, quality and inversion are all correct. We exclude the key
-        "roman numeral w/o inversion": 100 * np.average(np.prod(success[:-2], axis=0),
-                                                        axis=-1),
-        "chord symbol chen and su": 100 * np.average(
-            chen_su_symbols(yc_true, yc_pred, lc)),
-        "chord symbol w/ inversion": 100 * np.average(np.prod(success[-3:], axis=0),
-                                                      axis=-1),
-        "chord symbol w/o inversion": 100 * np.average(success[-3] * success[-1],
-                                                       axis=-1),
+        "roman numeral w/o inversion": 100 * np.average(np.prod(success[:-2], axis=0), axis=-1),
+        "chord symbol chen and su": 100 * np.average(chen_su_symbols(yc_true, yc_pred, lc)),
+        "chord symbol w/ inversion": 100 * np.average(np.prod(success[-3:], axis=0), axis=-1),
+        "chord symbol w/o inversion": 100 * np.average(success[-3] * success[-1], axis=-1),
         "quality": 100 * np.average(success[-3], axis=-1),
         "inversion": 100 * np.average(success[-2], axis=-1),
         "root": 100 * np.average(success[-1], axis=-1),
         "root coherence": 100 * np.average(root_der == np.argmax(yc_pred[-1], axis=-1)),
-        "diminished seventh": 100 * np.average(np.prod(success[:-3], axis=0)[d7_msk],
-                                               axis=-1),
+        "diminished seventh": 100 * np.average(np.prod(success[:-3], axis=0)[d7_msk], axis=-1),
     }
     if lc.mode == "legacy":
         t_msk = np.argmax(yc_true[2], axis=-1) != 0  # True when the chord is tonicised
@@ -290,8 +282,7 @@ def analyse_results_concatenated(yc_true, yc_pred, spelling, mode, verbose=True)
     all_mirex_keys_metrics = []
     for k_gt, k_pred in list(zip(yc_true[0], yc_pred[0])):
         all_mirex_keys_metrics.append(
-            mir_eval.key.weighted_score(mirex_keys[np.argmax(k_gt)],
-                                        mirex_keys[np.argmax(k_pred)])
+            mir_eval.key.weighted_score(mirex_keys[np.argmax(k_gt)], mirex_keys[np.argmax(k_pred)])
         )
     print("MIREX_KEY:", np.mean(all_mirex_keys_metrics), np.std(all_mirex_keys_metrics))
     return accuracies
@@ -346,12 +337,10 @@ def do_confusion_matrix(true, pred, labels, plot_name, output_folder):
     if labels == labels_semitones:
         print("Does the re-ordering")
         ys_true_conc_argmax = [
-            circle_of_fifth_for_pitch.index(labels[old_l]) for old_l in
-            ys_true_conc_argmax
+            circle_of_fifth_for_pitch.index(labels[old_l]) for old_l in ys_true_conc_argmax
         ]
         ys_pred_conc_argmax = [
-            circle_of_fifth_for_pitch.index(labels[old_l]) for old_l in
-            ys_pred_conc_argmax
+            circle_of_fifth_for_pitch.index(labels[old_l]) for old_l in ys_pred_conc_argmax
         ]
 
         xticks = circle_of_fifth_for_pitch
@@ -493,11 +482,10 @@ def create_mir_eval_lab_files(ys_true, ys_pred, spelling, verbose, output_folder
         inversion_one_hot_lists = data[4]
 
         for root, quality, inversion in zip(
-                root_one_hot_lists, quality_one_hot_lists, inversion_one_hot_lists
+            root_one_hot_lists, quality_one_hot_lists, inversion_one_hot_lists
         ):
             if np.argmax(inversion) != 0:
-                if bass_note_from_inversion[
-                    lc.decode_inversion(np.argmax(inversion))] == "3":
+                if bass_note_from_inversion[lc.decode_inversion(np.argmax(inversion))] == "3":
                     if QUALITIES_MIREX[np.argmax(quality)] in [
                         "min",
                         "dim",
@@ -506,47 +494,40 @@ def create_mir_eval_lab_files(ys_true, ys_pred, spelling, verbose, output_folder
                         "hdim7",
                     ]:
                         bass_part = (
-                                "b"
-                                + bass_note_from_inversion[
-                                    lc.decode_inversion(np.argmax(inversion))]
+                            "b"
+                            + bass_note_from_inversion[lc.decode_inversion(np.argmax(inversion))]
                         )
                     else:
                         bass_part = bass_note_from_inversion[
                             lc.decode_inversion(np.argmax(inversion))
                         ]
 
-                elif bass_note_from_inversion[
-                    lc.decode_inversion(np.argmax(inversion))] == "5":
+                elif bass_note_from_inversion[lc.decode_inversion(np.argmax(inversion))] == "5":
                     if QUALITIES_MIREX[np.argmax(quality)] in ["dim", "dim7", "hdim7"]:
                         bass_part = (
-                                "b"
-                                + bass_note_from_inversion[
-                                    lc.decode_inversion(np.argmax(inversion))]
+                            "b"
+                            + bass_note_from_inversion[lc.decode_inversion(np.argmax(inversion))]
                         )
                     elif QUALITIES_MIREX[np.argmax(quality)] == "aug":
                         bass_part = (
-                                "#"
-                                + bass_note_from_inversion[
-                                    lc.decode_inversion(np.argmax(inversion))]
+                            "#"
+                            + bass_note_from_inversion[lc.decode_inversion(np.argmax(inversion))]
                         )
                     else:
                         bass_part = bass_note_from_inversion[
                             lc.decode_inversion(np.argmax(inversion))
                         ]
 
-                elif bass_note_from_inversion[
-                    lc.decode_inversion(np.argmax(inversion))] == "7":
+                elif bass_note_from_inversion[lc.decode_inversion(np.argmax(inversion))] == "7":
                     if QUALITIES_MIREX[np.argmax(quality)] in ["min7", "7", "hdim7"]:
                         bass_part = (
-                                "b"
-                                + bass_note_from_inversion[
-                                    lc.decode_inversion(np.argmax(inversion))]
+                            "b"
+                            + bass_note_from_inversion[lc.decode_inversion(np.argmax(inversion))]
                         )
                     elif QUALITIES_MIREX[np.argmax(quality)] == "dim7":
                         bass_part = (
-                                "bb"
-                                + bass_note_from_inversion[
-                                    lc.decode_inversion(np.argmax(inversion))]
+                            "bb"
+                            + bass_note_from_inversion[lc.decode_inversion(np.argmax(inversion))]
                         )
                     else:
                         bass_part = bass_note_from_inversion[
@@ -554,23 +535,22 @@ def create_mir_eval_lab_files(ys_true, ys_pred, spelling, verbose, output_folder
                         ]
 
                 label = (
-                        lc.root[np.argmax(root)].replace("-", "b")
-                        + ":"
-                        + QUALITIES_MIREX[np.argmax(quality)]
-                        + "/"
-                        + bass_part
+                    lc.root[np.argmax(root)].replace("-", "b")
+                    + ":"
+                    + QUALITIES_MIREX[np.argmax(quality)]
+                    + "/"
+                    + bass_part
                 )
 
             else:
                 label = (
-                        lc.root[np.argmax(root)].replace("-", "b")
-                        + ":"
-                        + QUALITIES_MIREX[np.argmax(quality)]
+                    lc.root[np.argmax(root)].replace("-", "b")
+                    + ":"
+                    + QUALITIES_MIREX[np.argmax(quality)]
                 )
             data_to_convert.append(label)
 
-        start_times, end_times, labels = create_annotations_file_content(
-            data_to_convert)
+        start_times, end_times, labels = create_annotations_file_content(data_to_convert)
         out_filename = os.path.join(annotations_folder, "_all.lab")
         write_to_file(start_times, end_times, labels, out_filename)
 
@@ -608,11 +588,9 @@ def compute_mir_eval_metrics(folder_path_true, folder_path_predicted, output_fol
     for true_lab_file in true_lab_files:
         print(true_lab_file)
         ground_truth_lab = true_lab_file
-        prediction_lab = os.path.join(folder_path_predicted,
-                                      os.path.basename(true_lab_file))
+        prediction_lab = os.path.join(folder_path_predicted, os.path.basename(true_lab_file))
         print(prediction_lab)
-        (ref_intervals, ref_labels) = mir_eval.io.load_labeled_intervals(
-            ground_truth_lab)
+        (ref_intervals, ref_labels) = mir_eval.io.load_labeled_intervals(ground_truth_lab)
         (est_intervals, est_labels) = mir_eval.io.load_labeled_intervals(prediction_lab)
 
         est_intervals, est_labels = mir_eval.util.adjust_intervals(
@@ -648,25 +626,18 @@ def compute_mir_eval_metrics(folder_path_true, folder_path_predicted, output_fol
 
         score_root = mir_eval.chord.weighted_accuracy(comparisons_root, durations)
         score_majmin = mir_eval.chord.weighted_accuracy(comparisons_majmin, durations)
-        score_majmin_inv = mir_eval.chord.weighted_accuracy(comparisons_majmin_inv,
-                                                            durations)
+        score_majmin_inv = mir_eval.chord.weighted_accuracy(comparisons_majmin_inv, durations)
         score_mirex = mir_eval.chord.weighted_accuracy(comparisons_mirex, durations)
         score_thirds = mir_eval.chord.weighted_accuracy(comparisons_thirds, durations)
-        score_thirds_inv = mir_eval.chord.weighted_accuracy(comparisons_thirds_inv,
-                                                            durations)
+        score_thirds_inv = mir_eval.chord.weighted_accuracy(comparisons_thirds_inv, durations)
         score_triads = mir_eval.chord.weighted_accuracy(comparisons_triads, durations)
-        score_triads_inv = mir_eval.chord.weighted_accuracy(comparisons_triads_inv,
-                                                            durations)
+        score_triads_inv = mir_eval.chord.weighted_accuracy(comparisons_triads_inv, durations)
         score_tetrads = mir_eval.chord.weighted_accuracy(comparisons_tetrads, durations)
-        score_tetrads_inv = mir_eval.chord.weighted_accuracy(comparisons_tetrads_inv,
-                                                             durations)
-        score_sevenths = mir_eval.chord.weighted_accuracy(comparisons_sevenths,
-                                                          durations)
-        score_sevenths_inv = mir_eval.chord.weighted_accuracy(comparisons_sevenths_inv,
-                                                              durations)
+        score_tetrads_inv = mir_eval.chord.weighted_accuracy(comparisons_tetrads_inv, durations)
+        score_sevenths = mir_eval.chord.weighted_accuracy(comparisons_sevenths, durations)
+        score_sevenths_inv = mir_eval.chord.weighted_accuracy(comparisons_sevenths_inv, durations)
         score_overseg = mir_eval.chord.weighted_accuracy(comparisons_overseg, durations)
-        score_underseg = mir_eval.chord.weighted_accuracy(comparisons_underseg,
-                                                          durations)
+        score_underseg = mir_eval.chord.weighted_accuracy(comparisons_underseg, durations)
         score_seg = mir_eval.chord.weighted_accuracy(comparisons_seg, durations)
 
         scores_root.append(score_root)

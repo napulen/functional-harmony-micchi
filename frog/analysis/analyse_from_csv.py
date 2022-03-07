@@ -59,7 +59,7 @@ def model_analysis_from_csv(folder_ground_truth, folder_predictions, spelling):
 
 
 def model_analysis_global_output_for_HT(
-        folder_ground_truth, folder_predictions, spelling, output_folder
+    folder_ground_truth, folder_predictions, spelling, output_folder
 ):
     lc = LabelCodec(spelling=False, mode="legacy", strict=False)
     y_true = []
