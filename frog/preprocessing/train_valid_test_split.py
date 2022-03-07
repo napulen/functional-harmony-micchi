@@ -63,8 +63,7 @@ def train_valid_test_split(in_folder, out_folder, seed=18, split=(0.8, 0.1, 0.1)
     @param split: Percentage of files in training, validation, and test set respectively
     """
     if not os.path.isdir(in_folder):
-        logger.warning(
-            f"{in_folder} is not a folder. Can't find the files to split. Skipping.")
+        logger.warning(f"{in_folder} is not a folder. Can't find the files to split. Skipping.")
         return
     if in_folder.startswith("."):
         logger.warning(f"{in_folder} is hidden. Skipping.")
@@ -97,6 +96,7 @@ def train_valid_test_split(in_folder, out_folder, seed=18, split=(0.8, 0.1, 0.1)
                 os.path.join(in_folder, t, f + ext),
                 os.path.join(out_folder, ds, t, f + ext),
             )
+
 
 # TODO: Unfinished
 # def cross_valid_split(in_folder, out_folder, n_folds, seed=18, test_size=0.1):

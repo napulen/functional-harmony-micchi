@@ -43,11 +43,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def _make_tfr_feature(piano_roll, structure, chords, label_codec, name, s, start,
-                      beat_strength):
+def _make_tfr_feature(piano_roll, structure, chords, label_codec, name, s, start, beat_strength):
     feature = {
-        "name": tf.train.Feature(
-            bytes_list=tf.train.BytesList(value=[name.encode("utf-8")])),
+        "name": tf.train.Feature(bytes_list=tf.train.BytesList(value=[name.encode("utf-8")])),
         "transposition": tf.train.Feature(int64_list=tf.train.Int64List(value=[s])),
         "start": tf.train.Feature(int64_list=tf.train.Int64List(value=[start])),
         "piano_roll": tf.train.Feature(float_list=tf.train.FloatList(value=piano_roll.reshape(-1))),

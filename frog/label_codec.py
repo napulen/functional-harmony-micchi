@@ -3,8 +3,14 @@ import random
 
 import numpy as np
 
-from frog import (NOTES, PITCH_FIFTHS, SCALES, _flat_alteration, _sharp_alteration,
-                  find_enharmonic_equivalent)
+from frog import (
+    NOTES,
+    PITCH_FIFTHS,
+    SCALES,
+    _flat_alteration,
+    _sharp_alteration,
+    find_enharmonic_equivalent,
+)
 
 OUTPUT_MODES = ["legacy", "experimental"]
 KEY_START, KEY_END = [PITCH_FIFTHS.index(p) for p in ["C-", "A#"]]
@@ -12,8 +18,7 @@ KEYS_FIFTH = PITCH_FIFTHS[KEY_START : KEY_END + 1]
 
 QUALITIES = ["M", "m", "d", "a", "M7", "m7", "D7", "d7", "h7", "+6"]
 # QUALITIES = ["M", "m", "d", "a", "M7", "m7", "D7", "d7", "h7", "Gr+6", "It+6", "Fr+6"]
-QUALITIES_MIREX = ["maj", "min", "dim", "aug", "maj7", "min7", "7", "dim7", "hdim7",
-                   "7"]
+QUALITIES_MIREX = ["maj", "min", "dim", "aug", "maj7", "min7", "7", "dim7", "hdim7", "7"]
 Q2I = {x: i for i, x in enumerate(QUALITIES)}
 
 DEGREES_DIATONIC = ["1", "2", "3", "4", "5", "6", "7"]

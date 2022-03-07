@@ -5,10 +5,13 @@ from argparse import ArgumentParser
 
 import numpy as np
 
-from frog.analysis.analyse_results import (analyse_results,
-                                           analyse_results_concatenated,
-                                           compute_mir_eval_metrics,
-                                           create_mir_eval_lab_files, make_plots)
+from frog.analysis.analyse_results import (
+    analyse_results,
+    analyse_results_concatenated,
+    compute_mir_eval_metrics,
+    create_mir_eval_lab_files,
+    make_plots,
+)
 from frog.label_codec import LabelCodec
 from frog.preprocessing.preprocess_chords import import_chords
 
@@ -56,7 +59,7 @@ def model_analysis_from_csv(folder_ground_truth, folder_predictions, spelling):
 
 
 def model_analysis_global_output_for_HT(
-        folder_ground_truth, folder_predictions, spelling, output_folder
+    folder_ground_truth, folder_predictions, spelling, output_folder
 ):
     lc = LabelCodec(spelling=False, mode="legacy", strict=False)
     y_true = []
