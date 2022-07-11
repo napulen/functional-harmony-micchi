@@ -1,0 +1,83 @@
+{
+  "trained on": "tfrecords_spelling_bass_2022-06-30_19-51-06",
+  "input type": "spelling_bass",
+  "output mode": "legacy",
+  "model name": "ConvGruBlocknade_spelling_bass_2022-06-30_20-30-35",
+  "model type": "ConvGruBlocknade",
+  "use music structure info": true,
+  "input shapes": {
+    "piano_roll": [
+      640,
+      70
+    ],
+    "structure": [
+      640,
+      2
+    ],
+    "mask": [
+      160
+    ]
+  },
+  "output shapes": {
+    "key": [
+      160,
+      36
+    ],
+    "tonicisation": [
+      160,
+      21
+    ],
+    "degree": [
+      160,
+      21
+    ],
+    "quality": [
+      160,
+      10
+    ],
+    "inversion": [
+      160,
+      4
+    ],
+    "root": [
+      160,
+      35
+    ]
+  },
+  "hyper parameters": {
+    "conv": {
+      "num_dnb_1": 3,
+      "filters_dnb_1": 10,
+      "bottleneck_filters_dnb_1": 32,
+      "kernel_size_dnb_1": 7,
+      "filters_pb_1": 48,
+      "num_dnb_2": 2,
+      "filters_dnb_2": 4,
+      "bottleneck_filters_dnb_2": 20,
+      "kernel_size_dnb_2": 3,
+      "filters_pb_2": 48,
+      "num_dnb_3": 2,
+      "filters_dnb_3": 4,
+      "bottleneck_filters_dnb_3": 20,
+      "kernel_size_dnb_3": 3
+    },
+    "gru": {
+      "dropout": 0.2,
+      "size": 178
+    },
+    "fc": {
+      "size": 64
+    },
+    "nade": {
+      "hidden_size": 350,
+      "ensemble_size": 10
+    },
+    "optimizer": {
+      "learning_rate": 0.003,
+      "beta_1": 0.9,
+      "beta_2": 0.999,
+      "epsilon": 1e-07,
+      "decay": 0.0
+    }
+  }
+}
