@@ -1,0 +1,15 @@
+python -m scripts.cra_preprocess -f ./data spelling_complete
+python -m scripts.cra_preprocess -f ./data spelling_complete
+python -m scripts.cra_preprocess -f ./data spelling_complete -o legacy
+python -m scripts.cra_preprocess -n 5 -f ./data -o legacy
+python -m scripts.cra_preprocess -n 5 -f ./data -o legacy spelling_bass
+python -m scripts.cra_train
+python -m scripts.cra_train -m ConvGruBlocknade -n 5 data/tfrecords_spelling_bass_2022-06-28_13-07-49/
+ls ~/logs/
+cat ~/logs/ConvGruBlocknade_spelling_bass_2022-06-28_13-11-22/model.index
+cat ~/logs/ConvGruBlocknade_spelling_bass_2022-06-28_13-11-22/SUCCESS
+ls
+python -m scripts.cra_run ~/logs/ConvGruBlocknade_spelling_bass_2022-06-28_13-11-22/
+python -m scripts.cra_run -p ~/logs/ConvGruBlocknade_spelling_bass_2022-06-28_13-11-22/ data/datasets/BPS/scores/bps_01_01.mxl
+python -m scripts.cra_run -p ~/logs/ConvGruBlocknade_spelling_bass_2022-06-28_13-11-22/ data/datasets/BPS/scores/bps_01_01.mxl -o outputs
+python -m scripts.cra_run -p ~/logs/ConvGruBlocknade_spelling_bass_2022-06-28_13-11-22/ data/datasets/BPS/scores/bps_01_01.mxl -o outputs -v
