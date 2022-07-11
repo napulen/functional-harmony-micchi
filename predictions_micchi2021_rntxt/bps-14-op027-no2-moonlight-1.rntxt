@@ -1,0 +1,64 @@
+
+Time Signature : 4/4
+
+m1 c#: i
+m2 i64 b4.5 i
+m3 VI b3 bII6
+m4 V b1.5 V7 b2 V b2.5 i64 b3 V b4 V7 b4.5 V
+m5 i
+m6 V6 b1.5 V65
+m7 i b3 iv
+m8 E: I64 b2.5 V43 b3 V7
+m9 I
+m10 i b2.5 e: i
+m11 C: V42 b3 b: VIM42 b3.5 VIM7
+m12 bII b1.5 bII6 b2 i64 b2.5 viio42 b3 viio7 b4 V65
+m13 i b3 iv
+m14 i64 b3 V
+m15 i b3.5 I
+m16 bII6 b4 viio43
+m17 I
+m18 bII6 b4 viio42 b4.5 viio43
+m19 I b1.5 f#: IV b3 viio7
+m20 V65 b2.5 V7 b3 i b4.5 b: v
+m21 f#: bII6 b2.5 C: V65 b3 f#: viio7 b4 viio7/V
+m22 i64 b3 V
+m23 i
+m24 V65
+m25 i b3 c#: viio65 b4 f#: i
+m26 c#: V65
+m27 i b3 ii b4 viio7/V
+m28 V b3.5 V7
+m29 b1.5 V b2 V7
+m30 i64
+m32 V7
+m33 i64
+m34 b2 V7 b3 i64 b3.5 V7
+m39 b4.5 #IVIt65
+m40 V7 b3 VI
+m41 iio6 b2 V7
+m42 i
+m43 V65
+m44 i b3 iv
+m45 E: I64 b3 V7
+m46 I
+m47 V65
+m48 I b3 c#: V43 b4 i
+m49 V65 b3 i
+m50 bII6 b3 V7
+m51 i b3.5 I
+m52 iv b1.5 bII6 b4 #IVIt65
+m53 I
+m54 iv b2 bII6 b4 #IVIt65 b4.5 f#: V
+m55 b3 i
+m56 c#: V65 b2 bVII6 b4 E: I b4.5 c#: III
+m57 iv6 b2 iio6 b3 V65 b4 i
+m58 iiø65 b2.5 iio6 b3 V7 b3.5 iio6
+m59 V b1.5 i64 b3 V7 b4.5 V
+m60 i
+m61 V65
+m62 i
+m63 V b2 V7
+m64 i
+m65 V b2 V7
+m66 i

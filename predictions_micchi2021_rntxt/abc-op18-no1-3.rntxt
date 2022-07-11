@@ -1,0 +1,122 @@
+
+Time Signature : 3/4
+
+m1 F: I
+m2 g: IV b3 V b3.5 V7
+m3 i
+m4 V b3 a: V7
+m5 C: vi b1.5 a: i b2 F: iii b3 a: V b3.5 C: V
+m6 vi
+m7 V7
+m8 I
+m9 V7
+m10 I
+m11 f: III b1.5 Ab: I
+m12 V43 b2.5 V7
+m13 I
+m14 f: i
+m15 V43 b3 V7
+m16 b2 i
+m17 VI b2 Db: I b3.5 f: bII
+m18 Db: I b2 V b3 f: i b3.5 Db: V
+m19 f: v b1.5 eb: i b2 bb: iv b2.5 bII6 b3 eb: VI b3.5 bb: bII6
+m20 iv b2 Eb: V b3 I
+m21 ii b3 V
+m22 f: i64 b2 V b3 iv7
+m23 iio b2.5 V7 b3 viio7
+m24 i b1.5 V b2 VI b3 V b3.5 viio7/V
+m25 V
+m26 i64 b2 i b3.5 V
+m27 b3 C: I
+m28 IV b1.5 iv64 b2 I
+m30 I6 b2.5 I
+m31 b3.5 F: V
+m32 V7 b2.5 C: I
+m33 b1.5 F: V
+m34 V7 b1.5 viio6 b2 V7 b3 vi
+m35 V7
+m36 b2 V42 b3 C: I64 b3.5 I
+m37 F: I b2 C: IV b3 viio7
+m38 I b3 V42/V
+m39 F: V b1.5 C: V b3 viio7/II b3.5 d: viio7
+m40 C: ii b1.5 V b2 V/V b3 a: V7
+m41 i b1.5 C: vi b2 a: i b3 C: V b3.5 V/VI
+m42 i b1.5 a: i b3.5 d: V
+m43 i b3 V
+m44 F: i b1.5 I
+m45 b3 V
+m46 I
+m47 V7
+m48 I
+m49 V7
+m50 I
+m51 V7 b2 V43 b2.5 viio6 b3.5 V7
+m52 I b3.5 V
+m53 b1.5 V7 b2 viio6
+m54 I
+m55 V43 b1.5 V7 b2 viio6
+m56 I
+m57 b1.5 g: viio7 b2 viio65 b3 F: viio65/II
+m58 ii6 b2.5 IV
+m59 V7
+m60 I
+m61 g: viio7 b2 viio65 b2.5 viio7 b3 viio65
+m62 i6 b1.5 F: ii6 b2 IV6 b2.5 IV
+m63 V7
+m64 I b3 viio7/V b3.5 C: viio7
+m65 F: V b1.5 C: I b2 F: V b3 V7 b3.5 viio65/II
+m66 ii b2 g: i b3 d: V65
+m67 F: vi b2 I b2.5 vi b3 V7/III
+m68 iii b1.5 g: ii b2 d: V42 b2.5 g: V7 b3 C: ii6 b3.5 ii64
+m69 d: V64 b1.5 V b2 C: ii b2.5 d: i b3 g: V65/V
+m70 F: vi b2 g: viio42 b2.5 viio43 b3 i6 b3.5 F: ii6
+m71 g: ii b2 F: ii b3 g: viio7
+m72 F: ii b3 V7
+m73 V b2 V7 b3 I
+m74 ii b2 I6 b3 viio6
+m75 I64 b2 V43 b2.5 V7
+m76 I b2 V43 b3 I6
+m77 ii6 b2 ii b3 V7
+m78 I b3 viio7/V b3.5 I
+m79 b2 V6 b3 V
+m80 I b3 I64 b3.5 V42
+m81 I b2 V
+m82 I b2 V
+m83 I b2 V
+m84 I
+m86 V
+m87 f: V
+m89 b1.5 Db: V
+m90 I
+m93 b3.5 V7
+m94 I
+m97 b3.5 V7
+m98 I
+m100 V
+m101 I
+m102 Bb: V7
+m105 Eb: V7 b3.5 c: V7
+m106 Eb: V7
+m107 b2 eb: V7 b3 Eb: V7
+m110 f: ii b3 iio
+m111 V65
+m112 C: IV b1.5 iv
+m113 b1.5 F: i b2 f: i
+m114 V b2.5 C: I
+m120 b1.5 Ab: V b2.5 C: I
+m121 b1.5 Eb: I b2 C: I b3 g: V
+m122 i64
+m125 b3 V7
+m126 i64
+m129 b3 V7
+m130 I b3 V7/IV b3.5 I
+m132 i
+m133 b3 iv64 b3.5 I64
+m134 I b2 C: V b2.5 V7
+m135 b3 V
+m136 V7
+m137 V b3 I
+m141 b3 IV64
+m142 I
+m144 b3 V
+m145 I b1.5 V b2.5 I b3 V

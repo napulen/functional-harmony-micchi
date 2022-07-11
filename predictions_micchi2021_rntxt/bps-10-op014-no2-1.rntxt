@@ -1,0 +1,156 @@
+
+Time Signature : 2/4
+
+m0 b2 G: I
+m3 IV b2 IV64
+m4 IV b1.5 IV64 b2 ii42 b2.5 I
+m5 V43
+m6 I b2 I64
+m7 I b2 V7
+m8 I
+m10 ii6 b1.5 V7 b2 V43
+m11 b1.5 V42 b2 V43
+m12 I64 b1.5 I6
+m14 ii6
+m15 V b2.5 I64
+m16 vi b1.5 vi6 b2 viio43/V b2.5 viio7/V
+m17 iii6 b1.5 V b2.5 V7
+m18 I b1.5 A: V7
+m19 I b2 V7
+m20 I b2.5 V7
+m21 I b2 V7
+m22 I b2.5 V7
+m23 I b2 V7
+m24 I
+m26 D: I
+m29 V7/II b2 V7
+m31 b1.5 I b2.5 V7
+m32 I
+m33 b2 V7
+m34 I b2 V7
+m35 I b2 V7 b2.5 V7/V
+m36 V7 b2 I b2.5 V7
+m37 I b2 V7
+m38 I b2 V7
+m39 I b2.5 IV
+m40 I b1.5 vi b2 V7/IV
+m41 IV
+m42 viio7/V
+m43 I64
+m44 b2 V7
+m45 I
+m46 I64 b2 V7
+m47 I
+m50 V7
+m51 V65 b2 V7
+m52 I64 b1.5 I6 b2 vi
+m53 ii65 b2 V7
+m54 I64 b1.5 I6 b2 vi
+m55 IV64 b1.5 ii65 b2 V7
+m56 I64 b1.5 I b2 vi b2.5 G: V7
+m57 D: vi b1.5 IV b2 I64 b2.5 V7
+m58 I
+m60 b2.5 V7
+m61 I b1.5 V7 b2 I b2.5 V7
+m63 I b2.5 g: V
+m64 i
+m66 Bb: vi b1.5 ii
+m68 b1.5 viio7 b2.5 V7
+m74 I
+m77 V7
+m78 c: viio7 b1.5 Bb: V7 b2.5 c: viio7
+m79 b1.5 V7
+m80 i b1.5 V7 b2 g: iv
+m81 bII b2 bII6
+m83 b2.5 iv6
+m84 V65 b2 V7
+m86 i
+m88 b2.5 c: v
+m89 f: V65
+m90 V7
+m91 i
+m92 Bb: V7
+m93 Eb: V b1.5 Bb: I b2.5 Eb: V
+m94 V7
+m99 I
+m101 IV b1.5 ii65 b2.5 IV64
+m102 ii65
+m103 V7
+m104 g: i b2 iv6
+m105 V7
+m106 i b2 #IVIt65
+m107 V b2 V7
+m108 b2 i64 b2.5 V
+m109 b2 V7
+m110 b2 i64 b2.5 V
+m111 b2 V7
+m112 b1.5 V b2 i64 b2.5 V
+m117 b1.5 V7
+m120 b2 G: V7
+m125 I
+m126 b2.5 I6
+m127 IV6 b2 IV64
+m128 IV b1.5 ii42 b2.5 I
+m129 V43
+m130 I b2 ii6
+m131 I b2 V7
+m132 I b2.5 I6
+m133 I b1.5 I6
+m134 IV b2 V42
+m135 I b1.5 V42 b2 V7 b2.5 I6
+m137 V65/IV b1.5 C: V65
+m138 I6
+m139 V43
+m140 G: ii65 b1.5 IV6
+m141 V43 b2 V65 b2.5 V7
+m142 I b2 I6 b2.5 I
+m143 viiø65
+m144 I6
+m145 ii65 b2 V43/V
+m146 V b2.5 V7/V
+m147 V b1.5 D: I64 b2.5 V7
+m148 I b1.5 G: V b2.5 D: V7
+m149 I b1.5 G: V b2.5 D: V7
+m150 G: V b2.5 V7/V
+m151 V
+m152 b2.5 I
+m154 I6 b2.5 I
+m155 I64
+m156 I b1.5 I64 b2 V7
+m159 I b1.5 V7 b2 I b2.5 V7
+m160 I b2 V7
+m161 I b2 V7
+m162 I b2 V7 b2.5 V7/V
+m163 V7
+m164 I b2 V7
+m165 I b2 V7
+m166 I
+m168 IV
+m169 viio7/V
+m170 I64
+m171 b2 V7
+m172 I
+m173 I64 b2 V7
+m174 I b2 V7 b2.5 I
+m177 V7 b2 V65 b2.5 V7
+m178 V65 b2.5 V7
+m179 I64 b1.5 I6 b2 vi b2.5 vi6
+m180 II65 b1.5 II7 b2 V7
+m181 I64 b1.5 I+64 b2 vi
+m182 II65 b1.5 II43 b2 V7
+m183 I64 b1.5 I+64 b2 vi7 b2.5 I64
+m184 vi7 b1.5 vi b2 IV6 b2.5 I6
+m185 IV b2 V65/V
+m186 I64 b2 V7
+m187 I
+m188 b2 V7/IV
+m189 IV
+m190 V7
+m191 I
+m192 I6 b1.5 I b2 V7/IV
+m193 IV
+m194 b2 viio
+m195 V7
+m197 I b2 V b2.5 V7
+m198 I b2 V7
+m200 I

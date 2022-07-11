@@ -1,0 +1,141 @@
+
+Time Signature : 6/8
+
+m0 b2.67 D: V7
+m1 I
+m2 b1.33 V b2.33 V7 b2.67 V42
+m3 I6 b2 I b2.67 ii
+m4 I64 b2 V b2.67 V7
+m5 ii
+m6 vi b2.33 V42/II
+m7 ii b2.67 V
+m8 V7 b1.33 ii7 b1.67 I
+m10 V b2.33 V7 b2.67 V6
+m11 I b2 I6 b2.33 I b2.67 ii6
+m12 I64 b2 V b2.67 ii
+m14 V43/II b2.33 V7/II b2.67 V42/II
+m15 ii b2.67 V7
+m16 I
+m17 V6 b2.67 V
+m18 I
+m19 V6
+m20 I6 b2 V65
+m21 I b2 V7 b2.33 I b2.67 V42
+m22 I6 b2 V65
+m23 I
+m24 I6
+m25 IV6 b1.67 vi b2 ii6 b2.67 viio6/V
+m26 V b1.67 I b2 V b2.67 I
+m27 V b2 A: I
+m29 b1.33 V7 b2 V7/II b2.33 ii
+m32 V b1.33 V7
+m34 I
+m35 V65 b1.67 I b2 V7 b2.67 V65
+m36 I
+m37 V65 b1.67 I6 b2 V7 b2.67 V65
+m38 I b2.33 ii b2.67 I
+m39 ii6
+m40 V7 b1.33 I64 b2 V7
+m41 I
+m42 ii
+m43 V7
+m44 I b1.33 I6 b2.67 I
+m45 I64 b1.67 V7
+m48 I6 b1.67 IV b2 I6 b2.67 IV
+m49 I6 b2 V7/VI
+m50 IV
+m51 I b2 iv6 b2.33 ii6 b2.67 ii65
+m52 I64 b2 V7
+m53 I
+m54 V7
+m55 I
+m56 V7
+m57 I
+m58 b1.67 a: I b2 i
+m61 Bb: V7
+m63 I
+m65 b1.67 V7 b2.67 I
+m66 V7 b2.67 I
+m67 b1.33 V7 b2.33 g: ii42
+m68 V7 b1.67 i b2 V7 b2.67 i
+m69 V7
+m70 i
+m71 i64
+m72 b2 V7 b2.33 i64
+m73 V7 b2 i b2.67 V7
+m74 i b2 F: V7 b2.33 V b2.67 V7
+m76 a: i6 b1.33 F: V7 b2 a: V7 b2.67 F: V65/V
+m77 b: V b1.67 V7 b2.67 V
+m78 i b1.67 i64 b2.67 #IVIt65
+m79 V b2 i64
+m80 V b2 i64
+m81 V
+m83 b1.67 f#: i b2 b: V b2.67 f#: i
+m84 iiø42 b1.33 b: i64 b1.67 i b2 viio7/V b2.67 iio6
+m85 viio43 b2 V42 b2.33 V7
+m86 i
+m87 iio b1.33 i b1.67 V7
+m88 V7/IV b1.33 viio7/IV b1.67 V7/IV
+m89 iv b1.67 e: i b2 D: ii b2.33 e: i b2.67 D: ii
+m90 vi b1.33 V7/II
+m91 viio7/V b1.33 viio43/V b2 A: V7 b2.33 D: V7/V b2.67 ii7
+m92 A: I6 b1.67 D: V65 b2.67 V7
+m93 I b2 V42/II b2.67 A: ii42
+m94 I b2 D: V42
+m95 I6 b1.33 I64
+m96 V b2 I
+m97 V7
+m99 I
+m100 b2.67 V42
+m101 I6 b2 I
+m102 I64 b2 V7
+m103 ii
+m104 vi b2.33 V42/II
+m105 ii6 b2 ii b2.33 ii6 b2.67 V7
+m106 b1.67 I
+m107 b2.33 G: V b2.67 V6
+m108 V b2.67 V7
+m109 I b1.33 V7 b1.67 I
+m111 b2.67 I6
+m112 I
+m114 V7
+m116 I
+m117 iii6 b2.33 V b2.67 I
+m118 D: I b1.33 G: V b1.67 I b2.33 V b2.67 D: I6
+m119 G: I6 b1.67 vi6 b2 D: ii6
+m120 V b2.67 I
+m121 V
+m122 V7 b1.33 V b2 ii b2.67 V7
+m124 I6 b2.67 I
+m125 I64 b1.67 V7
+m126 b2 ii b2.67 V7
+m128 I6 b2 I64 b2.33 I b2.67 V7
+m129 b1.67 I
+m130 IV b1.67 ii
+m131 V7
+m132 V65 b2 I
+m133 I64 b1.67 V7 b2.67 G: V7
+m134 I b1.33 D: I b2.33 V7
+m135 V42
+m136 I64 b1.33 #IVIt65/II b1.67 viio42/II b2 viio43/V b2.33 V42/V b2.67 ii
+m137 IV b1.33 IV6 b2 I6
+m138 vi b2 b: i b2.33 D: vi
+m140 ii
+m142 V
+m143 b2.33 V7
+m144 I
+m145 V b1.67 I b2.67 V6
+m146 I
+m147 V6 b1.67 I b2.67 V6
+m148 I
+m149 IV b1.33 ii6 b1.67 IV b2 ii b2.33 ii6 b2.67 IV
+m150 I64
+m152 viio7/V b2.67 IV
+m153 b1.33 I b2 IV6 b2.67 viio43/V
+m154 I64 b2 V7
+m155 I
+m156 V7
+m157 I
+m158 V7 b1.33 V b1.67 V7
+m159 I
+m160 b2.67 f#: i

@@ -1,0 +1,66 @@
+
+Time Signature : 4/4
+
+m1 Bb: V
+m2 I
+m4 b3 IV
+m5 b3 ii b4 V
+m6 I b3 IV
+m7 V b3 I
+m8 vi b2 g: i
+m9 Bb: IV b3.5 c: III
+m10 g: iv
+m11 V
+m12 i b2.5 Bb: I
+m13 d: iio6 b2 IV6 b3 IV
+m14 V b2.5 v b3.5 V b4 i64
+m15 V b3 i b4 VI
+m16 i64 b1.5 v6 b2 C: viio6 b3 I6
+m17 ii b2 viio6 b3 I b4 F: IV6
+m18 b1.5 iii6 b2 g: i6 b3 V6 b4 V
+m19 i
+m20 I b1.5 d: iv6 b2 F: V6 b2.5 C: I6 b3 ii6 b4 F: V
+m21 I b1.5 g: iv b2 C: ii6 b3 g: v6 b3.5 iv6 b4 i
+m22 V b3 i b4 I
+m24 b4 IV
+m25 III b1.5 d: VI b2 g: III
+m26 Bb: IV b2 g: VI b2.5 Bb: IV b3 I6
+m27 V
+m28 F: I b2 Bb: V
+m29 I
+m30 b3 vi b4.5 F: ii
+m31 I b3.5 Bb: V b4 F: I b4.5 Bb: V
+m32 F: V b3 I6 b4 V b4.5 I
+m33 V b4 I64 b4.5 I
+m34 I64 b1.5 V b3.5 I64
+m35 ii b1.5 ii7 b2 V b3 I
+m36 d: V
+m37 b3 F: vi b4.5 viio/V
+m38 V
+m39 I b3 V6 b4.5 C: I6
+m40 F: V b3.5 V/V
+m42 V b4 iii
+m43 b2 ii b4 I
+m44 V b3 I b4 V b4.5 IV
+m45 V b2 iii6 b4 ii6
+m46 iii6 b2 I6 b3 viio6 b3.5 ii7 b4 V6 b4.5 viio6
+m47 I b4 iii b4.5 I
+m48 V b3.5 I b4 V b4.5 I
+m49 V b4 vi
+m50 V6 b2 I b3 V/V
+m51 V b4 I
+m52 b4.5 d: III
+m53 F: I b1.5 d: III b3 V
+m54 b2 iv6 b3 g: ii b3.5 V/V b4 V b4.5 ii
+m55 i
+m57 b2 V b2.5 i b3 V
+m59 F: V b2 I64 b3.5 C: IV64 b4 I
+m60 b2 F: I64 b2.5 C: IV64 b3 I
+m61 d: III b4.5 i
+m62 b1.5 III b2 v b2.5 i b3 V b4 iv6
+m63 V
+m64 b2 i64 b4 V
+m65 v b2 i64 b3 V
+m66 I b2 g: i64 b4 V
+m67 b2 i64 b2.5 V
+m68 i

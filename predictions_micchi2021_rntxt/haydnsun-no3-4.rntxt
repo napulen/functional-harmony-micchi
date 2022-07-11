@@ -1,0 +1,102 @@
+
+Time Signature : 4/4
+
+m0 b4.5 g: V7
+m1 i b3 V42 b3.5 V7 b4 V42
+m2 i b3 V7 b3.5 i b4 V7 b4.5 i
+m3 V7
+m5 i b3 V42
+m6 i6 b1.5 i b3 V42
+m7 i6 b3.5 i
+m8 b2 #IVIt65 b3 V65 b4.5 V7
+m9 i b3 bII6 b4.5 iv
+m10 V b2.5 V7 b3.5 i b4.5 V7
+m11 i b3 V42
+m12 i6
+m13 VI
+m14 iv b2 VI b2.5 iv b3 V7 b3.5 viio7
+m15 ii7 b2 Bb: V65 b3 I
+m16 V42 b2 g: bVII43 b2.5 Bb: V42 b3 I6
+m17 V43/V b1.5 viio6/V b2 V43 b3 V b3.5 g: bVII
+m18 Bb: I b3 V65
+m19 I b3 V65
+m20 I b3 V43 b4.5 V7
+m21 I b3 IV
+m22 ii6
+m24 vi b2 c: V b2.5 Bb: I b3 viio7/V b3.5 vi b4 viio6/V b4.5 viio/V
+m25 V
+m26 b4 V42
+m27 I6 b3 I b3.5 IV b4 I
+m28 b4 V7
+m29 I6 b3 viio6 b4 V7
+m30 I6 b3 viio b3.5 V7
+m31 I b2 V7
+m32 b3 V65 b3.5 V7 b4 V65 b4.5 V7/VI
+m33 vi b3 viio7/V
+m34 V7 b3 vi
+m35 I6 b1.5 V65/IV b3 I6
+m36 IV b3.5 ii
+m37 I b3 V7
+m38 I b3 V7
+m39 I b3 V7
+m40 I b3 V7 b4.5 viio6
+m41 I b3 V7
+m42 I
+m43 b2 V b3 V7 b3.5 V
+m44 I64 b1.5 I b2 I64 b2.5 I b3 V65 b4 V43 b4.5 V7
+m45 I64 b1.5 I b2 I64 b3 V7/V b4.5 V/V
+m46 V b3 V7/V
+m47 V
+m48 c: i b2 V
+m49 i b2 V7 b2.5 i b3 viio7 b4 V7
+m50 i b3 viio7 b4 V7
+m51 i b2 viio7 b2.5 VI b3 V7 b4 i b4.5 III
+m52 iv b3 viio7 b3.5 f: viio7 b4 c: iv
+m53 b2.5 f: i b3 c: iv b4 iio
+m54 V b2.5 V7 b3 V42 b4.5 V7
+m55 i6 b3 V65
+m56 i
+m57 bVII6 b1.5 Eb: V65
+m58 V7 b2 c: bVII b4 Eb: V
+m59 I b1.5 c: III b2 bVII b2.5 V b3 Eb: V42
+m60 I6 b3 V42 b4.5 Ab: V7
+m61 V6 b3 Eb: I6 b4.5 Ab: V6
+m62 c: viio7/IV b2 Ab: viio7/II b2.5 c: viio7/IV b4.5 viio65
+m63 iv6 b3 Bb: V6 b4.5 Ab: vi
+m64 Bb: viio65 b1.5 viio65/II b2 c: viio65
+m65 v6 b2 v
+m66 V7
+m67 i
+m68 VI
+m69 V65/V b1.5 ii65 b3 V65/V b3.5 g: V7
+m70 c: V65/V b1.5 g: V65 b3 V7
+m71 i6 b1.5 i b2 V7 b2.5 i b3 V7 b4.5 V42
+m72 i b3 V7 b3.5 i64 b4 V7 b4.5 i
+m73 V7
+m75 i b3 V42
+m76 i6 b2.5 i b3 V42
+m77 i6 b4 c: V65
+m78 i b3 V7 b3.5 V65 b4.5 V7
+m79 i b4.5 g: iv
+m80 b1.5 iv6 b3.5 c: i b4.5 g: bII6
+m81 iv b1.5 c: i b2 Eb: i b2.5 vi b3 #IVIt65 b4 c: #IVIt65 b4.5 g: #IVIt65
+m82 III b2.5 i b3 viio7
+m83 iv b3 viio7/V
+m84 V b3 V7
+m85 viio42
+m89 viio7 b2 viio42 b2.5 viio7 b3 viio42 b4 V7
+m90 i b3 viio7 b4 i b4.5 V7
+m91 i6 b2 i b3 viio7 b4 V7
+m92 i6 b2 i b3 viio7 b4 V7
+m93 i b2 V7
+m94 b3 VI b4.5 #IVIt65
+m95 bII6 b3 viio7/V
+m96 V b3 i
+m97 V7 b2 i b3 V7
+m98 i b3 V7
+m99 i b3 V7
+m100 i b3.5 viio6/IV b4.5 c: V7
+m101 i b2 i64 b3.5 g: viio42 b4 V7
+m102 i b3 c: V7 b4 V43 b4.5 V7
+m103 i b1.5 i64 b2.5 i b3 viio7/V b3.5 V7/V b4 g: V7
+m104 I b3 i
