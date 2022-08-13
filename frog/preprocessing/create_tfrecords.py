@@ -157,7 +157,7 @@ def _create_tfrecords(tfr_base_folder, input_type, output_mode, beat_strength, n
         #     split_bach_like_chen_su(os.path.join(in_folder, sub_folder), out_folder)
         else:  # We want to have only Bach Preludes and BPS in our test set
             train_valid_test_split(
-                os.path.join(in_folder, sub_folder), out_folder, seed=18, split=(0.80, 0.20, 0.0)
+                os.path.join(in_folder, sub_folder), out_folder, seed=18, split=(1.00, 0.0, 0.0)
             )
 
     files_per_dataset = {}
