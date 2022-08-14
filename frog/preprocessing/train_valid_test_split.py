@@ -62,6 +62,57 @@ def train_valid_test_split(in_folder, out_folder, seed=18, split=(0.8, 0.1, 0.1)
     @param seed: For replicability purposes
     @param split: Percentage of files in training, validation, and test set respectively
     """
+    testset_napulen = [
+        "op18_no1_mov1",
+        "op18_no1_mov3",
+        "op18_no6_mov3",
+        "op59_no7_mov1",
+        "op59_no8_mov3",
+        "op74_no10_mov3",
+        "op74_no10_mov4",
+        "op95_no11_mov3",
+        "op127_no12_mov2",
+        "op135_no16_mov2",
+        "bps_01_01",
+        "bps_07_01",
+        "bps_10_01",
+        "bps_14_01",
+        "bps_15_01",
+        "bps_23_01",
+        "bps_25_01",
+        "Haydn_Franz_Joseph_-_Op20_No2_-_2",
+        "Haydn_Franz_Joseph_-_Op20_No3_-_4",
+        "Haydn_Franz_Joseph_-_Op20_No5_-_3",
+        "Haydn_Franz_Joseph_-_Op20_No6_-_4",
+        "Beethoven_Ludwig_van_-___-_WoO_70",
+        "Beethoven_Ludwig_van_-___-_WoO_75",
+        "Beethoven_Ludwig_van_-___-_WoO_77",
+        "Beethoven_Ludwig_van_-___-_WoO_78",
+        "Monteverdi_Claudio_-_Madrigals_Book_3_-_9",
+        "Monteverdi_Claudio_-_Madrigals_Book_5_-_5",
+        "Monteverdi_Claudio_-_Madrigals_Book_5_-_7",
+        "Hensel_Fanny_(Mendelssohn)_-_6_Lieder_Op9_-_1_Die_Ersehnte",
+        "Reichardt_Louise_-_Sechs_Lieder_von_Novalis_Op4_-_5_Noch_ein_Bergmannslied",
+        "Schubert_Franz_-_Die_schöne_Müllerin_D795_-_12_Pause",
+        "Schubert_Franz_-_Op59_-_3_Du_bist_die_Ruh",
+        "Schubert_Franz_-_Schwanengesang_D957_-_05_Aufenthalt",
+        "Schubert_Franz_-_Schwanengesang_D957_-_08_Der_Atlas",
+        "Schubert_Franz_-_Schwanengesang_D957_-_10_Das_Fischermädchen",
+        "Schubert_Franz_-_Winterreise_D911_-_03_Gefror’ne_Thränen",
+        "Schumann_Robert_-_Dichterliebe_Op48_-_02_Aus_meinen_Tränen_sprießen",
+        "Schumann_Robert_-_Dichterliebe_Op48_-_04_Wenn_ich_in_deine_Augen_seh’",
+        "Schumann_Robert_-_Dichterliebe_Op48_-_10_Hör’_ich_das_Liedchen_klingen",
+        "Schumann_Robert_-_Dichterliebe_Op48_-_12_Am_leuchtenden_Sommermorgen",
+        "Schumann_Robert_-_Dichterliebe_Op48_-_16_Die_alten_bösen_Lieder",
+        "Wolf_Hugo_-_Eichendorff-Lieder_-_14_Der_verzweifelte_Liebhaber",
+        "Wolf_Hugo_-_Eichendorff-Lieder_-_19_Die_Nacht",
+        "wtc_i_prelude_03",
+        "wtc_i_prelude_08",
+        "wtc_i_prelude_12",
+        "wtc_i_prelude_15",
+        "wtc_i_prelude_22",
+        "wtc_i_prelude_24",
+    ]
     if not os.path.isdir(in_folder):
         logger.warning(f"{in_folder} is not a folder. Can't find the files to split. Skipping.")
         return
@@ -91,6 +142,11 @@ def train_valid_test_split(in_folder, out_folder, seed=18, split=(0.8, 0.1, 0.1)
     random.seed(seed)
     random.shuffle(file_names)
     for ds, f in zip(dataset, file_names):
+        if f in testset_napulen:
+            logger.warning("*" * 20 + f"SENDING TO VALIDATION {f}")
+            ds = "valid"
+        else:
+            ds = "train"
         for ext, t in zip([".mxl", ".csv", ".txt"], ["scores", "chords", "txt"]):
             copyfile(
                 os.path.join(in_folder, t, f + ext),

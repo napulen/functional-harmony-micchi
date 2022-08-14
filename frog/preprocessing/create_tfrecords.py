@@ -145,7 +145,7 @@ def _create_tfrecords(tfr_base_folder, input_type, output_mode, beat_strength, n
 
     # Split the data into train/valid/test
     for sub_folder in os.listdir(in_folder):
-        if sub_folder == "Beethoven_4tets":
+        if sub_folder == "Beethoven_4tets" and False: # napulen: allowing it for comparison
             continue  # We are not legally allowed to use this dataset, for the moment
         if sub_folder.__contains__("Tavern"):
             continue  # Slightly different structure, not compatible yet
